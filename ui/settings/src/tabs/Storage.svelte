@@ -23,7 +23,10 @@
     }
 
     async function call<T>(path: string, body?: unknown): Promise<T> {
-        const sid = kit.platform.kind === 'openccu-lite' ? '' : new URLSearchParams(location.search).get('sid') ?? '';
+        // the frame took the sid out of the address bar on load (reading location.search found
+        // nothing on a CCU and the API answered 401); kit.app.url carries it, as the frame hands
+        // it to the application
+        const sid = kit.platform.kind === 'openccu-lite' || !kit.app ? '' : (new URL(kit.app.url, location.href).searchParams.get('sid') ?? '');
         const url = API + path + (sid ? (path.includes('?') ? '&' : '?') + 'sid=' + encodeURIComponent(sid) : '');
         const res = await fetch(url, {
             method: body === undefined ? 'GET' : 'POST',

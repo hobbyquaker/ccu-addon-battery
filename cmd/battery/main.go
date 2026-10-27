@@ -142,7 +142,11 @@ func run(addonDir, id string, port int, base, basePath, www, tokenFile string, f
 	log.Printf("battery: detection window %s, merge window %s", params.Window, merge)
 
 	rec := recorder.New(recorder.Options{Source: src, Store: st, Observer: chg, Log: log.Printf})
+	// recDone: the recorder (and its source) returned - on a classic CCU the source unregisters
+	// its callback from the interface processes on the way out, so the stop waits for it
+	recDone := make(chan struct{})
 	go func() {
+		defer close(recDone)
 		if err := rec.Run(ctx); err != nil && ctx.Err() == nil {
 			log.Printf("battery: recorder ended: %v", err)
 		}
@@ -173,6 +177,11 @@ func run(addonDir, id string, port int, base, basePath, www, tokenFile string, f
 	log.Printf("battery %s: serving %s on %s, store %s", version, basePath, l.Addr(), st.Health().State)
 	if err := srv.Serve(l); err != nil && err != http.ErrServerClosed {
 		return err
+	}
+	select {
+	case <-recDone:
+	case <-time.After(5 * time.Second):
+		log.Printf("battery: the recorder did not end within 5 s")
 	}
 	log.Printf("battery: stopping, writing the batch")
 	if err := st.Close(); err != nil {
