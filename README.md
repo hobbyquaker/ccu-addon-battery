@@ -1,111 +1,163 @@
 # ccu-addon-battery
 
-Battery change detection and statistics for Homematic devices: an addon for
-[openccu-lite](https://github.com/hobbyquaker/openccu-lite) (and, later, for the classic CCU3 and
-OpenCCU). It records the battery voltage and the low-battery flag of every device, detects
-battery changes from them, lets the user say which batteries went in, and turns the record into
-how long batteries last, what is due soon and what to buy.
+[:uk: English README](README.en.md)
 
-**Status: in development, no release yet.** What works today: the recording; the battery table
-(which device takes which batteries); the change detection with its inbox; changes recorded by
-hand; the API for importing past changes and voltage series; the choice of where the database
-lives. The battery editor, the statistics and the forecasts follow.
+Batteriewechsel erkennen und Batterien auswerten, für Homematic-Geräte: ein Addon für
+[openccu-lite](https://github.com/hobbyquaker/openccu-lite) (und später für die klassische CCU3
+und OpenCCU). Es zeichnet die Batteriespannung und die Batterie-leer-Meldung jedes Geräts auf,
+erkennt daraus Batteriewechsel, lässt Sie eintragen, welche Batterien eingelegt wurden, und macht
+aus dem Protokoll: wie lange Batterien halten, welche Geräte Batteriefresser sind, welche
+Batterien am besten abschneiden, was bald fällig ist und was zu kaufen ist.
 
-## What it records
+**Stand: in Entwicklung, noch kein Release.** Was heute funktioniert: die Aufzeichnung; die
+Batterietabelle (welches Gerät welche Batterien nimmt); die Wechselerkennung mit ihrem Eingang;
+von Hand gebuchte Wechsel mit den eingelegten Batterien (Hersteller, Typ, Preis); die
+Gerätebilder, die Haltedauern je Gerät, die Tabs Batterien und Statistik; die API zum Import
+vergangener Wechsel und Spannungsverläufe; die Wahl des Datenbank-Speicherorts. Die Prognosen und
+die Einkaufsliste folgen.
 
-| Signal | Where | Devices |
+## Die Seiten
+
+Die Anwendung öffnet sich unter `/addons/battery/` (auf openccu-lite in der Oberfläche des Systems,
+mit dessen Design und Sprache):
+
+- **Geräte:** jedes Batteriegerät mit Bild, Status, Batterien, Spannung, der bisherigen Haltedauer
+  seiner Batterien (Durchschnitt, kürzeste, längste, Anzahl – sortierbar, kürzeste zuerst, um die
+  Batteriefresser zu finden) und wie lange die aktuellen schon drin sind. Ein Gerät öffnet seine
+  Detailseite: der Spannungsverlauf über die gesamte Aufzeichnung mit den Wechseln als Marken und
+  den Batterie-leer-Phasen als Bändern, und seine Wechsel, jeder bearbeitbar. *Gewechselt …* bucht
+  einen Wechsel.
+- **Eingang:** was die Erkennung gefunden hat und auf Ihre Antwort wartet – ja (mit den eingelegten
+  Batterien), an einem anderen Tag, oder nein. Darunter alle gebuchten Wechsel.
+- **Batterien:** jede je eingetragene Batterie (Hersteller, Typ, Größe): wie viele eingelegt
+  wurden, in welchen Geräten und Modellen, wie lange sie hielten, was sie pro Batterie und pro
+  Jahr kosteten – und, weil die Haltedauer vom Gerät abhängt, die Haltedauer je Gerätemodell
+  hinter jeder Zeile, dazu ein Vergleich innerhalb eines Modells oder einer Größe.
+- **Statistik:** die letzten zwölf Monate in Zahlen, die Geräte mit den kürzesten Haltedauern, die
+  Haltedauer je Modell und je Größe, und die Exporte.
+
+Die **Einstellungsseite** ist davon getrennt (auf openccu-lite unter *Addons → Batterie →
+Einstellungen*, auf einer CCU der *Einstellungen*-Knopf des Addons): der Speicherort der Datenbank
+und, auf einer CCU, der Dienst, sein Protokoll und die Version. Dienststeuerung und Protokoll sind
+auf openccu-lite die Seiten des Systems selbst.
+
+## Was aufgezeichnet wird
+
+| Signal | Wo | Geräte |
 | --- | --- | --- |
-| `OPERATING_VOLTAGE`, `OPERATING_VOLTAGE_STATUS`, `LOW_BAT`, `BOOTED`, `UNREACH` | channel 0 | every Homematic IP device |
-| `LOWBAT`, `UNREACH` | channel 0 | every BidCos device |
-| `BATTERY_STATE` | the thermostat channel | HM-CC-RT-DN, HM-TC-IT-WM-W-EU |
+| `OPERATING_VOLTAGE`, `OPERATING_VOLTAGE_STATUS`, `LOW_BAT`, `BOOTED`, `UNREACH` | Kanal 0 | jedes Homematic-IP-Gerät |
+| `LOWBAT`, `UNREACH` | Kanal 0 | jedes BidCos-Gerät |
+| `BATTERY_STATE` | der Thermostatkanal | HM-CC-RT-DN, HM-TC-IT-WM-W-EU |
 
-A device is tracked when its descriptions carry one of the battery datapoints. At the start the
-addon seeds the values from the system's state store and, for Homematic IP, from the radio
-process's cache (no radio traffic); BidCos values are never read, only received. Samples are
-downsampled: a row when the voltage moved by 0.01 V, when the low-battery flag changed, or once a
-day. The low-battery and unreachable transitions and `BOOTED` are kept as evidence.
+Ein Gerät wird aufgezeichnet, wenn seine Beschreibungen einen der Batterie-Datenpunkte tragen.
+Beim Start übernimmt das Addon die Werte aus dem Zustandsspeicher des Systems und, für Homematic
+IP, aus dem Cache des Funkprozesses (kein Funkverkehr); BidCos-Werte werden nie gelesen, nur
+empfangen. Die Werte werden ausgedünnt: eine Zeile, wenn sich die Spannung um 0,01 V bewegt hat,
+wenn sich die Batterie-leer-Meldung geändert hat, oder einmal am Tag. Die Übergänge von
+Batterie-leer und Nicht-erreichbar sowie `BOOTED` bleiben als Beleg erhalten.
 
-## Which batteries a device takes
+## Welche Batterien ein Gerät nimmt
 
-[data/batteries.json](data/README.md) is a table of 459 Homematic models: the power source
-(battery, rechargeable, mains, bus, …), the battery slots (count and type), the voltage datapoint,
-the device's own low-battery threshold, and the sources every row stands on - for most battery
-models eQ-3's own product pages and manuals. The data is CC0: take it for any project. The addon
-embeds it, looks models up case-insensitively (and by their aliases), and lets the user correct it
-per model or per device (a remote in a desk stand, lithium or rechargeable cells). Corrections to
-the table are welcome as pull requests; `python3 data/check.py` checks it (CI runs it), and
-[tools/](tools/README.md) has the scripts it was built with.
+[data/batteries.json](data/README.md) ist eine Tabelle von 459 Homematic-Modellen: die
+Stromversorgung (Batterie, Akku, Netz, Bus, …), die Batteriefächer (Anzahl und Typ), der
+Spannungs-Datenpunkt, die Batterie-leer-Schwelle des Geräts und die Quellen jeder Zeile – für die
+meisten Batteriemodelle die Produktseiten und Anleitungen von eQ-3 selbst. Die Daten sind CC0:
+nehmen Sie sie für jedes Projekt. Das Addon bettet sie ein, sucht Modelle ohne Rücksicht auf
+Groß- und Kleinschreibung (und über ihre Aliasse) und lässt sie je Modell oder je Gerät
+korrigieren (eine Fernbedienung im Tischaufsteller, Lithium- oder Akkuzellen). Korrekturen an der
+Tabelle sind als Pull Requests willkommen; `python3 data/check.py` prüft sie (die CI führt es aus),
+und [tools/](tools/README.md) enthält die Skripte, mit denen sie gebaut wurde.
 
-## Detecting a battery change
+## Wie ein Batteriewechsel erkannt wird
 
-A device restart (`BOOTED`), a voltage jump to the fresh level, or the low-battery flag clearing
-makes a *candidate*. Re-seating the same half-used cells looks the same for a while - their voltage
-recovers once the load is off - so a candidate only comes into the **inbox** when the voltage
-still holds the fresh level a day later; otherwise it is logged as a boot. Nothing is booked on
-its own: the user confirms a detection, rejects it, or says it was another day. Devices that
-report only a low-battery flag are detected when the flag clears; for those, and for any other
-device, "Changed…" records a change by hand. [docs/detection.md](docs/detection.md) has the rules.
+Ein Neustart des Geräts (`BOOTED`), ein Spannungssprung auf das Frischniveau oder das Erlöschen
+der Batterie-leer-Meldung ergibt einen *Kandidaten*. Dieselben halb verbrauchten Zellen neu
+einzusetzen sieht eine Weile genauso aus – ihre Spannung erholt sich, sobald die Last weg ist –,
+deshalb kommt ein Kandidat erst in den **Eingang**, wenn die Spannung einen Tag später noch das
+Frischniveau hält; sonst wird er als Neustart protokolliert. Nichts wird von allein gebucht: Sie
+bestätigen eine Erkennung, verwerfen sie oder sagen, dass es ein anderer Tag war. Geräte, die nur
+eine Batterie-leer-Meldung liefern, werden erkannt, wenn die Meldung erlischt; für diese und jedes
+andere Gerät bucht *Gewechselt …* einen Wechsel von Hand. [docs/detection.md](docs/detection.md)
+beschreibt die Regeln.
 
-## The API
+## Die Batterien und was sie kosten
 
-Everything the page does goes through the addon's API at `/addons/battery/api/v1/`, behind the
-system's login: devices and their battery profiles, the changes (list, record, confirm, edit),
-bulk imports of past changes (JSON or CSV, with a dry run, deduplicated and merged with what the
-detector found), voltage series, a detection run over imported history, value suggestions and
-exports. [docs/api.md](docs/api.md) explains it with a curl recipe;
-[docs/openapi.json](docs/openapi.json) specifies it.
+Bei jedem Wechsel können Sie eintragen, was eingelegt wurde, je Fach: den Hersteller („Varta“), den
+Typ („Power on Demand“), ob es Akkus sind, und den Preis einer Batterie. Hersteller und Typ werden
+aus dem bisher Eingetragenen vorgeschlagen, damit ein Hersteller nicht auf drei Arten geschrieben
+wird; der Preis wird mit dem zuletzt für diesen Hersteller und Typ gezahlten vorbelegt. Eine
+*Haltedauer* ist die Zeit zwischen zwei bestätigten Wechseln eines Geräts; die Statistik entsteht
+aus den Haltedauern, die laufende zählt in keinem Durchschnitt mit. Die Gerätebilder sind die der
+Plattform selbst (der Katalog der WebUI, den auch openccu-lite mitbringt).
 
-## On openccu-lite
+## Die API
 
-Install the package from the Addons page (or, once listed, from the catalogue). The addon runs
-confined as its own user, reads the system's APIs with its own token (`rpc:read`, `meta:read`) and
-serves its page at `/addons/battery/`, embedded in the system's shell with its theme and language.
-Updates come from the system's Addons page.
+Alles, was die Seite tut, läuft über die API des Addons unter `/addons/battery/api/v1/`, hinter der
+Anmeldung des Systems: Geräte mit ihren Batterieprofilen, Bildern und Haltedauern, die Wechsel
+(auflisten, buchen, bestätigen, bearbeiten, löschen), Massenimport vergangener Wechsel (JSON oder
+CSV, mit Probelauf, dedupliziert und mit dem Erkannten zusammengeführt), Spannungsverläufe, ein
+Erkennungslauf über importierte Verläufe, Wertvorschläge, der letzte Preis, die Statistik und die
+Exporte. [docs/api.md](docs/api.md) erklärt sie mit einem curl-Rezept;
+[docs/openapi.json](docs/openapi.json) spezifiziert sie.
 
-### Where the database lives
+## Auf openccu-lite
 
-The database is one SQLite file, `battery.db`. By default it is in the addon's own directory on
-the user partition, `/usr/local/addons/battery/var/`, which every backup of the system includes.
-It can be moved to a USB stick the system has mounted (System → Storage); the stick is **not**
-part of the system's backups, and the page says so. Network shares are not offered: SQLite needs
-local file locking, which NFS and SMB do not give.
+Installieren Sie das Paket über die Addons-Seite (oder, sobald es gelistet ist, aus dem Katalog).
+Das Addon läuft eingeschränkt als eigener Benutzer, liest die APIs des Systems mit seinem eigenen
+Token (`rpc:read`, `meta:read`) und liefert seine Seite unter `/addons/battery/`, eingebettet in die
+Oberfläche des Systems mit dessen Design und Sprache; seine Einstellungsseite ist
+`/addons/battery-config/`. Aktualisierungen kommen über die Addons-Seite des Systems.
 
-The move is safe: the writers pause (new values wait in memory), the pending rows are written, a
-consistent copy is made with `VACUUM INTO`, the copy is verified (`integrity_check`, the row count
-of every table), the setting is switched, the addon reopens on the new file, and the old file is
-kept or removed as you chose. If any step fails, nothing changes. When a stick with the database
-is pulled, the addon keeps the new values in memory (up to 20,000 rows), says so on its page and in
-the journal, and goes on where it was once the stick is back - it never starts a fresh database
-somewhere else on its own.
+### Wo die Datenbank liegt
 
-The setting is `storage` in `/usr/local/addons/battery/etc/battery.json`
-(`{"storage": {"location": "usb:<label>", "folder": "battery"}}`); the details are in
+Die Datenbank ist eine SQLite-Datei, `battery.db`. Standardmäßig liegt sie im eigenen Verzeichnis
+des Addons auf der Benutzerpartition, `/usr/local/addons/battery/var/`, das jedes Backup des
+Systems enthält. Sie kann auf einen vom System eingebundenen USB-Stick verschoben werden (die
+Einstellungsseite); der Stick ist **nicht** Teil der Backups des Systems, und die Seite sagt das.
+Netzwerkfreigaben werden nicht angeboten: SQLite braucht lokale Dateisperren, die NFS und SMB
+nicht geben.
+
+Das Verschieben ist sicher: Die Schreiber halten an (neue Werte warten im Arbeitsspeicher), die
+ausstehenden Zeilen werden geschrieben, mit `VACUUM INTO` entsteht eine konsistente Kopie, die
+Kopie wird geprüft (`integrity_check`, die Zeilenzahl jeder Tabelle), die Einstellung wird
+umgeschaltet, das Addon öffnet die neue Datei, und die alte Datei wird nach Ihrer Wahl behalten
+oder entfernt. Schlägt ein Schritt fehl, ändert sich nichts. Wird ein Stick mit der Datenbank
+abgezogen, sammelt das Addon die neuen Werte im Arbeitsspeicher (bis zu 20.000 Zeilen), sagt das
+auf seiner Seite und im Journal und macht weiter, sobald der Stick zurück ist – es beginnt nie von
+sich aus anderswo eine neue Datenbank.
+
+Die Einstellung ist `storage` in `/usr/local/addons/battery/etc/battery.json`
+(`{"storage": {"location": "usb:<label>", "folder": "battery"}}`); die Einzelheiten stehen in
 [docs/storage.md](docs/storage.md).
 
-### Uninstall
+### Deinstallation
 
-Removes the program and keeps `/usr/local/addons/battery/etc` (the settings) and `var` (the
-database) for a reinstall. Remove that directory by hand to be rid of the data.
+Entfernt das Programm und behält `/usr/local/addons/battery/etc` (die Einstellungen) und `var`
+(die Datenbank) für eine Neuinstallation. Entfernen Sie dieses Verzeichnis von Hand, um die Daten
+loszuwerden.
 
-## Development
+## Entwicklung
 
 ```sh
-go test -race ./...                      # the store, the recorder, the detector, the changes, the API, the package files
-python3 data/check.py                    # the battery table
-(cd ui && npm ci && npm run check && npm test && npm run build)
-VERSION=0.1.0 scripts/build.sh           # dist/battery-<arch>-<version>.tar.gz for aarch64, x86_64, armv7l
+go test -race ./...                      # Speicher, Aufzeichnung, Erkennung, Wechsel, Statistik, API, Paketdateien
+python3 data/check.py                    # die Batterietabelle
+(cd ui && npm ci && npm run check && npm test && npm run build)   # die Anwendung und die Einstellungsseite
+VERSION=0.1.0 scripts/build.sh           # dist/battery-<arch>-<version>.tar.gz für aarch64, x86_64, armv7l
 ```
 
-The Go side uses [ccu-addon-kit](https://github.com/hobbyquaker/ccu-addon-kit)'s `addonkit`
-(session, CSRF, token, manifest and lighttpd fragment) and `litesource` (the event stream with
-resume, the state store, the metadata API); the web app is Svelte 5 on
-[occulite-ui](https://github.com/hobbyquaker/occulite-ui). The daemon takes `-no-session-check`
-and `-token-file` for development against a system other than the one it runs on:
+Die Go-Seite nutzt `addonkit` (Sitzung, CSRF, Token, Manifest) und `litesource` (der Ereignisstrom
+mit Wiederaufnahme, der Zustandsspeicher, die Metadaten-API) aus
+[ccu-addon-kit](https://github.com/hobbyquaker/ccu-addon-kit); die Anwendung ist Svelte 5 auf
+[occulite-ui](https://github.com/hobbyquaker/occulite-ui) mit [uPlot](https://github.com/leeoniya/uPlot)
+für den Spannungsverlauf; die Einstellungsseite ist der Rahmen des Kits mit dem eigenen Tab des
+Addons, von `ccu-addon-kit vendor` aus [addon/kit.json](addon/kit.json) ins Paket übernommen. Der
+Dienst nimmt `-no-session-check` und `-token-file` für die Entwicklung gegen ein anderes System als
+das, auf dem er läuft:
 
 ```sh
 go run ./cmd/battery -addon-dir /tmp/battery -www ui/dist -system http://<system> -token-file ./token -no-session-check
 ```
 
-## Licence
+## Lizenz
 
-MIT; the battery table (`data/batteries.json` and its schema) is CC0-1.0.
+MIT; die Batterietabelle (`data/batteries.json` und ihr Schema) ist CC0-1.0.
