@@ -245,7 +245,7 @@ the settings page (service, log, database, notifications, version), whose *Open 
 opens the app with the WebUI's session. Nothing but the web server faces the network. The
 settings and the database live in `/usr/local/addons/battery/etc` and `var`, in every backup;
 `Deinstallieren` keeps them, as above. Tested on OpenCCU 3.89 (x86_64) and on a CCU3 with eQ-3's
-firmware 3.89 (`armv7l`), there so far without paired battery devices - feedback is welcome.
+firmware 3.89.11 (`armv7l`), there so far without paired battery devices - feedback is welcome.
 
 ## Development
 

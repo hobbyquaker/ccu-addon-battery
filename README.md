@@ -258,7 +258,7 @@ des Addons in der WebUI öffnet die Einstellungsseite (Dienst, Protokoll, Datenb
 Benachrichtigungen, Version), deren Knopf *Batterie öffnen* die Anwendung mit der Sitzung der WebUI
 öffnet. Nach außen spricht nur der Webserver. Einstellungen und Datenbank liegen in
 `/usr/local/addons/battery/etc` und `var`, in jedem Backup; *Deinstallieren* behält sie, wie oben.
-Getestet auf OpenCCU 3.89 (x86_64) und auf einer CCU3 mit der Firmware 3.89 von eQ-3 (`armv7l`),
+Getestet auf OpenCCU 3.89 (x86_64) und auf einer CCU3 mit der Firmware 3.89.11 von eQ-3 (`armv7l`),
 dort bisher ohne angelernte Batteriegeräte – Rückmeldungen sind willkommen.
 
 ## Entwicklung

@@ -25,5 +25,7 @@ The first release.
   settings page.
 - **Platforms:** openccu-lite (the addon's own token and session, embedded in the system's shell), OpenCCU and the
   CCU3 (XML-RPC from the interface processes, names and rooms from ReGaHSS; the settings page in the WebUI's
-  *Zusatzsoftware*). Packages for aarch64, x86_64 and armv7l. Tested on openccu-lite with real devices and on
-  OpenCCU; on the CCU3 firmware so far without paired battery devices - feedback is welcome.
+  *Zusatzsoftware*, whose tabs and the app take the WebUI's session; the callback registration is removed at the
+  stop). Packages for aarch64, x86_64 and armv7l. Tested on openccu-lite with real devices and on OpenCCU; on the
+  stock CCU3 firmware 3.89.11 installed, updated and run (also across a reboot), so far without paired battery
+  devices - feedback is welcome.
