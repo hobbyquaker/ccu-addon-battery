@@ -61,7 +61,8 @@ type Recorder struct {
 	mu    sync.Mutex
 	devs  map[string]*device // by interface + "." + address
 	names *litesource.Names
-	state string // starting | seeding | live | degraded
+	chans map[string][]string // the channel addresses of every named device, by interface + "." + address
+	state string              // starting | seeding | live | degraded
 	last  map[string]store.Sample
 	ctx   context.Context
 }
@@ -596,9 +597,68 @@ func (r *Recorder) refreshNames(ctx context.Context) {
 		r.logf("recorder: names: %v", err)
 		return
 	}
+	chans := channelIndex(n)
 	r.mu.Lock()
 	r.names = n
+	r.chans = chans
 	r.mu.Unlock()
+}
+
+// channelIndex lists the channel addresses of every device the names know, in channel order.
+func channelIndex(n *litesource.Names) map[string][]string {
+	if n == nil {
+		return nil
+	}
+	out := map[string][]string{}
+	for key := range n.Objects {
+		dot := strings.IndexByte(key, '.')
+		colon := strings.LastIndexByte(key, ':')
+		if dot < 0 || colon < dot {
+			continue
+		}
+		dev := key[:colon]
+		out[dev] = append(out[dev], key[dot+1:])
+	}
+	for _, list := range out {
+		sort.Slice(list, func(i, j int) bool { return channelLess(list[i], list[j]) })
+	}
+	return out
+}
+
+// channelLess orders channel addresses by their number, then as text.
+func channelLess(a, b string) bool {
+	na, ea := strconv.Atoi(a[strings.LastIndexByte(a, ':')+1:])
+	nb, eb := strconv.Atoi(b[strings.LastIndexByte(b, ':')+1:])
+	if ea == nil && eb == nil && na != nb {
+		return na < nb
+	}
+	return a < b
+}
+
+// deviceRooms answers the rooms of a device in lang: its own and those of its channels, each
+// once, in channel order. openccu-lite's metadata puts rooms on the channels (the device object
+// usually has none); a classic CCU's ReGa does the same, and ccusource adds the union to the
+// device too - the duplicates fall out here.
+func deviceRooms(n *litesource.Names, chans map[string][]string, iface, address, lang string) []string {
+	out := []string{}
+	if n == nil {
+		return out
+	}
+	seen := map[string]bool{}
+	add := func(rooms []string) {
+		for _, room := range rooms {
+			if room == "" || seen[room] {
+				continue
+			}
+			seen[room] = true
+			out = append(out, room)
+		}
+	}
+	add(n.RoomNames(iface, address, lang))
+	for _, ch := range chans[iface+"."+address] {
+		add(n.RoomNames(iface, ch, lang))
+	}
+	return out
 }
 
 func (r *Recorder) followNames(ctx context.Context) {
@@ -661,9 +721,7 @@ func (r *Recorder) Devices(lang string) []View {
 		}
 		if r.names != nil {
 			v.Name = r.names.Name(d.Interface, d.Address)
-			if rooms := r.names.RoomNames(d.Interface, d.Address, lang); rooms != nil {
-				v.Rooms = rooms
-			}
+			v.Rooms = deviceRooms(r.names, r.chans, d.Interface, d.Address, lang)
 			if v.Name == "" {
 				// a device named only by its first channel, as the ReGa import leaves some
 				v.Name = r.names.Name(d.Interface, d.Address+":1")

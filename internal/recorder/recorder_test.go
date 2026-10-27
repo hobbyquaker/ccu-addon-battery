@@ -75,7 +75,7 @@ func system(t *testing.T) *fakelite.Server {
 	s.EventID = "boot1-0"
 	s.Meta["enums"] = map[string]any{"room": map[string]any{"name": map[string]string{"en": "Rooms"}, "tree": []map[string]any{{"id": "kueche", "name": map[string]string{"de": "Küche", "en": "Kitchen"}}}}}
 	s.SetName("HmIP-RF.WRC2", "Taster Küche", "room/kueche")
-	s.SetName("BidCos-RF.SC:1", "Fenster")
+	s.SetName("BidCos-RF.SC:1", "Fenster", "room/kueche") // the room on the channel, as openccu-lite keeps it
 	return s
 }
 
@@ -143,8 +143,8 @@ func TestLearnSeedRecord(t *testing.T) {
 		t.Fatalf("RT-DN: %+v", rt)
 	}
 	sc := find(views, "SC")
-	if sc == nil || sc.VoltageDP != "" || sc.LowBatDP != "0/LOWBAT" || sc.LowBat == nil || !*sc.LowBat || sc.LowBatSince != time.Date(2026, 10, 20, 8, 0, 0, 0, time.UTC).UnixMilli() || sc.Name != "Fenster" {
-		t.Fatalf("SC (LOWBAT only, restored seed, named by its channel): %+v", sc)
+	if sc == nil || sc.VoltageDP != "" || sc.LowBatDP != "0/LOWBAT" || sc.LowBat == nil || !*sc.LowBat || sc.LowBatSince != time.Date(2026, 10, 20, 8, 0, 0, 0, time.UTC).UnixMilli() || sc.Name != "Fenster" || len(sc.Rooms) != 1 || sc.Rooms[0] != "Küche" {
+		t.Fatalf("SC (LOWBAT only, restored seed, named and roomed by its channel): %+v", sc)
 	}
 	if bbl := find(views, "BBL"); bbl == nil || bbl.LowBatDP != "" || *bbl.Voltage != 230 {
 		t.Fatalf("BBL: %+v", bbl)
