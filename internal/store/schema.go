@@ -85,7 +85,23 @@ CREATE TABLE changes (
 );
 CREATE INDEX changes_device ON changes (interface, address, at);
 CREATE UNIQUE INDEX changes_external ON changes (source, external_id) WHERE external_id IS NOT NULL;`,
+	// 2: P1 - the per-model overrides of the battery table (the per-device ones are
+	// devices.profile_override), the answers kept for an Idempotency-Key, and the inbox's index.
+	// changes.status gains candidate (waiting for its confirmation window) and discarded (a boot
+	// or a recovery, kept as evidence) besides pending, accepted and rejected.
+	`CREATE TABLE model_overrides (
+  model TEXT PRIMARY KEY,                     -- lower case
+  value TEXT NOT NULL,                        -- JSON, batteries.Override
+  updated_at INTEGER NOT NULL
+) WITHOUT ROWID;
+CREATE TABLE idempotency (
+  key TEXT PRIMARY KEY,
+  created_at INTEGER NOT NULL,
+  status INTEGER NOT NULL,
+  body TEXT NOT NULL
+) WITHOUT ROWID;
+CREATE INDEX changes_status ON changes (status, at);`,
 }
 
 // Tables lists the tables a move verifies by row count.
-var Tables = []string{"meta", "devices", "slots", "current", "samples", "events", "changes"}
+var Tables = []string{"meta", "devices", "slots", "current", "samples", "events", "changes", "model_overrides", "idempotency"}

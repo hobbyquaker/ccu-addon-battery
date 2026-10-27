@@ -1,0 +1,2489 @@
+{
+ "openapi": "3.1.0",
+ "info": {
+  "title": "ccu-addon-battery API",
+  "version": "1",
+  "license": {
+   "name": "MIT",
+   "identifier": "MIT"
+  },
+  "description": "The addon's own API, served behind the system's session gate at /addons/battery/. A browser sends the gate cookie; a script logs in first (docs/api.md). Writes carry the X-CCU-Addon-Request header. Times are Unix milliseconds in answers; requests take milliseconds, RFC 3339 or a date."
+ },
+ "servers": [
+  {
+   "url": "/addons/battery"
+  }
+ ],
+ "components": {
+  "schemas": {
+   "Error": {
+    "type": "object",
+    "required": [
+     "error",
+     "message"
+    ],
+    "properties": {
+     "error": {
+      "type": "string",
+      "description": "a code: invalid, not-found, unknown-device, ambiguous-device, unavailable, busy, csrf, forbidden, idempotency-key-reused, …"
+     },
+     "message": {
+      "type": "string"
+     }
+    }
+   },
+   "Slot": {
+    "type": "object",
+    "required": [
+     "count",
+     "type"
+    ],
+    "properties": {
+     "count": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 12
+     },
+     "type": {
+      "type": "string",
+      "description": "a key of the battery table's types: AA, AAA, C, D, 9V, LR44, CR2016, CR2032, CR2450, CR123A, fixed, pack, lead12V"
+     },
+     "chemistry": {
+      "type": "string"
+     },
+     "replaceable": {
+      "type": "boolean"
+     }
+    }
+   },
+   "Profile": {
+    "type": "object",
+    "properties": {
+     "source": {
+      "enum": [
+       "table",
+       "override",
+       "guess",
+       "none"
+      ]
+     },
+     "model": {
+      "type": "string",
+      "description": "the table's spelling"
+     },
+     "power": {
+      "enum": [
+       "battery",
+       "rechargeable",
+       "battery-or-dc",
+       "mains",
+       "bus",
+       "host",
+       "external",
+       "unknown"
+      ]
+     },
+     "slots": {
+      "type": "array",
+      "items": {
+       "$ref": "#/components/schemas/Slot"
+      }
+     },
+     "fresh": {
+      "type": "number",
+      "description": "the pack's fresh level, V"
+     },
+     "low": {
+      "type": "number"
+     },
+     "step": {
+      "type": "number",
+      "description": "the jump of rule B, V"
+     },
+     "outdoor": {
+      "type": "boolean"
+     },
+     "life_years": {
+      "type": "number"
+     },
+     "confidence": {
+      "type": "string"
+     }
+    }
+   },
+   "Override": {
+    "type": "object",
+    "description": "changes what the battery table says; a missing field leaves the value below alone",
+    "properties": {
+     "power": {
+      "type": "string"
+     },
+     "slots": {
+      "type": "array",
+      "items": {
+       "$ref": "#/components/schemas/Slot"
+      }
+     },
+     "chemistry": {
+      "type": "string"
+     },
+     "rechargeable": {
+      "type": "boolean",
+      "description": "true: the slots hold NiMH cells (unless chemistry says otherwise)"
+     },
+     "outdoor": {
+      "type": "boolean"
+     }
+    },
+    "additionalProperties": false
+   },
+   "Device": {
+    "type": "object",
+    "properties": {
+     "interface": {
+      "type": "string"
+     },
+     "address": {
+      "type": "string"
+     },
+     "name": {
+      "type": "string"
+     },
+     "rooms": {
+      "type": "array",
+      "items": {
+       "type": "string"
+      }
+     },
+     "model": {
+      "type": "string"
+     },
+     "firmware": {
+      "type": "string"
+     },
+     "power": {
+      "type": "string"
+     },
+     "voltage_dp": {
+      "type": "string"
+     },
+     "lowbat_dp": {
+      "type": "string"
+     },
+     "voltage": {
+      "type": [
+       "number",
+       "null"
+      ]
+     },
+     "voltage_ts": {
+      "type": "integer"
+     },
+     "voltage_status": {
+      "type": "string"
+     },
+     "low_bat": {
+      "type": [
+       "boolean",
+       "null"
+      ]
+     },
+     "low_bat_since": {
+      "type": "integer"
+     },
+     "unreach": {
+      "type": [
+       "boolean",
+       "null"
+      ]
+     },
+     "unreach_since": {
+      "type": "integer"
+     },
+     "last_report": {
+      "type": "integer"
+     },
+     "first_seen": {
+      "type": "integer"
+     },
+     "profile": {
+      "$ref": "#/components/schemas/Profile"
+     }
+    }
+   },
+   "Battery": {
+    "type": "object",
+    "properties": {
+     "slot": {
+      "type": "integer"
+     },
+     "count": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 12
+     },
+     "type": {
+      "type": "string"
+     },
+     "chemistry": {
+      "type": "string"
+     },
+     "rechargeable": {
+      "type": "boolean"
+     },
+     "vendor": {
+      "type": "string"
+     },
+     "product": {
+      "type": "string"
+     },
+     "price_cents": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "per battery, in cents of the user's currency"
+     },
+     "lot": {
+      "type": "string"
+     }
+    },
+    "additionalProperties": false
+   },
+   "Evidence": {
+    "type": "object",
+    "description": "what the detector saw",
+    "properties": {
+     "triggers": {
+      "type": "array",
+      "items": {
+       "enum": [
+        "A",
+        "B",
+        "C",
+        "D"
+       ]
+      }
+     },
+     "voltage_before": {
+      "type": "number"
+     },
+     "max_before": {
+      "type": "number"
+     },
+     "voltage_after": {
+      "type": "number"
+     },
+     "voltage_confirmed": {
+      "type": "number",
+      "description": "the reading after the confirmation window"
+     },
+     "confirmed_at": {
+      "type": "integer"
+     },
+     "low_bat_before": {
+      "type": "boolean"
+     },
+     "booted": {
+      "type": "boolean"
+     },
+     "unreach_gap_s": {
+      "type": "integer"
+     },
+     "silence_s": {
+      "type": "integer"
+     },
+     "fresh": {
+      "type": "number"
+     },
+     "step": {
+      "type": "number"
+     },
+     "window_s": {
+      "type": "integer"
+     },
+     "last_trigger": {
+      "type": "integer"
+     },
+     "reason": {
+      "enum": [
+       "boot",
+       "recovered",
+       "low-again",
+       "unconfirmed"
+      ]
+     }
+    }
+   },
+   "Change": {
+    "type": "object",
+    "properties": {
+     "id": {
+      "type": "integer"
+     },
+     "interface": {
+      "type": "string"
+     },
+     "address": {
+      "type": "string"
+     },
+     "name": {
+      "type": "string",
+      "description": "in lists: the device's name from the system"
+     },
+     "model": {
+      "type": "string",
+      "description": "in lists"
+     },
+     "at": {
+      "type": "integer",
+      "description": "Unix ms"
+     },
+     "kind": {
+      "enum": [
+       "detected",
+       "confirmed",
+       "manual",
+       "import"
+      ]
+     },
+     "confidence": {
+      "enum": [
+       "",
+       "high",
+       "medium",
+       "low"
+      ]
+     },
+     "rule": {
+      "type": "string",
+      "description": "the rules that fired, e.g. A+B; E for a manual entry"
+     },
+     "status": {
+      "enum": [
+       "candidate",
+       "pending",
+       "accepted",
+       "rejected",
+       "discarded"
+      ]
+     },
+     "evidence": {
+      "$ref": "#/components/schemas/Evidence"
+     },
+     "batteries": {
+      "type": "array",
+      "items": {
+       "$ref": "#/components/schemas/Battery"
+      }
+     },
+     "note": {
+      "type": "string"
+     },
+     "source": {
+      "type": "string",
+      "description": "detector, detect, manual or import"
+     },
+     "external_id": {
+      "type": "string"
+     },
+     "created_by": {
+      "type": "string"
+     },
+     "created_at": {
+      "type": "integer"
+     },
+     "updated_at": {
+      "type": "integer"
+     }
+    }
+   },
+   "ChangeInput": {
+    "type": "object",
+    "required": [
+     "at"
+    ],
+    "additionalProperties": false,
+    "properties": {
+     "device": {
+      "type": "string",
+      "description": "the address (or use address)"
+     },
+     "address": {
+      "type": "string"
+     },
+     "interface": {
+      "type": "string",
+      "description": "needed when the address is on several interfaces, or with model for a device the addon never saw"
+     },
+     "model": {
+      "type": "string",
+      "description": "with interface: records a change of a device that left the system (created as retired)"
+     },
+     "at": {
+      "description": "Unix milliseconds, an RFC 3339 string, or YYYY-MM-DD (noon in the system's time zone)",
+      "oneOf": [
+       {
+        "type": "integer"
+       },
+       {
+        "type": "string"
+       }
+      ]
+     },
+     "batteries": {
+      "type": "array",
+      "items": {
+       "$ref": "#/components/schemas/Battery"
+      }
+     },
+     "note": {
+      "type": "string"
+     },
+     "source": {
+      "enum": [
+       "manual",
+       "import"
+      ],
+      "description": "manual by default (import in a bulk request)"
+     },
+     "external_id": {
+      "type": "string",
+      "description": "the client's own key, unique per source: the same id again is a duplicate"
+     }
+    }
+   },
+   "Patch": {
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {
+     "at": {
+      "description": "Unix milliseconds, an RFC 3339 string, or YYYY-MM-DD (noon in the system's time zone)",
+      "oneOf": [
+       {
+        "type": "integer"
+       },
+       {
+        "type": "string"
+       }
+      ]
+     },
+     "batteries": {
+      "type": "array",
+      "items": {
+       "$ref": "#/components/schemas/Battery"
+      }
+     },
+     "note": {
+      "type": "string"
+     },
+     "status": {
+      "enum": [
+       "accepted",
+       "rejected",
+       "pending"
+      ]
+     }
+    }
+   },
+   "Outcome": {
+    "type": "object",
+    "properties": {
+     "row": {
+      "type": "integer",
+      "description": "the array index + 1, or the CSV line"
+     },
+     "status": {
+      "enum": [
+       "created",
+       "merged",
+       "duplicate",
+       "error"
+      ]
+     },
+     "id": {
+      "type": "integer"
+     },
+     "merged_into": {
+      "type": "integer"
+     },
+     "error": {
+      "type": "string"
+     },
+     "code": {
+      "type": "string"
+     }
+    }
+   },
+   "BulkResult": {
+    "type": "object",
+    "properties": {
+     "dry_run": {
+      "type": "boolean"
+     },
+     "atomic": {
+      "type": "boolean"
+     },
+     "applied": {
+      "type": "boolean",
+      "description": "false on a dry run and on an atomic request with an error"
+     },
+     "counts": {
+      "type": "object",
+      "additionalProperties": {
+       "type": "integer"
+      }
+     },
+     "rows": {
+      "type": "array",
+      "items": {
+       "$ref": "#/components/schemas/Outcome"
+      }
+     }
+    }
+   },
+   "SampleInput": {
+    "type": "object",
+    "required": [
+     "ts"
+    ],
+    "additionalProperties": false,
+    "properties": {
+     "device": {
+      "type": "string"
+     },
+     "address": {
+      "type": "string"
+     },
+     "interface": {
+      "type": "string"
+     },
+     "ts": {
+      "description": "Unix milliseconds, an RFC 3339 string, or YYYY-MM-DD (noon in the system's time zone)",
+      "oneOf": [
+       {
+        "type": "integer"
+       },
+       {
+        "type": "string"
+       }
+      ]
+     },
+     "voltage": {
+      "type": [
+       "number",
+       "null"
+      ],
+      "minimum": 0,
+      "maximum": 30
+     },
+     "low_bat": {
+      "type": "boolean"
+     }
+    }
+   },
+   "SamplesResult": {
+    "type": "object",
+    "properties": {
+     "dry_run": {
+      "type": "boolean"
+     },
+     "received": {
+      "type": "integer"
+     },
+     "stored": {
+      "type": "integer"
+     },
+     "skipped": {
+      "type": "integer",
+      "description": "dropped by the downsampling, or a row at that millisecond is there"
+     },
+     "errors": {
+      "type": "array",
+      "items": {
+       "$ref": "#/components/schemas/Outcome"
+      }
+     }
+    }
+   },
+   "Found": {
+    "type": "object",
+    "properties": {
+     "interface": {
+      "type": "string"
+     },
+     "address": {
+      "type": "string"
+     },
+     "at": {
+      "type": "integer"
+     },
+     "rule": {
+      "type": "string"
+     },
+     "confidence": {
+      "type": "string"
+     },
+     "status": {
+      "enum": [
+       "created",
+       "merged",
+       "duplicate"
+      ]
+     },
+     "id": {
+      "type": "integer"
+     },
+     "evidence": {
+      "$ref": "#/components/schemas/Evidence"
+     }
+    }
+   },
+   "DetectResult": {
+    "type": "object",
+    "properties": {
+     "dry_run": {
+      "type": "boolean"
+     },
+     "devices": {
+      "type": "integer"
+     },
+     "found": {
+      "type": "array",
+      "items": {
+       "$ref": "#/components/schemas/Found"
+      }
+     },
+     "discarded": {
+      "type": "integer"
+     },
+     "undecided": {
+      "type": "integer"
+     }
+    }
+   },
+   "Suggestion": {
+    "type": "object",
+    "properties": {
+     "value": {
+      "type": "string"
+     },
+     "count": {
+      "type": "integer"
+     }
+    }
+   }
+  },
+  "securitySchemes": {
+   "gate": {
+    "type": "apiKey",
+    "in": "cookie",
+    "name": "occulite_gate",
+    "description": "the system's gate cookie, set by POST /api/auth/v1/login"
+   }
+  }
+ },
+ "security": [
+  {
+   "gate": []
+  }
+ ],
+ "paths": {
+  "/api/v1/health": {
+   "get": {
+    "summary": "the addon's state",
+    "responses": {
+     "200": {
+      "description": "OK",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "object",
+         "properties": {
+          "ok": {
+           "type": "boolean"
+          },
+          "version": {
+           "type": "string"
+          },
+          "uptime_s": {
+           "type": "integer"
+          },
+          "recorder": {
+           "type": "string"
+          },
+          "storage": {
+           "type": "object"
+          },
+          "devices": {
+           "type": "integer"
+          },
+          "inbox": {
+           "type": "integer",
+           "description": "pending detections"
+          }
+         }
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/devices": {
+   "get": {
+    "summary": "every tracked device with its current values and battery profile",
+    "parameters": [
+     {
+      "name": "lang",
+      "in": "query",
+      "description": "de or en, for the rooms",
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "OK",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "object",
+         "properties": {
+          "devices": {
+           "type": "array",
+           "items": {
+            "$ref": "#/components/schemas/Device"
+           }
+          }
+         }
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/devices/{iface}/{address}/override": {
+   "get": {
+    "summary": "the device's override",
+    "parameters": [
+     {
+      "name": "iface",
+      "in": "path",
+      "required": true,
+      "description": "the interface",
+      "schema": {
+       "type": "string"
+      }
+     },
+     {
+      "name": "address",
+      "in": "path",
+      "required": true,
+      "description": "the device address",
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "OK",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "object",
+         "properties": {
+          "override": {
+           "oneOf": [
+            {
+             "$ref": "#/components/schemas/Override"
+            },
+            {
+             "type": "null"
+            }
+           ]
+          }
+         }
+        }
+       }
+      }
+     }
+    }
+   },
+   "put": {
+    "summary": "set the device's override (a remote in a desk stand, lithium cells, rechargeables)",
+    "parameters": [
+     {
+      "name": "X-CCU-Addon-Request",
+      "in": "header",
+      "required": true,
+      "description": "the CSRF header every writing request carries (any value)",
+      "schema": {
+       "type": "string",
+       "example": "1"
+      }
+     },
+     {
+      "name": "iface",
+      "in": "path",
+      "required": true,
+      "description": "the interface",
+      "schema": {
+       "type": "string"
+      }
+     },
+     {
+      "name": "address",
+      "in": "path",
+      "required": true,
+      "description": "the device address",
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/Override"
+       }
+      }
+     }
+    },
+    "responses": {
+     "200": {
+      "description": "OK",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "object"
+        }
+       }
+      }
+     },
+     "400": {
+      "description": "the body is not valid JSON for the route",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Error"
+        }
+       }
+      }
+     },
+     "403": {
+      "description": "no CSRF header, or the level does not suffice",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Error"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "invalid input (error code in the body)",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Error"
+        }
+       }
+      }
+     }
+    }
+   },
+   "delete": {
+    "summary": "remove the device's override",
+    "parameters": [
+     {
+      "name": "X-CCU-Addon-Request",
+      "in": "header",
+      "required": true,
+      "description": "the CSRF header every writing request carries (any value)",
+      "schema": {
+       "type": "string",
+       "example": "1"
+      }
+     },
+     {
+      "name": "iface",
+      "in": "path",
+      "required": true,
+      "description": "the interface",
+      "schema": {
+       "type": "string"
+      }
+     },
+     {
+      "name": "address",
+      "in": "path",
+      "required": true,
+      "description": "the device address",
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "204": {
+      "description": "removed"
+     },
+     "403": {
+      "description": "no CSRF header, or the level does not suffice",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Error"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "invalid input (error code in the body)",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Error"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/models": {
+   "get": {
+    "summary": "the models of the installation with their table rows",
+    "parameters": [
+     {
+      "name": "unknown",
+      "in": "query",
+      "description": "only the models the battery table lacks",
+      "schema": {
+       "type": "boolean"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "OK",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "object"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/models/{model}": {
+   "get": {
+    "summary": "one model's table row, override and profile (case-insensitive, aliases)",
+    "parameters": [
+     {
+      "name": "model",
+      "in": "path",
+      "required": true,
+      "description": "the TYPE",
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "OK",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "object"
+        }
+       }
+      }
+     },
+     "404": {
+      "description": "not found",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Error"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/models/{model}/override": {
+   "put": {
+    "summary": "set a model's override (fixes the table locally)",
+    "parameters": [
+     {
+      "name": "X-CCU-Addon-Request",
+      "in": "header",
+      "required": true,
+      "description": "the CSRF header every writing request carries (any value)",
+      "schema": {
+       "type": "string",
+       "example": "1"
+      }
+     },
+     {
+      "name": "model",
+      "in": "path",
+      "required": true,
+      "description": "the TYPE",
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/Override"
+       }
+      }
+     }
+    },
+    "responses": {
+     "200": {
+      "description": "OK",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "object"
+        }
+       }
+      }
+     },
+     "400": {
+      "description": "the body is not valid JSON for the route",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Error"
+        }
+       }
+      }
+     },
+     "403": {
+      "description": "no CSRF header, or the level does not suffice",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Error"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "invalid input (error code in the body)",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Error"
+        }
+       }
+      }
+     }
+    }
+   },
+   "delete": {
+    "summary": "remove a model's override",
+    "parameters": [
+     {
+      "name": "X-CCU-Addon-Request",
+      "in": "header",
+      "required": true,
+      "description": "the CSRF header every writing request carries (any value)",
+      "schema": {
+       "type": "string",
+       "example": "1"
+      }
+     },
+     {
+      "name": "model",
+      "in": "path",
+      "required": true,
+      "description": "the TYPE",
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "204": {
+      "description": "removed"
+     },
+     "403": {
+      "description": "no CSRF header, or the level does not suffice",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Error"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/changes": {
+   "get": {
+    "summary": "the changes, newest first",
+    "parameters": [
+     {
+      "name": "device",
+      "in": "query",
+      "description": "an address",
+      "schema": {
+       "type": "string"
+      }
+     },
+     {
+      "name": "from",
+      "in": "query",
+      "description": "at >= from (a time)",
+      "schema": {
+       "type": "string"
+      }
+     },
+     {
+      "name": "to",
+      "in": "query",
+      "description": "at <= to (a time)",
+      "schema": {
+       "type": "string"
+      }
+     },
+     {
+      "name": "status",
+      "in": "query",
+      "description": "comma-separated statuses (default: all)",
+      "schema": {
+       "type": "string"
+      }
+     },
+     {
+      "name": "limit",
+      "in": "query",
+      "description": "at most this many (10000)",
+      "schema": {
+       "type": "integer"
+      }
+     },
+     {
+      "name": "lang",
+      "in": "query",
+      "description": "de or en",
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "OK",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "object",
+         "properties": {
+          "changes": {
+           "type": "array",
+           "items": {
+            "$ref": "#/components/schemas/Change"
+           }
+          }
+         }
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "invalid input (error code in the body)",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Error"
+        }
+       }
+      }
+     }
+    }
+   },
+   "post": {
+    "summary": "record one change (manual or import): created, merged into a detection within the merge window, or a duplicate",
+    "parameters": [
+     {
+      "name": "X-CCU-Addon-Request",
+      "in": "header",
+      "required": true,
+      "description": "the CSRF header every writing request carries (any value)",
+      "schema": {
+       "type": "string",
+       "example": "1"
+      }
+     },
+     {
+      "name": "dry_run",
+      "in": "query",
+      "description": "answer what would happen without writing",
+      "schema": {
+       "type": "boolean"
+      }
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/ChangeInput"
+       }
+      }
+     }
+    },
+    "responses": {
+     "201": {
+      "description": "created",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Outcome"
+        }
+       }
+      }
+     },
+     "200": {
+      "description": "merged, duplicate, or a dry run",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Outcome"
+        }
+       }
+      }
+     },
+     "400": {
+      "description": "the body is not valid JSON for the route",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Error"
+        }
+       }
+      }
+     },
+     "403": {
+      "description": "no CSRF header, or the level does not suffice",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Error"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "invalid input (error code in the body)",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Error"
+        }
+       }
+      }
+     },
+     "503": {
+      "description": "the database is not available, or being moved (Retry-After)",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Error"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/changes:bulk": {
+   "post": {
+    "summary": "record many changes: a JSON array of ChangeInput (source import by default) or text/csv",
+    "description": "CSV header: address,at,count,type,chemistry,rechargeable,vendor,product,price_cents,note,external_id (interface and model optional); one row per slot, rows with the same address and at are one change. Row by row by default; atomic=true applies all or nothing.",
+    "parameters": [
+     {
+      "name": "X-CCU-Addon-Request",
+      "in": "header",
+      "required": true,
+      "description": "the CSRF header every writing request carries (any value)",
+      "schema": {
+       "type": "string",
+       "example": "1"
+      }
+     },
+     {
+      "name": "dry_run",
+      "in": "query",
+      "description": "answer what would happen without writing",
+      "schema": {
+       "type": "boolean"
+      }
+     },
+     {
+      "name": "atomic",
+      "in": "query",
+      "description": "all or nothing",
+      "schema": {
+       "type": "boolean"
+      }
+     },
+     {
+      "name": "Idempotency-Key",
+      "in": "header",
+      "required": false,
+      "description": "a retried request with the same key and body within 24 h gets the stored answer (header Idempotent-Replayed: true); another body under the same key is a 409",
+      "schema": {
+       "type": "string",
+       "maxLength": 200
+      }
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "type": "array",
+        "items": {
+         "$ref": "#/components/schemas/ChangeInput"
+        }
+       }
+      },
+      "text/csv": {
+       "schema": {
+        "type": "string"
+       }
+      }
+     }
+    },
+    "responses": {
+     "200": {
+      "description": "OK",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/BulkResult"
+        }
+       }
+      }
+     },
+     "400": {
+      "description": "the body is not valid JSON for the route",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Error"
+        }
+       }
+      }
+     },
+     "403": {
+      "description": "no CSRF header, or the level does not suffice",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Error"
+        }
+       }
+      }
+     },
+     "409": {
+      "description": "conflict",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Error"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "invalid input (error code in the body)",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Error"
+        }
+       }
+      }
+     },
+     "503": {
+      "description": "the database is not available, or being moved (Retry-After)",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Error"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/changes/{id}": {
+   "get": {
+    "summary": "one change",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "description": "the change's id",
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "OK",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Change"
+        }
+       }
+      }
+     },
+     "404": {
+      "description": "not found",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Error"
+        }
+       }
+      }
+     }
+    }
+   },
+   "put": {
+    "summary": "edit a change (the same as PATCH: the fields given)",
+    "parameters": [
+     {
+      "name": "X-CCU-Addon-Request",
+      "in": "header",
+      "required": true,
+      "description": "the CSRF header every writing request carries (any value)",
+      "schema": {
+       "type": "string",
+       "example": "1"
+      }
+     },
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "description": "the change's id",
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/Patch"
+       }
+      }
+     }
+    },
+    "responses": {
+     "200": {
+      "description": "OK",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Change"
+        }
+       }
+      }
+     },
+     "400": {
+      "description": "the body is not valid JSON for the route",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Error"
+        }
+       }
+      }
+     },
+     "403": {
+      "description": "no CSRF header, or the level does not suffice",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Error"
+        }
+       }
+      }
+     },
+     "404": {
+      "description": "not found",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Error"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "invalid input (error code in the body)",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Error"
+        }
+       }
+      }
+     },
+     "503": {
+      "description": "the database is not available, or being moved (Retry-After)",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Error"
+        }
+       }
+      }
+     }
+    }
+   },
+   "patch": {
+    "summary": "edit a change: confirm (status accepted), reject, another date, the batteries, the note",
+    "parameters": [
+     {
+      "name": "X-CCU-Addon-Request",
+      "in": "header",
+      "required": true,
+      "description": "the CSRF header every writing request carries (any value)",
+      "schema": {
+       "type": "string",
+       "example": "1"
+      }
+     },
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "description": "the change's id",
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/Patch"
+       }
+      }
+     }
+    },
+    "responses": {
+     "200": {
+      "description": "OK",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Change"
+        }
+       }
+      }
+     },
+     "400": {
+      "description": "the body is not valid JSON for the route",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Error"
+        }
+       }
+      }
+     },
+     "403": {
+      "description": "no CSRF header, or the level does not suffice",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Error"
+        }
+       }
+      }
+     },
+     "404": {
+      "description": "not found",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Error"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "invalid input (error code in the body)",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Error"
+        }
+       }
+      }
+     },
+     "503": {
+      "description": "the database is not available, or being moved (Retry-After)",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Error"
+        }
+       }
+      }
+     }
+    }
+   },
+   "delete": {
+    "summary": "delete a change",
+    "parameters": [
+     {
+      "name": "X-CCU-Addon-Request",
+      "in": "header",
+      "required": true,
+      "description": "the CSRF header every writing request carries (any value)",
+      "schema": {
+       "type": "string",
+       "example": "1"
+      }
+     },
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "description": "the change's id",
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "204": {
+      "description": "deleted"
+     },
+     "403": {
+      "description": "no CSRF header, or the level does not suffice",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Error"
+        }
+       }
+      }
+     },
+     "404": {
+      "description": "not found",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Error"
+        }
+       }
+      }
+     },
+     "503": {
+      "description": "the database is not available, or being moved (Retry-After)",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Error"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/changes/by-external-id/{ext}": {
+   "put": {
+    "summary": "edit the change a client knows by its external id",
+    "parameters": [
+     {
+      "name": "X-CCU-Addon-Request",
+      "in": "header",
+      "required": true,
+      "description": "the CSRF header every writing request carries (any value)",
+      "schema": {
+       "type": "string",
+       "example": "1"
+      }
+     },
+     {
+      "name": "ext",
+      "in": "path",
+      "required": true,
+      "description": "the external id",
+      "schema": {
+       "type": "string"
+      }
+     },
+     {
+      "name": "source",
+      "in": "query",
+      "description": "import (default) or manual",
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/Patch"
+       }
+      }
+     }
+    },
+    "responses": {
+     "200": {
+      "description": "OK",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Change"
+        }
+       }
+      }
+     },
+     "400": {
+      "description": "the body is not valid JSON for the route",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Error"
+        }
+       }
+      }
+     },
+     "403": {
+      "description": "no CSRF header, or the level does not suffice",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Error"
+        }
+       }
+      }
+     },
+     "404": {
+      "description": "not found",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Error"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "invalid input (error code in the body)",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Error"
+        }
+       }
+      }
+     }
+    }
+   },
+   "patch": {
+    "summary": "the same as PUT",
+    "parameters": [
+     {
+      "name": "X-CCU-Addon-Request",
+      "in": "header",
+      "required": true,
+      "description": "the CSRF header every writing request carries (any value)",
+      "schema": {
+       "type": "string",
+       "example": "1"
+      }
+     },
+     {
+      "name": "ext",
+      "in": "path",
+      "required": true,
+      "description": "the external id",
+      "schema": {
+       "type": "string"
+      }
+     },
+     {
+      "name": "source",
+      "in": "query",
+      "description": "import (default) or manual",
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/Patch"
+       }
+      }
+     }
+    },
+    "responses": {
+     "200": {
+      "description": "OK",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Change"
+        }
+       }
+      }
+     },
+     "400": {
+      "description": "the body is not valid JSON for the route",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Error"
+        }
+       }
+      }
+     },
+     "403": {
+      "description": "no CSRF header, or the level does not suffice",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Error"
+        }
+       }
+      }
+     },
+     "404": {
+      "description": "not found",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Error"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "invalid input (error code in the body)",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Error"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/samples": {
+   "get": {
+    "summary": "a device's stored voltage samples",
+    "parameters": [
+     {
+      "name": "device",
+      "in": "query",
+      "description": "an address (required)",
+      "schema": {
+       "type": "string"
+      }
+     },
+     {
+      "name": "interface",
+      "in": "query",
+      "description": "when the address is ambiguous",
+      "schema": {
+       "type": "string"
+      }
+     },
+     {
+      "name": "from",
+      "in": "query",
+      "description": "a time",
+      "schema": {
+       "type": "string"
+      }
+     },
+     {
+      "name": "to",
+      "in": "query",
+      "description": "a time",
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "OK",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "object"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "invalid input (error code in the body)",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Error"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/samples:bulk": {
+   "post": {
+    "summary": "import voltage/low-battery samples (source import), downsampled on the way in",
+    "parameters": [
+     {
+      "name": "X-CCU-Addon-Request",
+      "in": "header",
+      "required": true,
+      "description": "the CSRF header every writing request carries (any value)",
+      "schema": {
+       "type": "string",
+       "example": "1"
+      }
+     },
+     {
+      "name": "dry_run",
+      "in": "query",
+      "description": "answer what would happen without writing",
+      "schema": {
+       "type": "boolean"
+      }
+     },
+     {
+      "name": "Idempotency-Key",
+      "in": "header",
+      "required": false,
+      "description": "a retried request with the same key and body within 24 h gets the stored answer (header Idempotent-Replayed: true); another body under the same key is a 409",
+      "schema": {
+       "type": "string",
+       "maxLength": 200
+      }
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "type": "array",
+        "items": {
+         "$ref": "#/components/schemas/SampleInput"
+        }
+       }
+      }
+     }
+    },
+    "responses": {
+     "200": {
+      "description": "OK",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/SamplesResult"
+        }
+       }
+      }
+     },
+     "400": {
+      "description": "the body is not valid JSON for the route",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Error"
+        }
+       }
+      }
+     },
+     "403": {
+      "description": "no CSRF header, or the level does not suffice",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Error"
+        }
+       }
+      }
+     },
+     "409": {
+      "description": "conflict",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Error"
+        }
+       }
+      }
+     },
+     "503": {
+      "description": "the database is not available, or being moved (Retry-After)",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Error"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/detect": {
+   "post": {
+    "summary": "run the detector over the stored samples of a span and file what it offers as pending changes",
+    "parameters": [
+     {
+      "name": "X-CCU-Addon-Request",
+      "in": "header",
+      "required": true,
+      "description": "the CSRF header every writing request carries (any value)",
+      "schema": {
+       "type": "string",
+       "example": "1"
+      }
+     },
+     {
+      "name": "device",
+      "in": "query",
+      "description": "one address (default: all)",
+      "schema": {
+       "type": "string"
+      }
+     },
+     {
+      "name": "from",
+      "in": "query",
+      "description": "a time",
+      "schema": {
+       "type": "string"
+      }
+     },
+     {
+      "name": "to",
+      "in": "query",
+      "description": "a time (default: now)",
+      "schema": {
+       "type": "string"
+      }
+     },
+     {
+      "name": "dry_run",
+      "in": "query",
+      "description": "answer what would happen without writing",
+      "schema": {
+       "type": "boolean"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "OK",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/DetectResult"
+        }
+       }
+      }
+     },
+     "403": {
+      "description": "no CSRF header, or the level does not suffice",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Error"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "invalid input (error code in the body)",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Error"
+        }
+       }
+      }
+     },
+     "503": {
+      "description": "the database is not available, or being moved (Retry-After)",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Error"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/suggestions": {
+   "get": {
+    "summary": "values recorded for a battery field, most used first (autocompletion)",
+    "parameters": [
+     {
+      "name": "field",
+      "in": "query",
+      "description": "vendor, product, type or chemistry",
+      "schema": {
+       "type": "string"
+      }
+     },
+     {
+      "name": "q",
+      "in": "query",
+      "description": "matched case-insensitively anywhere",
+      "schema": {
+       "type": "string"
+      }
+     },
+     {
+      "name": "limit",
+      "in": "query",
+      "description": "at most this many (20)",
+      "schema": {
+       "type": "integer"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "OK",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "object",
+         "properties": {
+          "suggestions": {
+           "type": "array",
+           "items": {
+            "$ref": "#/components/schemas/Suggestion"
+           }
+          }
+         }
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "invalid input (error code in the body)",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Error"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/export.json": {
+   "get": {
+    "summary": "everything: devices, slots, overrides, changes, events, samples",
+    "responses": {
+     "200": {
+      "description": "OK",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "object"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/export.csv": {
+   "get": {
+    "summary": "the accepted changes in the bulk CSV format (with an interface column)",
+    "responses": {
+     "200": {
+      "description": "CSV",
+      "content": {
+       "text/csv": {
+        "schema": {
+         "type": "string"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/settings": {
+   "get": {
+    "summary": "the detection and merge windows in force (set in etc/battery.json)",
+    "responses": {
+     "200": {
+      "description": "OK",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "object"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/storage": {
+   "get": {
+    "summary": "the database's location, health and the candidate locations",
+    "responses": {
+     "200": {
+      "description": "OK",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "object"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/storage/check": {
+   "post": {
+    "summary": "check a location without moving",
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "type": "object",
+        "properties": {
+         "location": {
+          "type": "string"
+         },
+         "folder": {
+          "type": "string"
+         }
+        }
+       }
+      }
+     }
+    },
+    "responses": {
+     "200": {
+      "description": "OK",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "object"
+        }
+       }
+      }
+     },
+     "400": {
+      "description": "the body is not valid JSON for the route",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Error"
+        }
+       }
+      }
+     },
+     "403": {
+      "description": "no CSRF header, or the level does not suffice",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Error"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "invalid input (error code in the body)",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Error"
+        }
+       }
+      }
+     }
+    },
+    "parameters": [
+     {
+      "name": "X-CCU-Addon-Request",
+      "in": "header",
+      "required": true,
+      "description": "the CSRF header every writing request carries (any value)",
+      "schema": {
+       "type": "string",
+       "example": "1"
+      }
+     }
+    ]
+   }
+  },
+  "/api/v1/storage/move": {
+   "post": {
+    "summary": "move the database (administrators)",
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "type": "object",
+        "properties": {
+         "location": {
+          "type": "string"
+         },
+         "folder": {
+          "type": "string"
+         },
+         "keep_old": {
+          "type": "boolean"
+         }
+        }
+       }
+      }
+     }
+    },
+    "responses": {
+     "200": {
+      "description": "OK",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "object"
+        }
+       }
+      }
+     },
+     "400": {
+      "description": "the body is not valid JSON for the route",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Error"
+        }
+       }
+      }
+     },
+     "403": {
+      "description": "no CSRF header, or the level does not suffice",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Error"
+        }
+       }
+      }
+     },
+     "409": {
+      "description": "conflict",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Error"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "invalid input (error code in the body)",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Error"
+        }
+       }
+      }
+     }
+    },
+    "parameters": [
+     {
+      "name": "X-CCU-Addon-Request",
+      "in": "header",
+      "required": true,
+      "description": "the CSRF header every writing request carries (any value)",
+      "schema": {
+       "type": "string",
+       "example": "1"
+      }
+     }
+    ]
+   }
+  },
+  "/api/v1/openapi.json": {
+   "get": {
+    "summary": "this document",
+    "responses": {
+     "200": {
+      "description": "OK",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "object"
+        }
+       }
+      }
+     }
+    }
+   }
+  }
+ }
+}

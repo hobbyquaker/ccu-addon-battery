@@ -9,6 +9,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/hobbyquaker/ccu-addon-battery/internal/batteries"
+	"github.com/hobbyquaker/ccu-addon-battery/internal/changes"
 	"github.com/hobbyquaker/ccu-addon-battery/internal/store"
 	"github.com/hobbyquaker/ccu-addon-kit/go/addonkit"
 	"github.com/hobbyquaker/ccu-addon-kit/go/litesource"
@@ -261,5 +263,71 @@ func TestDailyRow(t *testing.T) {
 	rows, _ := st.Samples(ctx, "HmIP-RF", "WRC2", 0, 0)
 	if len(rows) != 3 {
 		t.Fatalf("rows: %+v", rows)
+	}
+}
+
+// With the change keeper as the Observer: the table gives power and slots, an EXTERNAL status
+// overrides the power, and live reports reach the detector (a BOOTED with a jump opens a
+// candidate row).
+func TestObserverProfilesAndDetection(t *testing.T) {
+	s := system(t)
+	st, err := store.Open(store.Config{AddonDir: t.TempDir(), Log: t.Logf})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer st.Close()
+	chg := changes.New(changes.Options{Store: st, Log: t.Logf})
+	c := litesource.New(s.URL, addonkit.StaticToken("olt_test"))
+	c.Reconnect.Min, c.Reconnect.Max = 10*time.Millisecond, 50*time.Millisecond
+	r := New(Options{Source: c, Store: st, Observer: chg, Log: t.Logf, ReadPause: time.Millisecond})
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	go r.Run(ctx)
+	waitFor(t, func() bool { return r.State() == "live" && s.Streams() > 0 })
+	views := r.Devices("en")
+	want := map[string][2]string{"WRC2": {"battery", "2× AAA"}, "BBL": {"mains", ""}, "RTDN": {"battery", "2× AA"}, "SC": {"battery", "2× LR44"}}
+	for addr, w := range want {
+		v := find(views, addr)
+		if v == nil || v.Power != w[0] || batteries.Describe(v.Profile.Slots) != w[1] {
+			t.Errorf("%s: %+v", addr, v)
+		}
+	}
+	st.Flush()
+	db, _ := st.DB()
+	var n int
+	db.QueryRow(`SELECT COUNT(*) FROM slots WHERE address = 'WRC2' AND count = 2 AND type = 'AAA'`).Scan(&n)
+	if n != 1 {
+		t.Fatalf("slots rows: %d", n)
+	}
+	// the WRC2 on a desk stand reports an external supply
+	s.PushEvent("HmIP-RF", "WRC2:0", "OPERATING_VOLTAGE_STATUS", 3)
+	waitFor(t, func() bool { return find(r.Devices("en"), "WRC2").Power == "external" })
+	s.PushEvent("HmIP-RF", "WRC2:0", "OPERATING_VOLTAGE_STATUS", 0)
+	waitFor(t, func() bool { return find(r.Devices("en"), "WRC2").Power == "battery" })
+	// a re-seat: BOOTED and a jump from the seeded 2.9 V; a candidate row, not an inbox entry
+	s.PushEvent("HmIP-RF", "WRC2:0", "BOOTED", true)
+	time.Sleep(3 * time.Millisecond)
+	s.PushEvent("HmIP-RF", "WRC2:0", "OPERATING_VOLTAGE", 3.2)
+	var l []changes.Change
+	waitFor(t, func() bool {
+		l, _ = chg.List(context.Background(), changes.Filter{Statuses: []string{changes.StatusCandidate}})
+		return len(l) == 1 && l[0].Rule == "A+B"
+	})
+	if len(l) != 1 || !strings.Contains(string(l[0].Evidence), `"voltage_after":3.2`) {
+		t.Fatalf("%+v", l)
+	}
+	// an override (rechargeables) is written into the slots by Reprofile
+	tr := true
+	if err := chg.SetDeviceOverride(context.Background(), "HmIP-RF", "WRC2", &batteries.Override{Rechargeable: &tr}); err != nil {
+		t.Fatal(err)
+	}
+	r.Reprofile(context.Background())
+	if v := find(r.Devices("en"), "WRC2"); v.Profile.Source != "override" || v.Profile.Slots[0].Chemistry != "nimh" {
+		t.Fatalf("%+v", v.Profile)
+	}
+	st.Flush()
+	db.QueryRow(`SELECT COUNT(*) FROM slots WHERE address = 'WRC2' AND rechargeable = 1`).Scan(&n)
+	if n != 1 {
+		t.Fatal("the override's slots were not written")
 	}
 }

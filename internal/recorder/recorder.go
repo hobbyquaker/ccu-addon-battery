@@ -2,7 +2,8 @@
 // and which of them report a voltage or a low-battery flag, seeds their last values from the
 // state store (and, for HmIP, from hmipserver's cache, which costs no air), follows the event
 // stream, keeps the current values, and writes downsampled samples and the evidence events into
-// the store. It records; the detection of a battery change is P1's.
+// the store. Every report is handed on to the Observer (the change keeper and its detector), and
+// the Observer's battery profile gives each device its power source and slots.
 package recorder
 
 import (
@@ -15,6 +16,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/hobbyquaker/ccu-addon-battery/internal/batteries"
+	"github.com/hobbyquaker/ccu-addon-battery/internal/detect"
 	"github.com/hobbyquaker/ccu-addon-battery/internal/store"
 	"github.com/hobbyquaker/ccu-addon-kit/go/litesource"
 )
@@ -25,15 +28,24 @@ var Keys = []string{"OPERATING_VOLTAGE", "OPERATING_VOLTAGE_STATUS", "LOW_BAT", 
 // Downsampling: a row when the voltage moved by Step or more since the last row, the low-battery
 // flag changed, or MaxGap passed since the last row, whichever comes first.
 const (
-	Step   = 0.01
-	MaxGap = 24 * time.Hour
+	Step   = store.SampleStep
+	MaxGap = store.SampleMaxGap
 )
+
+// Observer takes what the recorder sees: the battery profile of a device (power, slots, levels)
+// and every report as a detector observation.
+type Observer interface {
+	Profile(ctx context.Context, d store.Device, maxV float64) batteries.Profile
+	Observe(ctx context.Context, d store.Device, o detect.Obs)
+}
 
 // Options configure the recorder.
 type Options struct {
 	Source litesource.Source
 	Store  *store.Store
-	Log    func(string, ...any)
+	// Observer gets the reports; nil records only.
+	Observer Observer
+	Log      func(string, ...any)
 	// ReadPause is the pause between two HmIP :0 reads at the seed (200 ms, as the system's own
 	// sweep); a test shortens it.
 	ReadPause time.Duration
@@ -50,6 +62,7 @@ type Recorder struct {
 	names *litesource.Names
 	state string // starting | seeding | live | degraded
 	last  map[string]store.Sample
+	ctx   context.Context
 }
 
 type device struct {
@@ -57,6 +70,7 @@ type device struct {
 	cur     store.Current
 	hmip    bool
 	tracked bool
+	profile batteries.Profile
 }
 
 // New makes a recorder; Run starts it.
@@ -70,7 +84,7 @@ func New(o Options) *Recorder {
 	if o.Now == nil {
 		o.Now = time.Now
 	}
-	r := &Recorder{o: o, logf: o.Log, devs: map[string]*device{}, state: "starting", last: map[string]store.Sample{}}
+	r := &Recorder{o: o, logf: o.Log, devs: map[string]*device{}, state: "starting", last: map[string]store.Sample{}, ctx: context.Background()}
 	return r
 }
 
@@ -89,6 +103,9 @@ func (r *Recorder) setState(s string) {
 
 // Run loads what the store has, learns the devices, seeds and follows the stream until ctx ends.
 func (r *Recorder) Run(ctx context.Context) error {
+	r.mu.Lock()
+	r.ctx = ctx
+	r.mu.Unlock()
 	r.loadStore(ctx)
 	if err := r.learnDevices(ctx); err != nil {
 		r.logf("recorder: learning the devices: %v (will retry with the stream)", err)
@@ -152,6 +169,9 @@ func (r *Recorder) loadStore(ctx context.Context) {
 		if d := r.devs[c.Interface+"."+c.Address]; d != nil {
 			d.cur = c
 		}
+	}
+	for _, d := range r.devs {
+		r.profileLocked(ctx, d, false)
 	}
 	for k, d := range r.devs {
 		if d.cur.VoltageTS != 0 {
@@ -243,13 +263,51 @@ func (r *Recorder) learnDevices(ctx context.Context) error {
 			ex.Device = dev
 			ex.hmip = strings.HasPrefix(iface.Name, "HmIP")
 			ex.tracked = dev.VoltageDP != "" || dev.LowBatDP != ""
-			r.mu.Unlock()
 			if ex.tracked {
-				r.o.Store.UpsertDevice(dev)
+				r.profileLocked(ctx, ex, true)
+				r.o.Store.UpsertDevice(ex.Device)
 			}
+			r.mu.Unlock()
 		}
 	}
 	return nil
+}
+
+// profileLocked asks the Observer for the device's profile and takes power and slots from it;
+// an external supply the device reports wins over the table's power. slots writes the slots.
+func (r *Recorder) profileLocked(ctx context.Context, d *device, slots bool) {
+	if r.o.Observer == nil {
+		return
+	}
+	maxV := 0.0
+	if d.cur.Voltage != nil {
+		maxV = *d.cur.Voltage
+	}
+	d.profile = r.o.Observer.Profile(ctx, d.Device, maxV)
+	d.Power = d.profile.Power
+	if d.cur.VoltageStatus == "EXTERNAL" {
+		d.Power = "external"
+	}
+	if slots {
+		var sl []store.Slot
+		for _, s := range d.profile.Slots {
+			sl = append(sl, store.Slot{Count: s.Count, Type: s.Type, Chemistry: s.Chemistry, Rechargeable: s.Chemistry == "nimh"})
+		}
+		r.o.Store.PutSlots(d.Interface, d.Address, sl)
+	}
+}
+
+// Reprofile recomputes every device's profile (after an override changed) and writes power and
+// slots.
+func (r *Recorder) Reprofile(ctx context.Context) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	for _, d := range r.devs {
+		if d.tracked {
+			r.profileLocked(ctx, d, true)
+			r.o.Store.UpsertDevice(d.Device)
+		}
+	}
 }
 
 func isThermostatChannel(t string) bool {
@@ -349,6 +407,7 @@ func (r *Recorder) apply(e litesource.Event, live bool) {
 	cur := &d.cur
 	changed := false
 	var sample bool
+	obs := detect.Obs{TS: ms, Seed: !live}
 	switch e.Key {
 	case "OPERATING_VOLTAGE", "BATTERY_STATE":
 		if want := strconv.Itoa(e.Channel()) + "/" + e.Key; want != d.VoltageDP {
@@ -364,13 +423,18 @@ func (r *Recorder) apply(e litesource.Event, live bool) {
 		vv := v
 		cur.Voltage, cur.VoltageTS = &vv, ms
 		sample = true
+		ov := v
+		obs.Voltage = &ov
 	case "OPERATING_VOLTAGE_STATUS":
 		s := statusName(e)
 		if s != cur.VoltageStatus {
 			cur.VoltageStatus = s
 			changed = true
-			if s == "EXTERNAL" && d.Power == "unknown" {
+			if s == "EXTERNAL" && d.Power != "external" {
 				d.Power = "external"
+				r.o.Store.UpsertDevice(d.Device)
+			} else if s != "EXTERNAL" && d.Power == "external" && d.profile.Power != "" && d.profile.Power != "external" {
+				d.Power = d.profile.Power
 				r.o.Store.UpsertDevice(d.Device)
 			}
 		}
@@ -389,6 +453,8 @@ func (r *Recorder) apply(e litesource.Event, live bool) {
 		}
 		bb := b
 		cur.LowBat = &bb
+		ob := b
+		obs.LowBat = &ob
 	case "UNREACH":
 		b, ok := e.Bool()
 		if !ok {
@@ -403,6 +469,8 @@ func (r *Recorder) apply(e litesource.Event, live bool) {
 		}
 		bb := b
 		cur.Unreach = &bb
+		ob := b
+		obs.Unreach = &ob
 	case "BOOTED":
 		b, ok := e.Bool()
 		if !ok {
@@ -416,6 +484,8 @@ func (r *Recorder) apply(e litesource.Event, live bool) {
 		}
 		bb := b
 		cur.Booted = &bb
+		ob := b
+		obs.Booted = &ob
 	default:
 		r.mu.Unlock()
 		return
@@ -429,7 +499,12 @@ func (r *Recorder) apply(e litesource.Event, live bool) {
 	if changed || sample {
 		r.o.Store.PutCurrent(*cur)
 	}
+	dev := d.Device
+	ctx := r.ctx
 	r.mu.Unlock()
+	if r.o.Observer != nil && (obs.Voltage != nil || obs.LowBat != nil || obs.Unreach != nil || obs.Booted != nil) {
+		r.o.Observer.Observe(ctx, dev, obs)
+	}
 }
 
 func statusName(e litesource.Event) string {
@@ -547,6 +622,8 @@ type View struct {
 	UnreachSince  int64    `json:"unreach_since,omitempty"`
 	LastReport    int64    `json:"last_report,omitempty"`
 	FirstSeen     int64    `json:"first_seen"`
+	// Profile is the battery profile: slots, levels, where it came from.
+	Profile batteries.Profile `json:"profile"`
 }
 
 // Devices answers every tracked device with its current values and names in lang.
@@ -560,7 +637,10 @@ func (r *Recorder) Devices(lang string) []View {
 		}
 		v := View{Interface: d.Interface, Address: d.Address, Model: d.Model, Firmware: d.Firmware, Power: d.Power, VoltageDP: d.VoltageDP, LowBatDP: d.LowBatDP,
 			Voltage: d.cur.Voltage, VoltageTS: d.cur.VoltageTS, VoltageStatus: d.cur.VoltageStatus, LowBat: d.cur.LowBat, LowBatSince: d.cur.LowBatSince,
-			Unreach: d.cur.Unreach, UnreachSince: d.cur.UnreachSince, LastReport: d.cur.LastReport, FirstSeen: d.FirstSeen, Rooms: []string{}}
+			Unreach: d.cur.Unreach, UnreachSince: d.cur.UnreachSince, LastReport: d.cur.LastReport, FirstSeen: d.FirstSeen, Rooms: []string{}, Profile: d.profile}
+		if v.Profile.Slots == nil {
+			v.Profile.Slots = []batteries.Slot{}
+		}
 		if r.names != nil {
 			v.Name = r.names.Name(d.Interface, d.Address)
 			if rooms := r.names.RoomNames(d.Interface, d.Address, lang); rooms != nil {

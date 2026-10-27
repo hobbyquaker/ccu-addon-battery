@@ -1,7 +1,8 @@
 // Package httpapi is the addon's own HTTP server: the Svelte app's files and the JSON API under
 // one base path (/addons/battery/), which lighttpd proxies to the loopback port. Every request
 // carries the gate's session header, confirmed through addonkit; writes carry the kit's CSRF
-// header and need an administrator.
+// header; moving the database needs an administrator. docs/api.md documents the routes and
+// docs/openapi.json (served at api/v1/openapi.json) specifies them.
 package httpapi
 
 import (
@@ -15,6 +16,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/hobbyquaker/ccu-addon-battery/internal/changes"
 	"github.com/hobbyquaker/ccu-addon-battery/internal/recorder"
 	"github.com/hobbyquaker/ccu-addon-battery/internal/store"
 	"github.com/hobbyquaker/ccu-addon-kit/go/addonkit"
@@ -28,6 +30,7 @@ type Options struct {
 	WWW      string
 	Store    *store.Store
 	Recorder *recorder.Recorder
+	Changes  *changes.Service
 	// Session checks the sessions; nil serves without a check (development only).
 	Session *addonkit.Checker
 	Version string
@@ -38,11 +41,12 @@ type Options struct {
 func New(o Options) http.Handler {
 	o.BasePath = strings.TrimRight(o.BasePath, "/")
 	api := http.NewServeMux()
-	api.HandleFunc("GET /api/v1/health", o.health)
-	api.HandleFunc("GET /api/v1/devices", o.devices)
-	api.HandleFunc("GET /api/v1/storage", o.storage)
-	api.HandleFunc("POST /api/v1/storage/check", o.storageCheck)
-	api.HandleFunc("POST /api/v1/storage/move", o.storageMove)
+	handle(api, "GET /api/v1/health", o.health)
+	handle(api, "GET /api/v1/devices", o.devices)
+	handle(api, "GET /api/v1/storage", o.storage)
+	handle(api, "POST /api/v1/storage/check", o.storageCheck)
+	handle(api, "POST /api/v1/storage/move", o.storageMove)
+	o.routesChanges(api)
 	api.HandleFunc("/api/", func(w http.ResponseWriter, r *http.Request) {
 		addonkit.WriteError(w, http.StatusNotFound, "not-found", r.URL.Path)
 	})
@@ -56,6 +60,22 @@ func New(o Options) http.Handler {
 		h = o.Session.Handler(h)
 	}
 	return guard(h)
+}
+
+// Routes lists every "METHOD /path" the API serves; a test holds docs/openapi.json to it.
+var Routes []string
+
+func handle(mux *http.ServeMux, pattern string, h http.HandlerFunc) {
+	found := false
+	for _, r := range Routes {
+		if r == pattern {
+			found = true
+		}
+	}
+	if !found {
+		Routes = append(Routes, pattern)
+	}
+	mux.HandleFunc(pattern, h)
 }
 
 // guard refuses a path that is not clean (the mux would redirect it, and after StripPrefix the
@@ -98,7 +118,20 @@ func (o Options) health(w http.ResponseWriter, r *http.Request) {
 		"recorder": o.Recorder.State(),
 		"storage":  o.Store.Health(),
 		"devices":  len(o.Recorder.Devices("en")),
+		"inbox":    o.inbox(r),
 	})
+}
+
+// inbox counts the detections waiting for the user, -1 when the store cannot say.
+func (o Options) inbox(r *http.Request) int {
+	if o.Changes == nil {
+		return 0
+	}
+	l, err := o.Changes.List(r.Context(), changes.Filter{Statuses: []string{changes.StatusPending}})
+	if err != nil {
+		return -1
+	}
+	return len(l)
 }
 
 func (o Options) devices(w http.ResponseWriter, r *http.Request) {

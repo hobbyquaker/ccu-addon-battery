@@ -5,6 +5,7 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"flag"
 	"fmt"
 	"log"
@@ -15,6 +16,8 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/hobbyquaker/ccu-addon-battery/internal/changes"
+	"github.com/hobbyquaker/ccu-addon-battery/internal/detect"
 	"github.com/hobbyquaker/ccu-addon-battery/internal/httpapi"
 	"github.com/hobbyquaker/ccu-addon-battery/internal/recorder"
 	"github.com/hobbyquaker/ccu-addon-battery/internal/store"
@@ -89,7 +92,12 @@ func run(addonDir, id string, port int, base, basePath, www, tokenFile string, f
 		}
 	}
 
-	rec := recorder.New(recorder.Options{Source: src, Store: st, Log: log.Printf})
+	params, merge := detectionSettings(filepath.Join(addonDir, "etc", "battery.json"))
+	chg := changes.New(changes.Options{Store: st, Params: params, MergeWindow: merge, Log: log.Printf})
+	go chg.Run(ctx)
+	log.Printf("battery: detection window %s, merge window %s", params.Window, merge)
+
+	rec := recorder.New(recorder.Options{Source: src, Store: st, Observer: chg, Log: log.Printf})
 	go func() {
 		if err := rec.Run(ctx); err != nil && ctx.Err() == nil {
 			log.Printf("battery: recorder ended: %v", err)
@@ -102,7 +110,7 @@ func run(addonDir, id string, port int, base, basePath, www, tokenFile string, f
 			log.Printf("battery: refused %s %s: %s", r.Method, r.URL.Path, reason)
 		}})
 	}
-	h := httpapi.New(httpapi.Options{BasePath: basePath, WWW: www, Store: st, Recorder: rec, Session: checker, Version: version, Started: time.Now()})
+	h := httpapi.New(httpapi.Options{BasePath: basePath, WWW: www, Store: st, Recorder: rec, Changes: chg, Session: checker, Version: version, Started: time.Now()})
 	l, err := addonkit.Listen(port, "")
 	if err != nil {
 		return err
@@ -124,4 +132,37 @@ func run(addonDir, id string, port int, base, basePath, www, tokenFile string, f
 	}
 	os.Stdout.Sync()
 	return nil
+}
+
+// detectionSettings reads the "detection" key of etc/battery.json: {"window_hours": 24,
+// "merge_window_hours": 48, "expire_hours": 168}. Absent or zero keys keep the defaults.
+func detectionSettings(path string) (detect.Params, time.Duration) {
+	p := detect.DefaultParams()
+	merge := 48 * time.Hour
+	b, err := os.ReadFile(path)
+	if err != nil {
+		return p, merge
+	}
+	var f struct {
+		Detection struct {
+			WindowHours      float64 `json:"window_hours"`
+			ExpireHours      float64 `json:"expire_hours"`
+			MergeWindowHours float64 `json:"merge_window_hours"`
+		} `json:"detection"`
+	}
+	if err := json.Unmarshal(b, &f); err != nil {
+		log.Printf("battery: %s: %v (detection defaults)", path, err)
+		return p, merge
+	}
+	hours := func(h float64) time.Duration { return time.Duration(h * float64(time.Hour)) }
+	if h := f.Detection.WindowHours; h > 0 {
+		p.Window = hours(h)
+	}
+	if h := f.Detection.ExpireHours; h > 0 {
+		p.Expire = hours(h)
+	}
+	if h := f.Detection.MergeWindowHours; h > 0 {
+		merge = hours(h)
+	}
+	return p, merge
 }

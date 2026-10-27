@@ -1,0 +1,129 @@
+# The API
+
+The addon serves its API under its own path, `/addons/battery/api/v1/`, behind the system's
+session gate - the same gate as its page. [openapi.json](openapi.json) specifies every route
+(served at `api/v1/openapi.json`); this page explains them and the rules behind them.
+
+## Access
+
+- **A browser** that shows the addon's page has the gate cookie already.
+- **A script** logs in first and keeps the cookie:
+
+```sh
+SYS=http://<system>
+curl -sc jar -H 'Content-Type: application/json' \
+     -d '{"username":"admin","password":"…"}' $SYS/api/auth/v1/login
+curl -sb jar $SYS/addons/battery/api/v1/devices
+curl -sb jar -H 'X-CCU-Addon-Request: 1' -H 'Content-Type: text/csv' \
+     --data-binary @changes.csv "$SYS/addons/battery/api/v1/changes:bulk?dry_run=true"
+```
+
+- **Every writing request** (POST, PUT, PATCH, DELETE) carries the header `X-CCU-Addon-Request`
+  (any value): a page of another site cannot set it, so it cannot write in the user's name.
+- Reading and writing need a session of level `operate` or above; moving the database needs an
+  administrator. The system's API tokens (`olt_…`) do not open the gate.
+
+**Times** are Unix milliseconds in every answer. Requests take milliseconds, an RFC 3339 string
+(`2024-03-01T08:30:00+01:00`) or a date (`2024-03-01`, noon in the system's time zone). **Errors**
+answer `{"error": "<code>", "message": "…"}`: 400 for a body that is not JSON for the route (unknown
+fields are refused, so a typo does not pass silently), 404, 422 with a code (`invalid`,
+`unknown-device`, `ambiguous-device`), 503 `unavailable` or `busy` (the database is being moved;
+`Retry-After`).
+
+## Devices and the battery table
+
+| Route | Does |
+| --- | --- |
+| `GET devices` | every tracked device: interface, address, the name and rooms from the system, the model, the current voltage and flags, and `profile` - power source, slots, the levels the detector uses, and where they came from (`table`, `override`, `guess`, `none`) |
+| `GET models` | the models of this installation with their table rows; `?unknown=true` lists the ones the table lacks |
+| `GET models/{model}` | one model's row, override and profile; the lookup ignores case and knows the aliases |
+| `PUT`/`DELETE models/{model}/override` | fix the table for a model locally: `{"slots": [{"count": 2, "type": "AA"}], "power": "battery"}` |
+| `GET`/`PUT`/`DELETE devices/{interface}/{address}/override` | one device: `{"rechargeable": true}`, `{"chemistry": "lithium-aa"}`, `{"slots": [...]}` (a remote in a desk stand), `{"power": "external"}`, `{"outdoor": true}` |
+
+A device override wins over a model override, which wins over the table.
+
+## Changes
+
+A change is one battery change of one device: `at`, the `batteries` that went in (`count`,
+`type`, `chemistry`, `rechargeable`, `vendor`, `product`, `price_cents`, `lot`, per slot), a
+`note`, and how it came: `kind` `detected` (the detector), `confirmed` (detected, and a manual or
+imported entry said the same), `manual` or `import`. Its `status`:
+
+| Status | Meaning |
+| --- | --- |
+| `candidate` | detected, waiting for its confirmation window ([detection.md](detection.md)); not in the inbox |
+| `pending` | in the inbox, waiting for the user |
+| `accepted` | a change: confirmed by the user, or recorded by hand or by an import |
+| `rejected` | the user said no |
+| `discarded` | the detector's own no (a boot, a recovery); kept as evidence |
+
+| Route | Does |
+| --- | --- |
+| `GET changes?device=&from=&to=&status=&limit=` | the list, newest first; `status` takes a comma-separated list (`pending` is the inbox) |
+| `POST changes` | one change: `{"device": "<address>", "at": "2024-03-01", "batteries": [...], "note": "…", "source": "manual", "external_id": "…"}` → `201 {"status": "created", "id": …}` or `200` with `merged`/`duplicate` |
+| `GET`/`PUT`/`PATCH`/`DELETE changes/{id}` | one change; PUT and PATCH take the fields to change: `{"status": "accepted"}` confirms an inbox entry, `"rejected"` rejects it, `{"at": …, "status": "accepted"}` confirms it with another date |
+| `PUT`/`PATCH changes/by-external-id/{id}?source=import` | the same, for the change a client knows by its own id |
+| `POST changes:bulk` | many changes, see below |
+
+A device the addon has never seen (one that left the system before the install) can be named
+with `interface` and `model`; it is created as retired.
+
+### Dedup and merge
+
+- **`external_id`** is the client's own key, unique per `source`. The same id again answers
+  `duplicate` with the existing id, so an import can be repeated safely.
+- Without one, a manual or imported change **merges into a detected change of the same device
+  within ±48 h** (the merge window): the detected change keeps its evidence and its minute, takes
+  the batteries and the note, becomes `accepted` and `confirmed`. The answer says `merged` and
+  `merged_into`. A pending detection the user has not answered yet counts, and so does a
+  candidate still in its window.
+- A second manual or imported change of the same device within the window is a `duplicate`.
+- The other way round, a detection that comes into the inbox while a manual or imported change of
+  the device is within the window merges into that one.
+
+### Bulk
+
+`POST changes:bulk` takes a JSON array of the objects above (`source` defaults to `import`) or
+`text/csv` with the header
+
+```
+address,at,count,type,chemistry,rechargeable,vendor,product,price_cents,note,external_id
+```
+
+(`interface` and `model` may be added). One row per slot: rows with the same `address` and `at`
+are one change. `rechargeable` takes `true`, `1`, `yes` or `x`. The answer has one line per change
+(the CSV line it starts on, or the array index + 1): `created`, `merged`, `duplicate`, or `error`
+with a code and a reason, plus the counts.
+
+- `?dry_run=true` answers what would happen and writes nothing.
+- By default each row stands alone: a bad row is an error line, the others land. `?atomic=true`
+  applies all or nothing.
+- An `Idempotency-Key` header makes a retried request safe: the same key with the same body within
+  24 h gets the stored answer (`Idempotent-Replayed: true`); the same key with another body is a
+  409.
+
+`GET export.csv` writes the accepted changes in this format (with an `interface` column and an
+`external_id` for every row), so the file goes back in unchanged.
+
+## Samples and detection over history
+
+| Route | Does |
+| --- | --- |
+| `GET samples?device=&from=&to=` | a device's stored samples (`source` `live`, `seed` or `import`) |
+| `POST samples:bulk` | `[{"device": "<address>", "ts": …, "voltage": 2.91, "low_bat": false}]`: imported samples, downsampled on the way in by the live rule (a row when the voltage moved by 0.01 V, the flag changed or a day passed); a row already stored at that millisecond is kept. `?dry_run=true`; an `Idempotency-Key` as above |
+| `POST detect?device=&from=&to=&dry_run=` | runs the detector over the stored samples of the span (all devices, or one) and files what it offers as `pending`: a detection near a manual or imported change merges into it; one near a detected or rejected change is a `duplicate`. The answer lists what it found and counts the candidates it discarded |
+
+So a script with years of recorded values has two ways in: push the changes it knows
+(`changes:bulk`, with `external_id` = its own row id), or push the series (`samples:bulk`) and
+call `detect`, then go through the inbox. Both end in the same tables.
+
+## Other routes
+
+| Route | Does |
+| --- | --- |
+| `GET suggestions?field=vendor\|product\|type\|chemistry&q=` | the values recorded for a battery field, most used first, matched case-insensitively; spellings that differ only in case count as one (types and chemistries add the table's) |
+| `GET export.json` | everything: devices with their overrides, slots, model overrides, changes, events, samples |
+| `GET settings` | the detection and merge windows in force |
+| `GET health` | the addon's state; `inbox` counts the pending detections |
+| `GET storage`, `POST storage/check`, `POST storage/move` | the database's location ([storage.md](storage.md)) |
+| `GET openapi.json` | the specification |

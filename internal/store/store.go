@@ -20,6 +20,13 @@ import (
 	_ "modernc.org/sqlite"
 )
 
+// The downsampling of samples, live and imported: a row when the voltage moved by SampleStep or
+// more since the last row, the low-battery flag changed, or SampleMaxGap passed.
+const (
+	SampleStep   = 0.01
+	SampleMaxGap = 24 * time.Hour
+)
+
 // FileName is the database file's name at every location.
 const FileName = "battery.db"
 
@@ -370,6 +377,35 @@ func (s *Store) RetireDevice(iface, address string, at int64) {
 	})
 }
 
+// Slot is one row of slots: what a device takes, from its profile (the battery table and the
+// overrides).
+type Slot struct {
+	Count        int    `json:"count"`
+	Type         string `json:"type"`
+	Chemistry    string `json:"chemistry,omitempty"`
+	Rechargeable bool   `json:"rechargeable,omitempty"`
+}
+
+// PutSlots queues the slots of a device, replacing what was there.
+func (s *Store) PutSlots(iface, address string, slots []Slot) {
+	s.enqueue(func(tx *sql.Tx) error {
+		if _, err := tx.Exec(`DELETE FROM slots WHERE interface = ? AND address = ?`, iface, address); err != nil {
+			return err
+		}
+		for i, sl := range slots {
+			r := 0
+			if sl.Rechargeable {
+				r = 1
+			}
+			if _, err := tx.Exec(`INSERT INTO slots (interface, address, slot, count, type, chemistry, rechargeable) VALUES (?, ?, ?, ?, ?, ?, ?)`,
+				iface, address, i+1, sl.Count, sl.Type, sl.Chemistry, r); err != nil {
+				return err
+			}
+		}
+		return nil
+	})
+}
+
 // PutCurrent queues the current row of a device.
 func (s *Store) PutCurrent(c Current) {
 	s.enqueue(func(tx *sql.Tx) error {
@@ -428,6 +464,37 @@ func (s *Store) reader() (*sql.DB, error) {
 	}
 	return s.db, nil
 }
+
+// ErrBusy is answered by a write while the database is being moved.
+var ErrBusy = errors.New("the database is being moved; try again in a moment")
+
+// Write runs fn in a transaction now, not in the batch: what the user or a script changes is on
+// disk when the answer goes out. The batch is flushed first, so fn sees every queued row.
+func (s *Store) Write(ctx context.Context, fn func(tx *sql.Tx) error) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if s.db == nil {
+		return fmt.Errorf("%w: %v", ErrUnavailable, s.err)
+	}
+	if s.paused {
+		return ErrBusy
+	}
+	if err := s.flushLocked(); err != nil {
+		return err
+	}
+	tx, err := s.db.BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+	if err := fn(tx); err != nil {
+		tx.Rollback()
+		return err
+	}
+	return tx.Commit()
+}
+
+// DB is the open database for reads, ErrUnavailable while there is none.
+func (s *Store) DB() (*sql.DB, error) { return s.reader() }
 
 // Devices reads every device row, retired ones included.
 func (s *Store) Devices(ctx context.Context) ([]Device, error) {

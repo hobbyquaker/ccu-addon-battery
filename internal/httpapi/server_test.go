@@ -6,10 +6,13 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
 
+	"github.com/hobbyquaker/ccu-addon-battery/docs"
+	"github.com/hobbyquaker/ccu-addon-battery/internal/changes"
 	"github.com/hobbyquaker/ccu-addon-battery/internal/recorder"
 	"github.com/hobbyquaker/ccu-addon-battery/internal/store"
 	"github.com/hobbyquaker/ccu-addon-kit/go/addonkit"
@@ -47,9 +50,10 @@ func server(t *testing.T) (http.Handler, *store.Store, *fakelite.Server, string)
 		t.Fatal(err)
 	}
 	t.Cleanup(func() { st.Close() })
-	rec := recorder.New(recorder.Options{Source: litesource.New(s.URL, nil), Store: st, Log: t.Logf})
+	chg := changes.New(changes.Options{Store: st, Log: t.Logf})
+	rec := recorder.New(recorder.Options{Source: litesource.New(s.URL, nil), Store: st, Observer: chg, Log: t.Logf})
 	checker := addonkit.NewChecker(addonkit.SessionOptions{Base: s.URL, Platform: func() addonkit.Kind { return addonkit.OpenccuLite }})
-	h := New(Options{BasePath: "/addons/battery", WWW: www, Store: st, Recorder: rec, Session: checker, Version: "test", Started: time.Now()})
+	h := New(Options{BasePath: "/addons/battery", WWW: www, Store: st, Recorder: rec, Changes: chg, Session: checker, Version: "test", Started: time.Now()})
 	return h, st, s, addon
 }
 
@@ -143,5 +147,177 @@ func TestRoutes(t *testing.T) {
 	}
 	if w := call(h, "GET", "/addons/battery/api/v1/storage", user, ""); !strings.Contains(w.Body.String(), `"in_backup":false`) {
 		t.Fatalf("after the move: %s", w.Body)
+	}
+}
+
+// Every route the API serves is in docs/openapi.json with its method, and nothing more.
+func TestOpenAPICoversRoutes(t *testing.T) {
+	server(t)
+	var doc struct {
+		Paths map[string]map[string]any `json:"paths"`
+	}
+	if err := json.Unmarshal(docs.OpenAPI, &doc); err != nil {
+		t.Fatal(err)
+	}
+	seen := map[string]bool{}
+	for _, r := range Routes {
+		method, path, _ := strings.Cut(r, " ")
+		ops, ok := doc.Paths[path]
+		if !ok || ops[strings.ToLower(method)] == nil {
+			t.Errorf("%s is not in openapi.json", r)
+		}
+		seen[strings.ToLower(method)+" "+path] = true
+	}
+	for path, ops := range doc.Paths {
+		for m := range ops {
+			if !seen[m+" "+path] {
+				t.Errorf("openapi.json has %s %s, the API does not", m, path)
+			}
+		}
+	}
+}
+
+func TestChangesAPI(t *testing.T) {
+	h, st, _, _ := server(t)
+	st.UpsertDevice(store.Device{Interface: "HmIP-RF", Address: "WRC2", Model: "HmIP-WRC2", VoltageDP: "0/OPERATING_VOLTAGE", LowBatDP: "0/LOW_BAT", FirstSeen: 1, LastSeen: 1})
+	st.UpsertDevice(store.Device{Interface: "BidCos-RF", Address: "SC", Model: "HM-Sec-SC-2", LowBatDP: "0/LOWBAT", FirstSeen: 1, LastSeen: 1})
+	st.Flush()
+	csrf := []string{addonkit.HeaderRequest, "1"}
+	if w := call(h, "POST", "/addons/battery/api/v1/changes", user, `{"device":"WRC2","at":"2026-01-10"}`); w.Code != 403 {
+		t.Fatalf("no CSRF: %d", w.Code)
+	}
+	w := call(h, "POST", "/addons/battery/api/v1/changes", user, `{"device":"WRC2","at":"2026-01-10","batteries":[{"count":2,"type":"AAA","vendor":"Varta","price_cents":80}]}`, csrf...)
+	var out changes.Outcome
+	if w.Code != 201 || json.Unmarshal(w.Body.Bytes(), &out) != nil || out.Status != "created" {
+		t.Fatalf("create: %d %s", w.Code, w.Body)
+	}
+	if w := call(h, "POST", "/addons/battery/api/v1/changes", user, `{"device":"WRC2","at":"2026-01-11"}`, csrf...); w.Code != 200 || !strings.Contains(w.Body.String(), `"duplicate"`) {
+		t.Fatalf("duplicate: %d %s", w.Code, w.Body)
+	}
+	if w := call(h, "POST", "/addons/battery/api/v1/changes", user, `{"device":"NOPE","at":"2026-01-11"}`, csrf...); w.Code != 422 || !strings.Contains(w.Body.String(), "unknown-device") {
+		t.Fatalf("unknown: %d %s", w.Code, w.Body)
+	}
+	if w := call(h, "POST", "/addons/battery/api/v1/changes", user, `{"device":"WRC2","at":"2026-01-11","colour":"red"}`, csrf...); w.Code != 400 {
+		t.Fatalf("unknown field: %d %s", w.Code, w.Body)
+	}
+	// bulk CSV with an Idempotency-Key: the retry is replayed, not run again
+	csv := "address,at,count,type,chemistry,rechargeable,vendor,product,price_cents,note,external_id\nSC,2025-05-01,2,LR44,,,,,,,r1\nSC,2025-09-01,2,LR44,,,,,,,r2\n"
+	idem := append([]string{"Content-Type", "text/csv", "Idempotency-Key", "k1"}, csrf...)
+	w = call(h, "POST", "/addons/battery/api/v1/changes:bulk", user, csv, idem...)
+	if w.Code != 200 || !strings.Contains(w.Body.String(), `"created":2`) {
+		t.Fatalf("bulk: %d %s", w.Code, w.Body)
+	}
+	w = call(h, "POST", "/addons/battery/api/v1/changes:bulk", user, csv, idem...)
+	if w.Code != 200 || w.Header().Get("Idempotent-Replayed") != "true" || !strings.Contains(w.Body.String(), `"created":2`) {
+		t.Fatalf("replay: %d %s %v", w.Code, w.Body, w.Header())
+	}
+	if w := call(h, "POST", "/addons/battery/api/v1/changes:bulk", user, csv+"SC,2024-01-01,,,,,,,,,r3\n", idem...); w.Code != 409 {
+		t.Fatalf("key reused: %d %s", w.Code, w.Body)
+	}
+	if w := call(h, "POST", "/addons/battery/api/v1/changes:bulk?dry_run=true", user, `[{"device":"SC","at":"2024-01-01"}]`, csrf...); w.Code != 200 || !strings.Contains(w.Body.String(), `"applied":false`) {
+		t.Fatalf("dry json bulk: %d %s", w.Code, w.Body)
+	}
+	// list, edit, delete
+	w = call(h, "GET", "/addons/battery/api/v1/changes?device=SC&status=accepted", user, "")
+	var l struct {
+		Changes []changes.Change `json:"changes"`
+	}
+	if w.Code != 200 || json.Unmarshal(w.Body.Bytes(), &l) != nil || len(l.Changes) != 2 {
+		t.Fatalf("list: %d %s", w.Code, w.Body)
+	}
+	if w := call(h, "GET", "/addons/battery/api/v1/changes?status=maybe", user, ""); w.Code != 422 {
+		t.Fatalf("bad status: %d", w.Code)
+	}
+	id := strconv.FormatInt(l.Changes[0].ID, 10)
+	if w := call(h, "PATCH", "/addons/battery/api/v1/changes/"+id, user, `{"note":"Keller","status":"rejected"}`, csrf...); w.Code != 200 || !strings.Contains(w.Body.String(), `"rejected"`) {
+		t.Fatalf("patch: %d %s", w.Code, w.Body)
+	}
+	if w := call(h, "PUT", "/addons/battery/api/v1/changes/by-external-id/r1", user, `{"note":"x"}`, csrf...); w.Code != 200 {
+		t.Fatalf("by external id: %d %s", w.Code, w.Body)
+	}
+	if w := call(h, "GET", "/addons/battery/api/v1/changes/"+id, user, ""); w.Code != 200 || !strings.Contains(w.Body.String(), "Keller") {
+		t.Fatalf("get: %d %s", w.Code, w.Body)
+	}
+	if w := call(h, "DELETE", "/addons/battery/api/v1/changes/"+id, user, "", csrf...); w.Code != 204 {
+		t.Fatalf("delete: %d", w.Code)
+	}
+	if w := call(h, "GET", "/addons/battery/api/v1/changes/"+id, user, ""); w.Code != 404 {
+		t.Fatalf("deleted: %d", w.Code)
+	}
+	if w := call(h, "GET", "/addons/battery/api/v1/changes/abc", user, ""); w.Code != 404 {
+		t.Fatalf("bad id: %d", w.Code)
+	}
+	// samples, detect
+	var samples []map[string]any
+	for i := 0; i < 20; i++ {
+		samples = append(samples, map[string]any{"device": "WRC2", "ts": int64(1767225600000) + int64(i)*86400000, "voltage": 2.5})
+	}
+	samples = append(samples, map[string]any{"device": "WRC2", "ts": int64(1767225600000) + 20*86400000, "voltage": 3.2}, map[string]any{"device": "WRC2", "ts": int64(1767225600000) + 21*86400000 + 3600000, "voltage": 3.15})
+	b, _ := json.Marshal(samples)
+	if w := call(h, "POST", "/addons/battery/api/v1/samples:bulk", user, string(b), csrf...); w.Code != 200 || !strings.Contains(w.Body.String(), `"stored":22`) {
+		t.Fatalf("samples: %d %s", w.Code, w.Body)
+	}
+	if w := call(h, "GET", "/addons/battery/api/v1/samples?device=WRC2", user, ""); w.Code != 200 {
+		t.Fatalf("samples get: %d %s", w.Code, w.Body)
+	}
+	if w := call(h, "GET", "/addons/battery/api/v1/samples", user, ""); w.Code != 422 {
+		t.Fatalf("samples without a device: %d", w.Code)
+	}
+	w = call(h, "POST", "/addons/battery/api/v1/detect?device=WRC2&from=2026-01-01&to=2026-03-01", user, "", csrf...)
+	if w.Code != 200 || !strings.Contains(w.Body.String(), `"status":"created"`) {
+		t.Fatalf("detect: %d %s", w.Code, w.Body)
+	}
+	if w := call(h, "POST", "/addons/battery/api/v1/detect?from=yesterday", user, "", csrf...); w.Code != 422 {
+		t.Fatalf("detect bad time: %d", w.Code)
+	}
+	if w := call(h, "GET", "/addons/battery/api/v1/suggestions?field=vendor&q=v", user, ""); w.Code != 200 || !strings.Contains(w.Body.String(), "Varta") {
+		t.Fatalf("suggestions: %d %s", w.Code, w.Body)
+	}
+	if w := call(h, "GET", "/addons/battery/api/v1/health", user, ""); !strings.Contains(w.Body.String(), `"inbox":1`) {
+		t.Fatalf("inbox count: %s", w.Body)
+	}
+	// exports
+	if w := call(h, "GET", "/addons/battery/api/v1/export.csv", user, ""); w.Code != 200 || !strings.HasPrefix(w.Body.String(), "interface,address,at") {
+		t.Fatalf("csv: %d %s", w.Code, w.Body)
+	}
+	if w := call(h, "GET", "/addons/battery/api/v1/export.json", user, ""); w.Code != 200 || !json.Valid(w.Body.Bytes()) {
+		t.Fatalf("json: %d %s", w.Code, w.Body)
+	}
+	// the table and the overrides
+	if w := call(h, "GET", "/addons/battery/api/v1/models/hmip-wrc2", user, ""); w.Code != 200 || !strings.Contains(w.Body.String(), `"in_table":true`) {
+		t.Fatalf("model: %d %s", w.Code, w.Body)
+	}
+	if w := call(h, "GET", "/addons/battery/api/v1/models/NOPE", user, ""); w.Code != 404 {
+		t.Fatalf("unknown model: %d", w.Code)
+	}
+	if w := call(h, "PUT", "/addons/battery/api/v1/models/HmIP-WRC2/override", user, `{"slots":[{"count":2,"type":"AA"}]}`, csrf...); w.Code != 200 {
+		t.Fatalf("model override: %d %s", w.Code, w.Body)
+	}
+	if w := call(h, "PUT", "/addons/battery/api/v1/models/HmIP-WRC2/override", user, `{"power":"solar"}`, csrf...); w.Code != 422 {
+		t.Fatalf("bad override: %d %s", w.Code, w.Body)
+	}
+	if w := call(h, "GET", "/addons/battery/api/v1/models", user, ""); w.Code != 200 {
+		t.Fatalf("models: %d", w.Code)
+	}
+	if w := call(h, "DELETE", "/addons/battery/api/v1/models/HmIP-WRC2/override", user, "", csrf...); w.Code != 204 {
+		t.Fatalf("model override delete: %d", w.Code)
+	}
+	if w := call(h, "PUT", "/addons/battery/api/v1/devices/HmIP-RF/WRC2/override", user, `{"rechargeable":true}`, csrf...); w.Code != 200 {
+		t.Fatalf("device override: %d %s", w.Code, w.Body)
+	}
+	if w := call(h, "GET", "/addons/battery/api/v1/devices/HmIP-RF/WRC2/override", user, ""); !strings.Contains(w.Body.String(), `"rechargeable":true`) {
+		t.Fatalf("device override get: %s", w.Body)
+	}
+	if w := call(h, "DELETE", "/addons/battery/api/v1/devices/HmIP-RF/WRC2/override", user, "", csrf...); w.Code != 204 {
+		t.Fatalf("device override delete: %d", w.Code)
+	}
+	if w := call(h, "PUT", "/addons/battery/api/v1/devices/HmIP-RF/NOPE/override", user, `{}`, csrf...); w.Code != 422 {
+		t.Fatalf("unknown device override: %d", w.Code)
+	}
+	if w := call(h, "GET", "/addons/battery/api/v1/settings", user, ""); !strings.Contains(w.Body.String(), `"window_hours":24`) {
+		t.Fatalf("settings: %s", w.Body)
+	}
+	if w := call(h, "GET", "/addons/battery/api/v1/openapi.json", user, ""); w.Code != 200 || !strings.Contains(w.Body.String(), `"openapi"`) {
+		t.Fatalf("openapi: %d", w.Code)
 	}
 }
