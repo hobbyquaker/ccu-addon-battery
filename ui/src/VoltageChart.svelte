@@ -8,6 +8,7 @@
     import {i18n, t} from 'occulite-ui/i18n';
     import {theme} from 'occulite-ui/theme';
 
+    import {timeAxisFor} from './chartTime.js';
     import {formatVoltage, type Change} from './model.js';
 
     export interface SamplePoint {
@@ -58,6 +59,7 @@
         const warn = token('--hmm-warn', '#b7791f');
         const ok = token('--hmm-ok', '#2a8a3e');
         const lang = i18n.language;
+        const time = timeAxisFor(lang);
         const marks = changes.filter((c) => c.status === 'accepted').map((c) => c.at / 1000);
         const lowPhases: [number, number][] = [];
         let start: number | null = null;
@@ -77,8 +79,10 @@
             cursor: {drag: {x: true, y: false}},
             legend: {show: false},
             scales: {x: {time: true}},
+            // German: 14:15, 27.10.26; English keeps uPlot's own labels
+            ...(time ? {fmtDate: (tpl: string) => uPlot.fmtDate(tpl, time.names)} : {}),
             axes: [
-                {stroke: muted, grid: {stroke: border, width: 1}, ticks: {stroke: border}},
+                {stroke: muted, grid: {stroke: border, width: 1}, ticks: {stroke: border}, ...(time ? {values: time.stamps as uPlot.Axis.Values} : {})},
                 {
                     stroke: muted,
                     grid: {stroke: border, width: 1},
