@@ -4,7 +4,10 @@
 /ui/node_modules/
 /ui/dist/
 /addon/battery/www/
+/addon/battery/app/
+/addon/battery/lib/
 /addon/battery/bin/
+/ui/settings/dist/
 /addon/battery/versions
 *.db
 *.db-wal

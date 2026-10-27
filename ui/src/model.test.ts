@@ -1,6 +1,6 @@
 import {describe, expect, it} from 'vitest';
 
-import {compareDevices, describeSlots, evidenceSummary, formatBytes, formatVoltage, fromLocalInput, isMains, relativeTime, statusOf, toLocalInput, type DeviceView} from './model.js';
+import {batteryName, compareDevices, describeSlots, evidenceSummary, formatBytes, formatCents, formatDays, formatVoltage, fromLocalInput, isMains, lifeText, modelInitials, parsePrice, priceInput, relativeTime, statusOf, toLocalInput, type DeviceView} from './model.js';
 
 const dev = (p: Partial<DeviceView>): DeviceView => ({
     interface: 'HmIP-RF',
@@ -108,5 +108,42 @@ describe('the catalogue', () => {
             expect(v, k).toHaveProperty('de');
             expect(v, k).toHaveProperty('en');
         }
+    });
+});
+
+describe('durations and prices', () => {
+    it('formats days as people say them', () => {
+        expect(formatDays(12, 'de')).toBe('12 T.');
+        expect(formatDays(12, 'en')).toBe('12 d');
+        expect(formatDays(45, 'de')).toBe('1 Mon.');
+        expect(formatDays(243, 'en')).toBe('8 mo');
+        expect(formatDays(365, 'de')).toBe('1 J.');
+        expect(formatDays(456, 'de')).toBe('1 J. 3 Mon.');
+        expect(formatDays(undefined)).toBe('');
+    });
+    it('builds the life column', () => {
+        expect(lifeText({count: 0})).toBe('');
+        expect(lifeText({count: 1, avg_days: 400, min_days: 400, max_days: 400}, 'de')).toBe('1 J. 1 Mon. (1×)');
+        expect(lifeText({count: 3, avg_days: 426, min_days: 274, max_days: 578}, 'de')).toBe('Ø 1 J. 2 Mon. (9 Mon. – 1 J. 7 Mon., 3×)');
+    });
+    it('parses and formats prices', () => {
+        expect(parsePrice('0,89')).toBe(89);
+        expect(parsePrice('0.89')).toBe(89);
+        expect(parsePrice('1')).toBe(100);
+        expect(parsePrice('1,5 €')).toBe(150);
+        expect(parsePrice('')).toBeUndefined();
+        expect(parsePrice('abc')).toBeNaN();
+        expect(parsePrice('1,234')).toBeNaN();
+        expect(priceInput(89, 'de')).toBe('0,89');
+        expect(priceInput(89, 'en')).toBe('0.89');
+        expect(priceInput(undefined)).toBe('');
+        expect(formatCents(89, 'de')).toMatch(/0,89/);
+        expect(formatCents(1250, 'en')).toMatch(/12\.50/);
+    });
+    it('names batteries and placeholders', () => {
+        expect(batteryName({vendor: 'Varta', product: 'Power on Demand', type: 'AA'})).toBe('Varta · Power on Demand · AA');
+        expect(batteryName({type: 'AAA'}, 'ohne Angabe')).toBe('ohne Angabe · AAA');
+        expect(modelInitials('HmIP-WRC2')).toBe('WR');
+        expect(modelInitials('HM-Sec-SC-2')).toBe('SE');
     });
 });

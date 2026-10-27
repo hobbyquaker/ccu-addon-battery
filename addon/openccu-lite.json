@@ -17,6 +17,8 @@
   },
   "ui": {
     "icon": "battery/www/icon.svg",
+    "icon_dark": "battery/www/icon-dark.svg",
+    "settings_url": "/addons/battery-config/settings.cgi",
     "session_header": true
   },
   "runtime": {

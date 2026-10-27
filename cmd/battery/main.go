@@ -31,12 +31,12 @@ var version = "dev"
 
 func main() {
 	log.SetFlags(0) // the journal adds the time
-	addonDir := flag.String("addon-dir", "/usr/local/addons/battery", "the addon's directory (etc/, var/, www/)")
+	addonDir := flag.String("addon-dir", "/usr/local/addons/battery", "the addon's directory (etc/, var/, app/)")
 	id := flag.String("id", "battery", "the addon id (token file, base path)")
 	port := flag.Int("port", 8291, "the loopback port lighttpd proxies to")
 	base := flag.String("system", "http://127.0.0.1", "openccu-lite's URL")
 	basePath := flag.String("base-path", "", "the path the app is served at (/addons/<id> by default)")
-	www := flag.String("www", "", "the built web app (<addon-dir>/www by default)")
+	www := flag.String("www", "", "the built web app (<addon-dir>/app by default; www/ holds the settings page)")
 	tokenFile := flag.String("token-file", "", "a token file for the system's API (the addon's own token by default)")
 	flush := flag.Duration("flush", 10*time.Minute, "how often the RAM batch is written to the database")
 	noSession := flag.Bool("no-session-check", false, "serve without the session check (development on a system that is not openccu-lite)")
@@ -50,7 +50,7 @@ func main() {
 		*basePath = "/addons/" + *id
 	}
 	if *www == "" {
-		*www = filepath.Join(*addonDir, "www")
+		*www = filepath.Join(*addonDir, "app")
 	}
 	if err := run(*addonDir, *id, *port, *base, *basePath, *www, *tokenFile, *flush, *noSession); err != nil {
 		log.Fatalf("battery: %v", err)

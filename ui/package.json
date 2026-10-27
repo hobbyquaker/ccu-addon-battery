@@ -10,13 +10,17 @@
   },
   "scripts": {
     "dev": "vite",
-    "build": "vite build",
+    "build": "vite build && vite build --config settings/vite.config.mjs",
+    "build:app": "vite build",
+    "build:settings": "vite build --config settings/vite.config.mjs",
     "check": "svelte-check --tsconfig ./tsconfig.json --fail-on-warnings",
     "test": "vitest run"
   },
   "dependencies": {
     "occulite-ui": "^0.1.0",
-    "svelte": "^5.57.0"
+    "svelte": "^5.57.0",
+    "uplot": "^1.6.32",
+    "ccu-addon-kit": "github:hobbyquaker/ccu-addon-kit#c92a1c4"
   },
   "devDependencies": {
     "@sveltejs/vite-plugin-svelte": "^6.2.4",

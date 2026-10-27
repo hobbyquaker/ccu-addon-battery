@@ -1,5 +1,5 @@
 // Package addonpkg tests the package files the addon ships: the manifest as the system would
-// validate it at install, and the lighttpd fragment as the kit renders it.
+// validate it at install, and the lighttpd fragment `ccu-addon-kit vendor` writes from kit.json.
 package addonpkg
 
 import (
@@ -32,8 +32,12 @@ func TestManifest(t *testing.T) {
 	}
 }
 
+// The fragment is the kit CLI's output (kit.json: proxied /addons/battery/ to the port, the
+// settings page in its own directory /addons/battery-config/). It must say what the Go side's
+// renderer says - the redirect of the bare path, the proxy to the port, the 503 page -, written
+// in the CLI's shape; the two renderers are to become one (ccu-addon-kit).
 func TestFragment(t *testing.T) {
-	want, err := fragment.Render(fragment.Fragment{ID: "battery", Port: Port, ErrorfilePrefix: "/usr/local/addons/battery/www/lighttpd-error-"})
+	ref, err := fragment.Render(fragment.Fragment{ID: "battery", Port: Port, ErrorfilePrefix: "/usr/local/addons/battery/www/lighttpd-error-"})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -41,8 +45,24 @@ func TestFragment(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if string(got) != want {
-		t.Fatalf("the shipped fragment differs from the kit's rendering:\n%s\n--- want\n%s", got, want)
+	for _, want := range []string{
+		`$HTTP["url"] == "/addons/battery" {`,
+		`url.redirect = ("" => "/addons/battery/")`,
+		`$HTTP["url"] =~ "^/addons/battery/" {`,
+		`("host" => "127.0.0.1", "port" => 8291)`,
+		`server.errorfile-prefix = "/usr/local/addons/battery/www/lighttpd-error-"`,
+	} {
+		if !strings.Contains(string(got), want) {
+			t.Errorf("the shipped fragment lacks %q:\n%s", want, got)
+		}
+	}
+	for _, want := range []string{"127.0.0.1", "8291", "lighttpd-error-"} {
+		if !strings.Contains(ref, want) {
+			t.Errorf("the Go renderer lacks %q", want)
+		}
+	}
+	if strings.Contains(string(got), "battery-config") {
+		t.Error("the fragment must not touch /addons/battery-config/ (the web server serves it)")
 	}
 }
 

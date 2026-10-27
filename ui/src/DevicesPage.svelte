@@ -1,14 +1,24 @@
 <script lang="ts">
+    // The Devices tab: every battery device with its picture, status, batteries, voltage and how
+    // long its batteries lasted so far - sortable by the mean life, shortest first, to find the
+    // battery-hungry ones. A row's name opens the device's detail; "Changed..." records a change.
     import {DataTable} from 'occulite-ui';
     import {i18n, t} from 'occulite-ui/i18n';
     import type {NoticesStore} from 'occulite-ui/notices';
     import type {DataTableColumn} from 'occulite-ui/table';
 
-    import ChangeDialog from './ChangeDialog.svelte';
+    import ChangeDialog, {type EditorResult} from './ChangeDialog.svelte';
+    import DevicePicture from './DevicePicture.svelte';
     import {get, post} from './api.js';
-    import {compareDevices, describeSlots, formatVoltage, isMains, relativeTime, statusOf, type DeviceView} from './model.js';
+    import {compareDevices, describeSlots, formatDays, formatVoltage, isMains, lifeText, relativeTime, statusOf, type DeviceView} from './model.js';
 
-    let {notices, inbox = 0, onshowinbox}: {notices: NoticesStore; inbox?: number; onshowinbox?: () => void} = $props();
+    let {
+        notices,
+        inbox = 0,
+        onshowinbox,
+        onopen,
+        onchanged,
+    }: {notices: NoticesStore; inbox?: number; onshowinbox?: () => void; onopen?: (d: DeviceView) => void; onchanged?: () => void} = $props();
 
     // mains, bus and externally powered devices carry a low-battery flag too; they are left out
     // unless asked for
@@ -17,15 +27,16 @@
     let recordOpen = $state(false);
     let saving = $state(false);
 
-    async function record(r: {at: number; note: string; vendor: string}) {
+    async function record(r: EditorResult) {
         const d = recordFor;
         if (!d) return;
         saving = true;
         try {
-            const batteries = (d.profile?.slots ?? []).map((s, i) => ({slot: i + 1, count: s.count, type: s.type, chemistry: s.chemistry, vendor: r.vendor || undefined}));
-            const out = await post<{status: string}>('api/v1/changes', {device: d.address, interface: d.interface, at: r.at, note: r.note, batteries, source: 'manual'});
+            const out = await post<{status: string}>('api/v1/changes', {device: d.address, interface: d.interface, at: r.at, note: r.note, batteries: r.batteries, source: 'manual'});
             notices.push('info', t('change.record.' + out.status, {name: d.name || d.address}));
             recordOpen = false;
+            await load();
+            onchanged?.();
         } catch (e) {
             notices.push('error', t('change.record.failed', {error: (e as Error).message}));
         } finally {
@@ -62,17 +73,30 @@
     const shown = $derived(showMains ? devices : devices.filter((d) => !isMains(d.power)));
     const hiddenMains = $derived(devices.length - devices.filter((d) => !isMains(d.power)).length);
     const columns = $derived<DataTableColumn<DeviceView>[]>([
-        {key: 'name', label: t('Name'), width: 200, copy: 'name'},
-        {key: 'rooms', label: t('Room'), width: 120, value: (d) => d.rooms.join(', ')},
+        {key: 'image', label: '', width: 32, fixed: true, sortable: false, filterable: false, align: 'center'},
+        {key: 'name', label: t('Name'), width: 190, copy: 'name'},
+        {key: 'rooms', label: t('Room'), width: 110, value: (d) => d.rooms.join(', ')},
         {key: 'model', label: t('Model'), width: 120},
-        {key: 'address', label: t('Address'), width: 130, mono: true, copy: 'address'},
         {key: 'status', label: t('Status'), width: 120, fixed: true, value: (d) => t('status.' + statusOf(d)), align: 'center'},
-        {key: 'batteries', label: t('Batteries'), width: 110, value: (d) => describeSlots(d.profile?.slots) || (d.profile?.source === 'none' ? t('profile.unknown') : '')},
-        {key: 'voltage', label: t('Voltage'), width: 80, align: 'right', value: (d) => (d.voltage === null ? '' : d.voltage)},
-        {key: 'low_bat_since', label: t('Low since'), width: 110, value: (d) => (d.low_bat ? relativeTime(d.low_bat_since, now, lang) : '')},
-        {key: 'last_report', label: t('Last report'), width: 110, value: (d) => relativeTime(d.last_report, now, lang)},
+        {key: 'batteries', label: t('Batteries'), width: 100, value: (d) => describeSlots(d.profile?.slots) || (d.profile?.source === 'none' ? t('profile.unknown') : '')},
+        {key: 'voltage', label: t('Voltage'), width: 76, align: 'right', value: (d) => (d.voltage === null ? '' : d.voltage)},
+        // sortable by the mean life (shortest first); devices without a completed life sort last
+        {key: 'life', label: t('life.column'), width: 170, value: (d) => (d.life?.count ? d.life.avg_days : undefined), filterable: false},
+        {key: 'running', label: t('life.running'), width: 90, value: (d) => d.life?.running_days, filterable: false},
+        {key: 'last_report', label: t('Last report'), width: 100, value: (d) => relativeTime(d.last_report, now, lang)},
         {key: 'actions', label: '', width: 140, fixed: true, minWidth: 140, keepMinWidth: true, sortable: false, filterable: false},
     ]);
+
+    function lifeTitle(d: DeviceView): string {
+        const l = d.life;
+        if (!l) return t('life.none');
+        const parts: string[] = [];
+        if (l.count) parts.push(t('life.tooltip', {avg: formatDays(l.avg_days, lang), min: formatDays(l.min_days, lang), max: formatDays(l.max_days, lang), median: formatDays(l.median_days, lang), count: l.count}));
+        else parts.push(t('life.none'));
+        if (l.running_days !== undefined) parts.push(t('life.runningSince', {days: formatDays(l.running_days, lang)}));
+        if (l.hint === 'short') parts.push(t('life.hint.short'));
+        return parts.join('\n');
+    }
 </script>
 
 {#if error}
@@ -107,7 +131,11 @@
             testId="devices"
         >
             {#snippet cell(row, column)}
-                {#if column.key === 'status'}
+                {#if column.key === 'image'}
+                    <DevicePicture model={row.model} src={row.image} size={20} />
+                {:else if column.key === 'name'}
+                    <button type="button" class="bat-link bat-truncate" title={t('device.open')} onclick={() => onopen?.(row)}>{row.name || row.address}</button>
+                {:else if column.key === 'status'}
                     {@const s = statusOf(row)}
                     <span class="bat-pill {s}" title={t('status.' + s)}>{t('status.' + s)}</span>
                 {:else if column.key === 'actions'}
@@ -118,6 +146,10 @@
                     <span class={row.profile?.source === 'none' ? 'bat-muted' : ''} title={row.profile ? t('profile.' + row.profile.source) : ''}>{column.value?.(row)}</span>
                 {:else if column.key === 'voltage'}
                     <span class="bat-mono" title={row.voltage_dp ?? t('No voltage')}>{formatVoltage(row.voltage, lang)}</span>
+                {:else if column.key === 'life'}
+                    <span class="bat-life bat-truncate" class:short={row.life?.hint === 'short'} title={lifeTitle(row)}>{lifeText(row.life, lang) || '–'}</span>
+                {:else if column.key === 'running'}
+                    <span class="bat-life" class:short={row.life?.hint === 'short'} title={lifeTitle(row)}>{row.life?.running_days !== undefined ? formatDays(row.life.running_days, lang) : '–'}</span>
                 {:else}
                     {column.value ? String(column.value(row) ?? '') : String((row as unknown as Record<string, unknown>)[column.key] ?? '')}
                 {/if}

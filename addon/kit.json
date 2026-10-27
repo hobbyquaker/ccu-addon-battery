@@ -1,0 +1,19 @@
+{
+  "$schema": "../ui/node_modules/ccu-addon-kit/schema/kit.schema.json",
+  "schema": 1,
+  "id": "battery",
+  "www": "battery-config",
+  "name": {"de": "Batterie", "en": "Battery"},
+  "icon": "icon.svg",
+  "service": {"commands": ["start", "stop", "restart"], "pollSeconds": 10},
+  "logs": [
+    {"id": "main", "label": {"de": "Dienst", "en": "Service"}, "file": "/var/log/battery.log", "rotated": "/var/log/battery.log.0"},
+    {"id": "syslog", "label": {"de": "Systemprotokoll", "en": "System log"}, "syslogTag": "battery"}
+  ],
+  "update": {"github": "hobbyquaker/ccu-addon-battery"},
+  "tabs": ["storage", "kit:service", "kit:log", "kit:about"],
+  "liteTabs": ["storage", "kit:about"],
+  "proxied": {"path": "/addons/battery/", "port": 8291, "websocket": false, "errorPage": true},
+  "app": {"path": "/addons/battery/", "label": {"de": "Batterie öffnen", "en": "Open Battery"}},
+  "links": [{"label": {"de": "ccu-addon-battery auf GitHub", "en": "ccu-addon-battery on GitHub"}, "url": "https://github.com/hobbyquaker/ccu-addon-battery"}]
+}

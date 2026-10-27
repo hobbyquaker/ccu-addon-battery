@@ -10,7 +10,9 @@ ADDON=battery
 NAME="Battery"
 CONF_DIR=/usr/local/etc/config
 ADDON_DIR=/usr/local/addons/$ADDON
-WWW_DIR=$CONF_DIR/addons/www/$ADDON
+# /addons/$WWW/: the settings page (the ccu-addon-kit frame); the app is proxied at /addons/$ADDON/
+WWW=battery-config
+WWW_DIR=$CONF_DIR/addons/www/$WWW
 # in the addon's tree: a confined addon cannot write /var/run, and the CCU3's chroot has none
 PIDFILE=$ADDON_DIR/var/$ADDON.pid
 DAEMON=$ADDON_DIR/bin/$ADDON
@@ -28,6 +30,9 @@ json_str() { printf '%s' "$1" | tr -d '\000-\037' | sed -e 's/\\/\\\\/g' -e 's/"
 
 # inside openccu-lite's addon-$ADDON.service unit?
 InUnit() { grep -q "addon-$ADDON.service" /proc/self/cgroup 2>/dev/null; }
+
+# on openccu-lite? (the manifest declares the settings page there; the CCU's button is Config-Url)
+IsLite() { grep -q '^LITE=' /VERSION 2>/dev/null || [ -x /usr/bin/occulited ]; }
 
 # pid of the running daemon, empty when not running
 Pid() {
@@ -110,17 +115,25 @@ case "$1" in
         echo "Info: <div>$NAME</div>"
         echo "Name: $NAME"
         echo "Version: $VERSION_ADDON"
-        echo "Config-Url: /addons/$ADDON/"
+        echo "Update: /addons/$WWW/update_check.cgi"
+        # openccu-lite opens the app from here and the settings page from the manifest's
+        # settings_url; a CCU's Einstellungen button is the settings page
+        if IsLite; then
+            echo "Config-Url: /addons/$ADDON/"
+        else
+            echo "Config-Url: /addons/$WWW/settings.cgi"
+        fi
         echo "Operations: restart uninstall"
         ;;
     uninstall)
         Stop
-        rm -f $CONF_DIR/rc.d/$ADDON $WWW_DIR
+        rm -f $CONF_DIR/rc.d/$ADDON $WWW_DIR $CONF_DIR/addons/www/$ADDON
         rm -f $CONF_DIR/lighttpd/$ADDON.conf
         rm -f $LOGFILE $LOGFILE.0
+        IsLite || [ -x $ADDON_DIR/bin/update_addon ] && $ADDON_DIR/bin/update_addon $ADDON 2>/dev/null
         # the program goes; etc/ (the settings) and var/ (the database) stay for a reinstall -
         # remove /usr/local/addons/battery by hand to be rid of the data
-        rm -rf $ADDON_DIR/bin $ADDON_DIR/www $ADDON_DIR/rc.d $ADDON_DIR/versions $ADDON_DIR/etc/lighttpd.conf
+        rm -rf $ADDON_DIR/bin $ADDON_DIR/app $ADDON_DIR/www $ADDON_DIR/lib $ADDON_DIR/rc.d $ADDON_DIR/versions $ADDON_DIR/etc/lighttpd.conf
         rm -f $PIDFILE
         log info "Uninstalled $ADDON (settings and database kept in $ADDON_DIR)"
         ;;

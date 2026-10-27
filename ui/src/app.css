@@ -309,3 +309,245 @@ body,
 .bat-page {
     overflow: auto;
 }
+
+/* P2: pictures, the life column, the detail page, the strips, the editor */
+:root {
+    --bat-devimg-filter: none;
+}
+
+@media (prefers-color-scheme: dark) {
+    :root:not([data-theme='light']) {
+        --bat-devimg-filter: invert(1) hue-rotate(180deg) contrast(0.74) brightness(0.94);
+    }
+}
+
+:root[data-theme='dark'] {
+    --bat-devimg-filter: invert(1) hue-rotate(180deg) contrast(0.74) brightness(0.94);
+}
+
+.bat-life {
+    display: inline-block;
+    max-width: 100%;
+}
+
+.bat-life.short {
+    color: var(--hmm-warn, #b7791f);
+}
+
+.bat-truncate {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    max-width: 100%;
+}
+
+button.bat-link.bat-truncate {
+    display: inline-block;
+    text-align: left;
+    vertical-align: middle;
+}
+
+.bat-detail {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    overflow: auto;
+}
+
+.bat-detail-head {
+    margin-bottom: 8px;
+}
+
+.bat-detail-card {
+    max-width: 64rem;
+}
+
+.bat-detail-title {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 10px;
+}
+
+.bat-detail-title h2 {
+    margin: 0;
+    font-size: 1.1rem;
+}
+
+.bat-detail-title .bat-spacer {
+    flex: 1;
+}
+
+.bat-plain {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: var(--hmm-font-size-small, 0.9em);
+}
+
+.bat-plain th,
+.bat-plain td {
+    text-align: left;
+    padding: 4px 8px;
+    border-bottom: 1px solid var(--hmm-border-muted, #8882);
+    vertical-align: middle;
+}
+
+.bat-plain th {
+    color: var(--hmm-fg-muted, #888);
+    font-weight: 500;
+}
+
+.bat-row-actions {
+    white-space: nowrap;
+    text-align: right;
+}
+
+.bat-row-actions .bat-cell-button {
+    margin-left: 4px;
+}
+
+.bat-dialog-device {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin: 0 0 6px;
+}
+
+.bat-slot {
+    border: 1px solid var(--hmm-border, #8884);
+    border-radius: 6px;
+    padding: 6px 10px 8px;
+    margin: 8px 0;
+}
+
+.bat-slot legend {
+    font-weight: 600;
+    padding: 0 4px;
+}
+
+.bat-price-field {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.bat-price-input {
+    width: 6em;
+    text-align: right;
+}
+
+.bat-price-input[aria-invalid='true'] {
+    border-color: var(--hmm-error, #c0392b);
+}
+
+.bat-total {
+    min-height: 1.4em;
+    margin: 4px 0 0;
+}
+
+.bat-dialog-buttons button.danger {
+    background: var(--hmm-error, #c0392b);
+    border-color: var(--hmm-error, #c0392b);
+    color: #fff;
+}
+
+.bat-stats {
+    overflow: auto;
+}
+
+.bat-stats .bat-card {
+    max-width: 64rem;
+}
+
+.bat-tiles {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px 24px;
+    margin-bottom: 8px;
+}
+
+.bat-tile {
+    display: flex;
+    flex-direction: column;
+    min-width: 7em;
+}
+
+.bat-tile-value {
+    font-size: 1.4rem;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+}
+
+.bat-strips {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+
+.bat-strip {
+    display: grid;
+    grid-template-columns: minmax(10em, 18em) 1fr minmax(9em, max-content);
+    align-items: center;
+    gap: 12px;
+    padding: 3px 0;
+    font-size: var(--hmm-font-size-small, 0.9em);
+}
+
+.bat-strip-label {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    min-width: 0;
+}
+
+.bat-strip-bar {
+    position: relative;
+    height: 10px;
+    border-radius: 5px;
+    background: var(--hmm-bg-sunken, #8881);
+    overflow: hidden;
+}
+
+.bat-strip-range {
+    position: absolute;
+    top: 0;
+    height: 100%;
+    background: var(--hmm-accent, #2c6fb3);
+    opacity: 0.35;
+    min-width: 2px;
+}
+
+.bat-strip-median {
+    position: absolute;
+    top: 0;
+    width: 3px;
+    height: 100%;
+    margin-left: -1px;
+    background: var(--hmm-accent, #2c6fb3);
+}
+
+.bat-strip-fill {
+    display: block;
+    height: 100%;
+    background: var(--hmm-accent, #2c6fb3);
+    opacity: 0.6;
+}
+
+.bat-strip-value {
+    white-space: nowrap;
+    font-variant-numeric: tabular-nums;
+}
+
+.bat-intro {
+    margin: 0 0 8px;
+}
+
+.bat-table-short {
+    flex: 0 1 auto;
+    min-height: 160px;
+    max-height: 50vh;
+}
+
+.bat-detection-head .bat-devimg {
+    margin-right: 6px;
+}
