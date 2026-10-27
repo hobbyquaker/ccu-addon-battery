@@ -181,10 +181,10 @@ type Health struct {
 	Error     string    `json:"error,omitempty"`
 	Path      string    `json:"path"`
 	Location  Location  `json:"location"`
-	Pending   int       `json:"pending"`
-	Dropped   int64     `json:"dropped"`
-	LastFlush time.Time `json:"last_flush,omitempty"`
-	Flushes   int64     `json:"flushes"`
+	Pending   int        `json:"pending"`
+	Dropped   int64      `json:"dropped"`
+	LastFlush *time.Time `json:"last_flush,omitempty"`
+	Flushes   int64      `json:"flushes"`
 	SizeBytes int64     `json:"size_bytes"`
 	InBackup  bool      `json:"in_backup"`
 }
@@ -193,7 +193,11 @@ type Health struct {
 func (s *Store) Health() Health {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	h := Health{State: "ok", Path: s.path, Location: s.loc, Pending: len(s.queue), Dropped: s.drop, LastFlush: s.last, Flushes: s.flushN, InBackup: s.loc.InBackup()}
+	h := Health{State: "ok", Path: s.path, Location: s.loc, Pending: len(s.queue), Dropped: s.drop, Flushes: s.flushN, InBackup: s.loc.InBackup()}
+	if !s.last.IsZero() {
+		last := s.last
+		h.LastFlush = &last
+	}
 	if s.db == nil {
 		h.State = "unavailable"
 	} else if s.err != nil {

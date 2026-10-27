@@ -107,7 +107,7 @@
                 <dd>{health.dropped}</dd>
             {/if}
             <dt>{t('storage.lastFlush')}</dt>
-            <dd>{health.last_flush && !health.last_flush.startsWith('0001') ? relativeTime(Date.parse(health.last_flush), Date.now(), lang) : t('time.never')}</dd>
+            <dd>{health.last_flush ? relativeTime(Date.parse(health.last_flush), Date.now(), lang) : t('time.never')}</dd>
         </dl>
         <p class="bat-muted">{health.in_backup ? t('storage.inBackup') : t('storage.notInBackup')}</p>
     </section>
