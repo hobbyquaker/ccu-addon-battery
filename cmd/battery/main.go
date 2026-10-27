@@ -1,6 +1,7 @@
-// battery is the ccu-addon-battery daemon: it records the battery datapoints of every device from
-// openccu-lite's APIs into its SQLite store and serves its web app and API on the loopback,
-// behind lighttpd's proxy of /addons/battery/.
+// battery is the ccu-addon-battery daemon: it records the battery datapoints of every device -
+// from openccu-lite's APIs, or on a classic CCU from the interface processes and ReGaHSS - into
+// its SQLite store and serves its web app and API on the loopback, behind lighttpd's proxy of
+// /addons/battery/.
 package main
 
 import (
@@ -25,6 +26,8 @@ import (
 	"github.com/hobbyquaker/ccu-addon-battery/internal/settings"
 	"github.com/hobbyquaker/ccu-addon-battery/internal/store"
 	"github.com/hobbyquaker/ccu-addon-kit/go/addonkit"
+	"github.com/hobbyquaker/ccu-addon-kit/go/addonkit/ccuauth"
+	"github.com/hobbyquaker/ccu-addon-kit/go/ccusource"
 	"github.com/hobbyquaker/ccu-addon-kit/go/litesource"
 )
 
@@ -42,6 +45,8 @@ func main() {
 	tokenFile := flag.String("token-file", "", "a token file for the system's API (the addon's own token by default)")
 	flush := flag.Duration("flush", 10*time.Minute, "how often the RAM batch is written to the database")
 	noSession := flag.Bool("no-session-check", false, "serve without the session check (development on a system that is not openccu-lite)")
+	platform := flag.String("platform", "", "openccu-lite, openccu or ccu3; detected from the system by default")
+	callbackPort := flag.Int("callback-port", 8292, "classic CCU: the loopback port the interface processes send events to")
 	showVersion := flag.Bool("version", false, "print the version and exit")
 	flag.Parse()
 	if *showVersion {
@@ -54,12 +59,16 @@ func main() {
 	if *www == "" {
 		*www = filepath.Join(*addonDir, "app")
 	}
-	if err := run(*addonDir, *id, *port, *base, *basePath, *www, *tokenFile, *flush, *noSession); err != nil {
+	kind := addonkit.Kind(*platform)
+	if kind == "" {
+		kind = addonkit.Platform()
+	}
+	if err := run(*addonDir, *id, *port, *base, *basePath, *www, *tokenFile, *flush, *noSession, kind, *callbackPort); err != nil {
 		log.Fatalf("battery: %v", err)
 	}
 }
 
-func run(addonDir, id string, port int, base, basePath, www, tokenFile string, flush time.Duration, noSession bool) error {
+func run(addonDir, id string, port int, base, basePath, www, tokenFile string, flush time.Duration, noSession bool, kind addonkit.Kind, callbackPort int) error {
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer stop()
 
@@ -70,30 +79,62 @@ func run(addonDir, id string, port int, base, basePath, www, tokenFile string, f
 	defer st.Close()
 	go st.Run(ctx, flush)
 
-	var token addonkit.TokenSource
-	if tokenFile != "" {
-		token = &addonkit.FileToken{Path: tokenFile}
-	} else {
-		token = addonkit.AddonToken(id)
-	}
-	src := litesource.New(base, token)
-	src.Log = log.Printf
-
-	// wait for the system: before the token exists or occulited answers there is nothing to do
-	for {
-		if _, err := src.Probe(ctx); err == nil {
-			break
-		} else if err == litesource.ErrNotOpenccuLite {
-			return fmt.Errorf("%s is not openccu-lite", base)
+	// the system: openccu-lite's APIs, or on a classic CCU the interface processes and ReGa
+	var src litesource.Source
+	wrap := func(h http.Handler) http.Handler { return h }
+	if kind == addonkit.OpenccuLite {
+		var token addonkit.TokenSource
+		if tokenFile != "" {
+			token = &addonkit.FileToken{Path: tokenFile}
 		} else {
-			log.Printf("battery: waiting for the system: %v", err)
+			token = addonkit.AddonToken(id)
 		}
-		select {
-		case <-ctx.Done():
-			return nil
-		case <-time.After(5 * time.Second):
+		lite := litesource.New(base, token)
+		lite.Log = log.Printf
+		// wait for the system: before the token exists or occulited answers there is nothing to do
+		for {
+			if _, err := lite.Probe(ctx); err == nil {
+				break
+			} else if err == litesource.ErrNotOpenccuLite {
+				return fmt.Errorf("%s is not openccu-lite", base)
+			} else {
+				log.Printf("battery: waiting for the system: %v", err)
+			}
+			select {
+			case <-ctx.Done():
+				return nil
+			case <-time.After(5 * time.Second):
+			}
+		}
+		src = lite
+		if !noSession {
+			c := addonkit.NewChecker(addonkit.SessionOptions{Base: base, Need: addonkit.LevelUser, OnRefused: func(r *http.Request, reason string) {
+				log.Printf("battery: refused %s %s: %s", r.Method, r.URL.Path, reason)
+			}})
+			wrap = c.Handler
+		}
+	} else {
+		ccu := ccusource.New(ccusource.Options{ID: id, CallbackPort: callbackPort, Log: log.Printf})
+		for {
+			if err := ccu.Probe(ctx); err == nil {
+				break
+			}
+			log.Printf("battery: waiting for an interface process of the CCU")
+			select {
+			case <-ctx.Done():
+				return nil
+			case <-time.After(10 * time.Second):
+			}
+		}
+		src = ccu
+		if !noSession {
+			c := ccuauth.New(id, ccuauth.Options{Need: addonkit.LevelUser, OnRefused: func(r *http.Request, reason string) {
+				log.Printf("battery: refused %s %s: %s", r.Method, r.URL.Path, reason)
+			}})
+			wrap = c.Handler
 		}
 	}
+	log.Printf("battery: platform %s", kind)
 
 	params, merge := detectionSettings(filepath.Join(addonDir, "etc", "battery.json"))
 	chg := changes.New(changes.Options{Store: st, Params: params, MergeWindow: merge, Log: log.Printf})
@@ -115,13 +156,7 @@ func run(addonDir, id string, port int, base, basePath, www, tokenFile string, f
 	notifier := notify.New(func() settings.Notify { return sf.Get().Notify }, st)
 	notifier.Log = log.Printf
 
-	var checker *addonkit.Checker
-	if !noSession {
-		checker = addonkit.NewChecker(addonkit.SessionOptions{Base: base, Need: addonkit.LevelUser, OnRefused: func(r *http.Request, reason string) {
-			log.Printf("battery: refused %s %s: %s", r.Method, r.URL.Path, reason)
-		}})
-	}
-	opts := httpapi.Options{BasePath: basePath, WWW: www, Store: st, Recorder: rec, Changes: chg, Images: &devimg.Catalog{}, Settings: sf, Notifier: notifier, Session: checker, Version: version, Started: time.Now()}
+	opts := httpapi.Options{BasePath: basePath, WWW: www, Store: st, Recorder: rec, Changes: chg, Images: &devimg.Catalog{}, Settings: sf, Notifier: notifier, Wrap: wrap, Version: version, Started: time.Now()}
 	h := httpapi.New(opts)
 	go notifier.Run(ctx, 15*time.Minute, opts.Events)
 	l, err := addonkit.Listen(port, "")

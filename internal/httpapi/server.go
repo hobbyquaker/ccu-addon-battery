@@ -41,8 +41,11 @@ type Options struct {
 	Settings *settings.File
 	// Notifier sends the notices; nil: no notifications.
 	Notifier *notify.Notifier
-	// Session checks the sessions; nil serves without a check (development only).
+	// Session checks the sessions (openccu-lite); nil serves without a check unless Wrap is set.
 	Session *addonkit.Checker
+	// Wrap is the session check as a handler wrapper (openccu-lite's or a classic CCU's); it
+	// takes precedence over Session. nil (and no Session): no check, development only.
+	Wrap    func(http.Handler) http.Handler
 	Version string
 	Started time.Time
 }
@@ -66,7 +69,10 @@ func New(o Options) http.Handler {
 	root.Handle("/", http.HandlerFunc(o.static))
 
 	var h http.Handler = http.StripPrefix(o.BasePath, root)
-	if o.Session != nil {
+	switch {
+	case o.Wrap != nil:
+		h = o.Wrap(h)
+	case o.Session != nil:
 		h = o.Session.Handler(h)
 	}
 	return guard(h)
@@ -236,7 +242,7 @@ func (o Options) mounts() []store.Mount {
 }
 
 func (o Options) storageMove(w http.ResponseWriter, r *http.Request) {
-	if o.Session != nil {
+	if o.Session != nil || o.Wrap != nil {
 		if s := addonkit.FromRequest(r); s == nil || !addonkit.Admits(addonkit.LevelAdmin, s.Level) {
 			addonkit.WriteError(w, http.StatusForbidden, "forbidden", "moving the database needs an administrator")
 			return

@@ -3,7 +3,7 @@ module github.com/hobbyquaker/ccu-addon-battery
 go 1.25.0
 
 require (
-	github.com/hobbyquaker/ccu-addon-kit/go v0.0.0-20261027131613-d85c867cf6d0
+	github.com/hobbyquaker/ccu-addon-kit/go v0.0.0-20261027132743-bdbc42326530
 	modernc.org/sqlite v1.59.0
 )
 
