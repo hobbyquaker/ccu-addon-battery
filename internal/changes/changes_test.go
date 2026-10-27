@@ -3,6 +3,7 @@ package changes
 import (
 	"bytes"
 	"context"
+	"database/sql"
 	"encoding/json"
 	"os"
 	"path/filepath"
@@ -435,5 +436,40 @@ func TestParseTime(t *testing.T) {
 	}
 	if err := json.Unmarshal([]byte(`{"At":true}`), &x); err == nil {
 		t.Fatal("bool parsed")
+	}
+}
+
+// Changes of an interface the addon does not record (VirtualDevices rows of an older version)
+// stay in the database but are not listed; a new one naming such an interface is refused.
+func TestUnsupportedInterfacesHidden(t *testing.T) {
+	s, st, c := setup(t, "")
+	ctx := context.Background()
+	c.ms = t0 + 10*day
+	if err := st.Write(ctx, func(tx *sql.Tx) error {
+		if _, err := tx.Exec(`INSERT INTO devices (interface, address, model, first_seen, last_seen) VALUES ('VirtualDevices', 'INT0001', 'HmIP-HEATING', 1, 1)`); err != nil {
+			return err
+		}
+		_, err := tx.Exec(`INSERT INTO changes (interface, address, at, kind, status, created_at, updated_at) VALUES ('VirtualDevices', 'INT0001', ?, 'detected', 'pending', 1, 1)`, t0)
+		return err
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := s.Create(ctx, Input{Address: wrc2.Address, At: Time(t0 + day)}, "test", false); err != nil {
+		t.Fatal(err)
+	}
+	if l := list(t, s); len(l) != 1 || l[0].Interface != "HmIP-RF" {
+		t.Fatalf("listed: %+v", l)
+	}
+	if _, err := s.Create(ctx, Input{Address: "INT0001", At: Time(t0 + day)}, "test", false); err == nil {
+		t.Fatal("a device of VirtualDevices resolved")
+	}
+	if _, err := s.Create(ctx, Input{Address: "HMW9", Interface: "BidCos-Wired", Model: "HMW-IO-12-Sw7-DR", At: Time(t0 + day)}, "test", false); err == nil || !strings.Contains(err.Error(), "not recorded") {
+		t.Fatalf("BidCos-Wired: %v", err)
+	}
+	db, _ := st.DB()
+	var n int
+	db.QueryRow(`SELECT COUNT(*) FROM changes WHERE interface = 'VirtualDevices'`).Scan(&n)
+	if n != 1 {
+		t.Fatal("the old row is kept")
 	}
 }

@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/hobbyquaker/ccu-addon-battery/internal/changes"
+	"github.com/hobbyquaker/ccu-addon-battery/internal/ifaces"
 	"github.com/hobbyquaker/ccu-addon-battery/internal/store"
 )
 
@@ -138,7 +139,7 @@ type Options struct {
 
 // Load reads the accepted changes and the devices, oldest change first.
 func Load(ctx context.Context, db *sql.DB) ([]changes.Change, []store.Device, error) {
-	rows, err := db.QueryContext(ctx, `SELECT id, interface, address, at, batteries FROM changes WHERE status = ? ORDER BY at, id`, changes.StatusAccepted)
+	rows, err := db.QueryContext(ctx, `SELECT id, interface, address, at, batteries FROM changes WHERE status = ? AND `+ifaces.SQL("interface")+` ORDER BY at, id`, changes.StatusAccepted)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -158,7 +159,7 @@ func Load(ctx context.Context, db *sql.DB) ([]changes.Change, []store.Device, er
 	if err := rows.Err(); err != nil {
 		return nil, nil, err
 	}
-	drows, err := db.QueryContext(ctx, `SELECT interface, address, model, power, retired_at FROM devices`)
+	drows, err := db.QueryContext(ctx, `SELECT interface, address, model, power, retired_at FROM devices WHERE `+ifaces.SQL("interface"))
 	if err != nil {
 		return nil, nil, err
 	}

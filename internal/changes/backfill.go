@@ -12,6 +12,7 @@ import (
 	"strings"
 
 	"github.com/hobbyquaker/ccu-addon-battery/internal/detect"
+	"github.com/hobbyquaker/ccu-addon-battery/internal/ifaces"
 	"github.com/hobbyquaker/ccu-addon-battery/internal/store"
 )
 
@@ -245,7 +246,7 @@ func (s *Service) ImportSamples(ctx context.Context, in []SampleInput, dry bool)
 		return res, err
 	}
 	ifaceOf := map[string][]string{}
-	rows, err := db.QueryContext(ctx, `SELECT interface, address FROM devices`)
+	rows, err := db.QueryContext(ctx, `SELECT interface, address FROM devices WHERE `+ifaces.SQL("interface"))
 	if err != nil {
 		return res, err
 	}
@@ -402,10 +403,10 @@ func (s *Service) Detect(ctx context.Context, address string, from, to int64, dr
 	if from > to {
 		return res, bad("invalid", "from lies after to")
 	}
-	q := `SELECT interface, address, model, voltage_dp, lowbat_dp, COALESCE(profile_override, '') FROM devices`
+	q := `SELECT interface, address, model, voltage_dp, lowbat_dp, COALESCE(profile_override, '') FROM devices WHERE ` + ifaces.SQL("interface")
 	var args []any
 	if address != "" {
-		q += ` WHERE address = ?`
+		q += ` AND address = ?`
 		args = append(args, address)
 	}
 	rows, err := db.QueryContext(ctx, q, args...)

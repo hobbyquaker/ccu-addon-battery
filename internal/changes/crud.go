@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/hobbyquaker/ccu-addon-battery/internal/batteries"
+	"github.com/hobbyquaker/ccu-addon-battery/internal/ifaces"
 )
 
 var errDryRun = errors.New("dry run")
@@ -130,7 +131,10 @@ VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`, iface, addr, at, src, rule, Sta
 // resolveDevice finds the interface of an address; a device the addon never saw is created as
 // retired when the input names its interface and model.
 func (s *Service) resolveDevice(tx *sql.Tx, in Input, addr string, at int64) (string, error) {
-	q := `SELECT interface FROM devices WHERE address = ?`
+	if in.Interface != "" && !ifaces.IsSupported(in.Interface) {
+		return "", bad("invalid", "interface %s is not recorded (only %s)", in.Interface, strings.Join(ifaces.Supported, ", "))
+	}
+	q := `SELECT interface FROM devices WHERE address = ? AND ` + ifaces.SQL("interface")
 	args := []any{addr}
 	if in.Interface != "" {
 		q += ` AND interface = ?`
@@ -304,7 +308,7 @@ func (s *Service) List(ctx context.Context, f Filter) ([]Change, error) {
 	if err != nil {
 		return nil, err
 	}
-	q := `SELECT ` + changeCols + ` FROM changes WHERE 1 = 1`
+	q := `SELECT ` + changeCols + ` FROM changes WHERE ` + ifaces.SQL("interface")
 	var args []any
 	if f.Address != "" {
 		q += ` AND address = ?`

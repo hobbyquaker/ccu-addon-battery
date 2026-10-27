@@ -59,10 +59,13 @@ dritte.
 | Signal | Wo | Geräte |
 | --- | --- | --- |
 | `OPERATING_VOLTAGE`, `OPERATING_VOLTAGE_STATUS`, `LOW_BAT`, `BOOTED`, `UNREACH` | Kanal 0 | jedes Homematic-IP-Gerät |
-| `LOWBAT`, `UNREACH` | Kanal 0 | jedes BidCos-Gerät |
+| `LOWBAT`, `UNREACH` | Kanal 0 | jedes BidCos-Funkgerät |
 | `BATTERY_STATE` | der Thermostatkanal | HM-CC-RT-DN, HM-TC-IT-WM-W-EU |
 
-Ein Gerät wird aufgezeichnet, wenn seine Beschreibungen einen der Batterie-Datenpunkte tragen.
+Aufgezeichnet werden die Schnittstellen `HmIP-RF` und `BidCos-RF`. BidCos-Wired (netzbetriebene
+Geräte) und VirtualDevices (die Gruppen des Systems) lässt das Addon ganz aus: es liest dort keine
+Geräteliste und meldet sich nicht für ihre Ereignisse an. Ein Gerät wird aufgezeichnet, wenn seine
+Beschreibungen einen der Batterie-Datenpunkte tragen.
 Beim Start übernimmt das Addon die Werte aus dem Zustandsspeicher des Systems und, für Homematic
 IP, aus dem Cache des Funkprozesses (kein Funkverkehr); BidCos-Werte werden nie gelesen, nur
 empfangen. Die Werte werden ausgedünnt: eine Zeile, wenn sich die Spannung um 0,01 V bewegt hat,

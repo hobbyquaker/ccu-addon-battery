@@ -29,12 +29,13 @@ func TestMain(m *testing.M) {
 
 // a system with one HmIP remote (voltage + LOW_BAT), one BidCos thermostat (BATTERY_STATE on
 // channel 4, LOWBAT on :0), one BidCos contact (LOWBAT only) and one HmIP mains actuator
-// (OPERATING_VOLTAGE, no LOW_BAT) - and a VirtualDevices group without any of it.
+// (OPERATING_VOLTAGE, no LOW_BAT) - and a VirtualDevices group and a BidCos-Wired actuator that
+// report a low-battery flag but belong to interfaces the addon never records.
 func system(t *testing.T) *fakelite.Server {
 	s := fakelite.New()
 	t.Cleanup(s.Close)
 	s.Token = "olt_test"
-	s.Interfaces = []string{"HmIP-RF", "BidCos-RF", "VirtualDevices"}
+	s.Interfaces = []string{"HmIP-RF", "BidCos-RF", "VirtualDevices", "BidCos-Wired"}
 	s.Devices["HmIP-RF"] = []map[string]any{
 		{"ADDRESS": "WRC2", "TYPE": "HmIP-WRC2", "FIRMWARE": "1.2", "VERSION": 1, "CHILDREN": []string{"WRC2:0", "WRC2:1", "WRC2:2"}},
 		{"ADDRESS": "WRC2:0", "TYPE": "MAINTENANCE", "PARENT": "WRC2"},
@@ -49,7 +50,16 @@ func system(t *testing.T) *fakelite.Server {
 		{"ADDRESS": "SC", "TYPE": "HM-Sec-SC-2", "FIRMWARE": "2.4", "VERSION": 1, "CHILDREN": []string{"SC:0", "SC:1"}},
 		{"ADDRESS": "SC:0", "TYPE": "MAINTENANCE", "PARENT": "SC"},
 	}
-	s.Devices["VirtualDevices"] = []map[string]any{{"ADDRESS": "INT0001", "TYPE": "HmIP-HEATING", "VERSION": 1, "CHILDREN": []string{"INT0001:1"}}}
+	s.Devices["VirtualDevices"] = []map[string]any{
+		{"ADDRESS": "INT0001", "TYPE": "HmIP-HEATING", "FIRMWARE": "1.0", "VERSION": 1, "CHILDREN": []string{"INT0001:0", "INT0001:1"}},
+		{"ADDRESS": "INT0001:0", "TYPE": "MAINTENANCE", "PARENT": "INT0001"},
+	}
+	s.Devices["BidCos-Wired"] = []map[string]any{
+		{"ADDRESS": "HMW1", "TYPE": "HMW-IO-12-Sw7-DR", "FIRMWARE": "1.0", "VERSION": 1, "CHILDREN": []string{"HMW1:0"}},
+		{"ADDRESS": "HMW1:0", "TYPE": "MAINTENANCE", "PARENT": "HMW1"},
+	}
+	s.Paramsets["VirtualDevices/HmIP-HEATING/1.0/1/MAINTENANCE/VALUES"] = map[string]any{"LOW_BAT": map[string]any{"TYPE": "BOOL"}, "UNREACH": map[string]any{"TYPE": "BOOL"}}
+	s.Paramsets["BidCos-Wired/HMW-IO-12-Sw7-DR/1.0/1/MAINTENANCE/VALUES"] = map[string]any{"LOWBAT": map[string]any{"TYPE": "BOOL"}, "UNREACH": map[string]any{"TYPE": "BOOL"}}
 	s.Paramsets["HmIP-RF/HmIP-WRC2/1.2/1/MAINTENANCE/VALUES"] = map[string]any{"OPERATING_VOLTAGE": map[string]any{"TYPE": "FLOAT"}, "OPERATING_VOLTAGE_STATUS": map[string]any{"TYPE": "ENUM"}, "LOW_BAT": map[string]any{"TYPE": "BOOL"}, "UNREACH": map[string]any{"TYPE": "BOOL"}, "BOOTED": map[string]any{"TYPE": "BOOL"}}
 	s.Paramsets["HmIP-RF/HmIP-BBL/1.0/1/MAINTENANCE/VALUES"] = map[string]any{"OPERATING_VOLTAGE": map[string]any{"TYPE": "FLOAT"}, "OPERATING_VOLTAGE_STATUS": map[string]any{"TYPE": "ENUM"}, "UNREACH": map[string]any{"TYPE": "BOOL"}}
 	s.Paramsets["BidCos-RF/HM-CC-RT-DN/1.4/1/MAINTENANCE/VALUES"] = map[string]any{"LOWBAT": map[string]any{"TYPE": "BOOL"}, "UNREACH": map[string]any{"TYPE": "BOOL"}}
@@ -139,13 +149,25 @@ func TestLearnSeedRecord(t *testing.T) {
 	if bbl := find(views, "BBL"); bbl == nil || bbl.LowBatDP != "" || *bbl.Voltage != 230 {
 		t.Fatalf("BBL: %+v", bbl)
 	}
-	if find(views, "INT0001") != nil {
-		t.Fatal("a group has no battery datapoint and is not tracked")
+	if find(views, "INT0001") != nil || find(views, "HMW1") != nil {
+		t.Fatal("VirtualDevices and BidCos-Wired are never recorded")
 	}
 	for _, c := range s.Calls {
 		if strings.Contains(c, "BidCos-RF getParamset") {
 			t.Fatalf("a BidCos value was read: %v", s.Calls)
 		}
+		if strings.HasPrefix(c, "VirtualDevices ") || strings.HasPrefix(c, "BidCos-Wired ") {
+			t.Fatalf("an interface the addon does not record was asked: %v", s.Calls)
+		}
+	}
+	// the stream is asked for the recorded interfaces only
+	if q := s.Queries(); len(q) == 0 || !strings.Contains(q[0], "interface=BidCos-RF%2CHmIP-RF") {
+		t.Fatalf("stream query: %v", q)
+	}
+	// and an event that names another interface anyway changes nothing
+	r.apply(litesource.Event{Interface: "VirtualDevices", Address: "INT0001:0", Key: "LOW_BAT", Value: []byte("true"), Confirmed: true, Source: "event"}, true)
+	if find(r.Devices("de"), "INT0001") != nil {
+		t.Fatal("an event of VirtualDevices made a device")
 	}
 	// the English rooms
 	if en := find(r.Devices("en"), "WRC2"); en.Rooms[0] != "Kitchen" {
@@ -329,5 +351,40 @@ func TestObserverProfilesAndDetection(t *testing.T) {
 	db.QueryRow(`SELECT COUNT(*) FROM slots WHERE address = 'WRC2' AND rechargeable = 1`).Scan(&n)
 	if n != 1 {
 		t.Fatal("the override's slots were not written")
+	}
+}
+
+// Devices of VirtualDevices or BidCos-Wired that an older version recorded are retired at the
+// start (kept, never deleted) and not loaded; the supported ones stay.
+func TestUnsupportedInterfacesRetired(t *testing.T) {
+	s := system(t)
+	dir := t.TempDir()
+	st, err := store.Open(store.Config{AddonDir: dir, Log: t.Logf})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer st.Close()
+	st.UpsertDevice(store.Device{Interface: "VirtualDevices", Address: "INT0001", Model: "HmIP-HEATING", LowBatDP: "0/LOW_BAT", FirstSeen: 1, LastSeen: 1})
+	st.UpsertDevice(store.Device{Interface: "BidCos-Wired", Address: "HMW1", Model: "HMW-IO-12-Sw7-DR", LowBatDP: "0/LOWBAT", FirstSeen: 1, LastSeen: 1})
+	st.UpsertDevice(store.Device{Interface: "HmIP-RF", Address: "WRC2", Model: "HmIP-WRC2", VoltageDP: "0/OPERATING_VOLTAGE", LowBatDP: "0/LOW_BAT", FirstSeen: 1, LastSeen: 1})
+	st.AddSample(store.Sample{Interface: "VirtualDevices", Address: "INT0001", TS: 1, Source: "live"})
+	st.Flush()
+	c := litesource.New(s.URL, addonkit.StaticToken("olt_test"))
+	r := New(Options{Source: c, Store: st, Log: t.Logf, ReadPause: time.Millisecond})
+	r.loadStore(context.Background())
+	if v := r.Devices("de"); len(v) != 1 || v[0].Address != "WRC2" {
+		t.Fatalf("loaded: %+v", v)
+	}
+	st.Flush()
+	devs, _ := st.Devices(context.Background())
+	got := map[string]bool{}
+	for _, d := range devs {
+		got[d.Interface+"."+d.Address] = d.RetiredAt != 0
+	}
+	if len(got) != 3 || !got["VirtualDevices.INT0001"] || !got["BidCos-Wired.HMW1"] || got["HmIP-RF.WRC2"] {
+		t.Fatalf("retired: %v", got)
+	}
+	if n, _ := st.Counts(context.Background()); n["samples"] != 1 {
+		t.Fatalf("the imported rows stay: %v", n)
 	}
 }

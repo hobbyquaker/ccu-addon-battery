@@ -1,6 +1,8 @@
 package stats
 
 import (
+	"context"
+	"database/sql"
 	"testing"
 	"time"
 
@@ -157,5 +159,36 @@ func TestLifeCost(t *testing.T) {
 	}
 	if perYear(100, 200) != 183 || perYear(100, 0) != 0 {
 		t.Error("perYear")
+	}
+}
+
+// Load leaves out the devices and changes of interfaces the addon does not record.
+func TestLoadOnlySupportedInterfaces(t *testing.T) {
+	st, err := store.Open(store.Config{AddonDir: t.TempDir(), Log: t.Logf})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer st.Close()
+	ctx := context.Background()
+	if err := st.Write(ctx, func(tx *sql.Tx) error {
+		for _, q := range []string{
+			`INSERT INTO devices (interface, address, model, first_seen, last_seen) VALUES ('HmIP-RF', 'A', 'HmIP-WRC2', 1, 1), ('VirtualDevices', 'INT0001', 'HmIP-HEATING', 1, 1), ('BidCos-Wired', 'HMW1', 'HMW-IO-12-Sw7-DR', 1, 1)`,
+			`INSERT INTO changes (interface, address, at, kind, status, created_at, updated_at) VALUES ('HmIP-RF', 'A', 5, 'manual', 'accepted', 1, 1), ('VirtualDevices', 'INT0001', 5, 'detected', 'accepted', 1, 1), ('BidCos-Wired', 'HMW1', 5, 'manual', 'accepted', 1, 1)`,
+		} {
+			if _, err := tx.Exec(q); err != nil {
+				return err
+			}
+		}
+		return nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+	db, _ := st.DB()
+	cs, ds, err := Load(ctx, db)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(cs) != 1 || cs[0].Address != "A" || len(ds) != 1 || ds[0].Address != "A" {
+		t.Fatalf("loaded: %+v %+v", cs, ds)
 	}
 }

@@ -18,6 +18,7 @@ import (
 
 	"github.com/hobbyquaker/ccu-addon-battery/internal/batteries"
 	"github.com/hobbyquaker/ccu-addon-battery/internal/detect"
+	"github.com/hobbyquaker/ccu-addon-battery/internal/ifaces"
 	"github.com/hobbyquaker/ccu-addon-battery/internal/store"
 	"github.com/hobbyquaker/ccu-addon-kit/go/litesource"
 )
@@ -120,7 +121,7 @@ func (r *Recorder) Run(ctx context.Context) error {
 		since = snap
 	}
 	r.setState("live")
-	ch := r.o.Source.Subscribe(ctx, litesource.Filter{Keys: Keys}, since)
+	ch := r.o.Source.Subscribe(ctx, litesource.Filter{Interfaces: ifaces.Supported, Keys: Keys}, since)
 	for m := range ch {
 		switch m.Type {
 		case "hello":
@@ -158,7 +159,15 @@ func (r *Recorder) loadStore(ctx context.Context) {
 	curs, _ := r.o.Store.Currents(ctx)
 	r.mu.Lock()
 	defer r.mu.Unlock()
+	now := r.o.Now().UnixMilli()
 	for _, d := range devs {
+		if !ifaces.IsSupported(d.Interface) {
+			// recorded by an older version (VirtualDevices, BidCos-Wired): retired, kept
+			if d.RetiredAt == 0 {
+				r.o.Store.RetireDevice(d.Interface, d.Address, now)
+			}
+			continue
+		}
 		if d.RetiredAt != 0 {
 			continue
 		}
@@ -183,12 +192,15 @@ func (r *Recorder) loadStore(ctx context.Context) {
 // learnDevices lists every interface's devices and finds, from the VALUES descriptions, which
 // datapoints each device reports; the result is upserted into the store.
 func (r *Recorder) learnDevices(ctx context.Context) error {
-	ifaces, err := r.o.Source.Interfaces(ctx)
+	list, err := r.o.Source.Interfaces(ctx)
 	if err != nil {
 		return err
 	}
 	now := r.o.Now().UnixMilli()
-	for _, iface := range ifaces {
+	for _, iface := range list {
+		if !ifaces.IsSupported(iface.Name) {
+			continue // never listed: no devices with a battery there
+		}
 		descs, err := r.o.Source.Devices(ctx, iface.Name)
 		if err != nil {
 			r.logf("recorder: %s: listDevices: %v", iface.Name, err)
@@ -315,6 +327,9 @@ func isThermostatChannel(t string) bool {
 }
 
 func (r *Recorder) retire(iface string, addresses []string) {
+	if !ifaces.IsSupported(iface) {
+		return
+	}
 	now := r.o.Now().UnixMilli()
 	r.mu.Lock()
 	defer r.mu.Unlock()
@@ -336,7 +351,7 @@ func (r *Recorder) retire(iface string, addresses []string) {
 // answers the stream position to subscribe from.
 func (r *Recorder) seed(ctx context.Context) (string, error) {
 	r.setState("seeding")
-	snap, err := r.o.Source.Seed(ctx, litesource.Filter{Keys: Keys})
+	snap, err := r.o.Source.Seed(ctx, litesource.Filter{Interfaces: ifaces.Supported, Keys: Keys})
 	if err != nil {
 		return "", err
 	}
@@ -388,6 +403,9 @@ func isKey(k string) bool {
 // apply takes one report. live says it is a live event (evidence); a seed, a sweep or a
 // restored entry updates the current values and the samples but never the events table.
 func (r *Recorder) apply(e litesource.Event, live bool) {
+	if !ifaces.IsSupported(e.Interface) {
+		return
+	}
 	key := e.Interface + "." + e.Device()
 	r.mu.Lock()
 	d := r.devs[key]

@@ -56,10 +56,13 @@ yet; once it does, it becomes a third one here.
 | Signal | Where | Devices |
 | --- | --- | --- |
 | `OPERATING_VOLTAGE`, `OPERATING_VOLTAGE_STATUS`, `LOW_BAT`, `BOOTED`, `UNREACH` | channel 0 | every Homematic IP device |
-| `LOWBAT`, `UNREACH` | channel 0 | every BidCos device |
+| `LOWBAT`, `UNREACH` | channel 0 | every BidCos radio device |
 | `BATTERY_STATE` | the thermostat channel | HM-CC-RT-DN, HM-TC-IT-WM-W-EU |
 
-A device is tracked when its descriptions carry one of the battery datapoints. At the start the
+The interfaces recorded are `HmIP-RF` and `BidCos-RF`. BidCos-Wired (mains-powered devices) and
+VirtualDevices (the system's groups) are left out entirely: the addon lists no devices there and does
+not register for their events. A device is tracked when its descriptions carry one of the battery
+datapoints. At the start the
 addon seeds the values from the system's state store and, for Homematic IP, from the radio
 process's cache (no radio traffic); BidCos values are never read, only received. Samples are
 downsampled: a row when the voltage moved by 0.01 V, when the low-battery flag changed, or once a
