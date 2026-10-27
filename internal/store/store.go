@@ -177,16 +177,16 @@ func (s *Store) Available() bool {
 
 // Health is what the API shows.
 type Health struct {
-	State     string    `json:"state"` // ok | degraded | unavailable
-	Error     string    `json:"error,omitempty"`
-	Path      string    `json:"path"`
-	Location  Location  `json:"location"`
+	State     string     `json:"state"` // ok | degraded | unavailable
+	Error     string     `json:"error,omitempty"`
+	Path      string     `json:"path"`
+	Location  Location   `json:"location"`
 	Pending   int        `json:"pending"`
 	Dropped   int64      `json:"dropped"`
 	LastFlush *time.Time `json:"last_flush,omitempty"`
 	Flushes   int64      `json:"flushes"`
-	SizeBytes int64     `json:"size_bytes"`
-	InBackup  bool      `json:"in_backup"`
+	SizeBytes int64      `json:"size_bytes"`
+	InBackup  bool       `json:"in_backup"`
 }
 
 // Health answers the store's state.
