@@ -54,6 +54,103 @@ erkannter Wechsel im Eingang wartet – jede Meldung einmal und frühestens nach
 Das System selbst bietet einem Addon noch keinen Kanal; sobald es einen hat, wird er hier der
 dritte.
 
+## Rundgang
+
+Ein Rundgang mit Bildern durch jede Seite des Addons, in der Oberfläche von openccu-lite (Version
+`0.0.0-prod.4` auf openccu-lite `1.0.0-rc.3`). Die Bilder zeigen ein echtes System: 67
+Batteriegeräte, 149 Batteriewechsel aus einer eigenen Liste und einem älteren Messwertarchiv
+übernommen, die Aufzeichnung selbst läuft dort erst seit einem Tag. Namen, Räume, Seriennummern
+und SGTINs sind verändert. Jedes Bild gibt es im hellen und im dunklen Design; Ihr Browser zeigt
+das, das zu seiner Einstellung passt.
+
+### Geräte
+
+<picture><source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/01-geraete-dunkel.png"><img alt="Geräte" src="docs/screenshots/01-geraete.png"></picture>
+
+Jedes Batteriegerät mit Bild, Status (nicht erreichbar, Batterie leer, OK), den Batterien
+aus der Batterietabelle, der letzten Spannung, der bisherigen Haltedauer seiner Batterien, wie
+lange die aktuellen schon drin sind, wann der nächste Wechsel fällig ist und wann es sich zuletzt
+gemeldet hat. Jede Spalte lässt sich sortieren und filtern; Geräte mit Netz- oder Busversorgung
+blendet der Haken oben ein. *Gewechselt …* bucht einen Wechsel direkt aus der Liste.
+
+### Ein Gerät
+
+<picture><source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/02-geraet-dunkel.png"><img alt="Ein Gerät" src="docs/screenshots/02-geraet.png"></picture>
+
+Ein Klick auf den Namen öffnet das Gerät: Batterien, Spannung, die Schwellen für frisch und leer,
+die Haltedauern und der Spannungsverlauf über die ganze Aufzeichnung, mit den Wechseln als Marken
+und den Batterie-leer-Phasen als Bändern. Darunter alle gebuchten Wechsel des Geräts, jeder
+bearbeitbar und löschbar; hier die übernommenen mit ihrer Herkunft in der Notiz.
+
+### Einen Wechsel buchen
+
+<picture><source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/03-wechsel-dunkel.png"><img alt="Einen Wechsel buchen" src="docs/screenshots/03-wechsel.png"></picture>
+
+*Gewechselt …* fragt, wann, und je Batteriefach, was eingelegt wurde: Hersteller und Typ (mit
+Vorschlägen aus den bisher eingetragenen), den Preis pro Batterie (vorgeschlagen: der zuletzt
+bezahlte) und ob es Akkus sind. Die Größe kommt aus der Batterietabelle.
+
+### Eingang
+
+<picture><source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/04-eingang-dunkel.png"><img alt="Eingang" src="docs/screenshots/04-eingang.png"></picture>
+
+Was die Erkennung für einen Batteriewechsel hält, wartet hier auf Ihre Antwort: ja (mit den
+eingelegten Batterien), an einem anderen Tag, oder nein. Auf dem gezeigten System wartet gerade
+nichts. Darunter alle gebuchten Wechsel aller Geräte.
+
+### Batterien
+
+<picture><source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/05-batterien-dunkel.png"><img alt="Batterien" src="docs/screenshots/05-batterien.png"></picture>
+
+Jede je eingetragene Batterie, nach Hersteller, Typ und Größe: wie viele eingelegt wurden, in
+wie vielen Wechseln und Geräten, in welchen Modellen, wie lange sie hielten und was sie pro
+Batterie und pro Jahr kosteten.
+
+<picture><source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/06-batterien-modelle-dunkel.png"><img alt="Haltedauer je Gerätemodell" src="docs/screenshots/06-batterien-modelle.png"></picture>
+
+Die Haltedauer hängt vom Gerät ab: *Je Modell* zeigt sie für eine Batterie getrennt nach
+Gerätemodell.
+
+<picture><source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/07-batterien-vergleich-dunkel.png"><img alt="Batterien vergleichen" src="docs/screenshots/07-batterien-vergleich.png"></picture>
+
+Fair vergleichen lassen sich Batterien deshalb nur innerhalb eines Modells oder einer Größe: hier
+die Batterien, die in den Heizkörperthermostaten HM-CC-RT-DN waren, nach Haltedauer sortiert, mit
+den Kosten pro Jahr. Die Zahl in Klammern sagt, auf wie vielen Haltedauern der Wert beruht.
+
+### Einkauf
+
+<picture><source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/08-einkauf-dunkel.png"><img alt="Einkauf" src="docs/screenshots/08-einkauf.png"></picture>
+
+Welche Geräte jetzt leer melden oder im gewählten Zeitraum fällig werden, was sie je
+Batteriegröße brauchen, gegen den Vorrat zu Hause gerechnet, und was zu kaufen ist – als Liste
+kopierbar. Darunter die fälligen Geräte selbst.
+
+### Statistik
+
+<picture><source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/09-statistik-dunkel.png"><img alt="Statistik" src="docs/screenshots/09-statistik.png"></picture>
+
+Die letzten zwölf Monate in Zahlen, die Geräte mit den kürzesten Haltedauern (die
+Batteriefresser) und die Haltedauer je Modell und je Größe: der Balken reicht von der kürzesten
+bis zur längsten, die Marke ist der Median. Weiter unten, nicht mehr im Bild, die Exporte.
+
+### Einstellungen
+
+<picture><source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/10-einstellungen-datenbank-dunkel.png"><img alt="Einstellungen: Datenbank" src="docs/screenshots/10-einstellungen-datenbank.png"></picture>
+
+Die Einstellungsseite (auf openccu-lite unter *Zusatzsoftware → Batterie → Einstellungen*) zeigt,
+wo die Datenbank liegt und wie es ihr geht, und verschiebt sie zwischen der Benutzerpartition
+(in jedem Backup) und einem USB-Stick – hier liegt sie auf dem Stick.
+
+<picture><source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/11-einstellungen-benachrichtigungen-dunkel.png"><img alt="Einstellungen: Benachrichtigungen" src="docs/screenshots/11-einstellungen-benachrichtigungen.png"></picture>
+
+Die Benachrichtigungen: der Kanal (ntfy oder ein Webhook), wobei gemeldet wird, und die Sprache
+der Meldungen; eine Testnachricht prüft den Kanal. Ohne Kanal wird nichts gesendet.
+
+<picture><source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/12-einstellungen-info-dunkel.png"><img alt="Einstellungen: Info" src="docs/screenshots/12-einstellungen-info.png"></picture>
+
+Info: die installierte Version, das System und die Suche nach einer neueren Version, die nur auf
+Ihren Klick hin ins Internet geht.
+
 ## Was aufgezeichnet wird
 
 | Signal | Wo | Geräte |

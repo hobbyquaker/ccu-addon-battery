@@ -51,6 +51,102 @@ device reports a low battery, a change is due or due soon, or a detected change 
 inbox - each once, and again only after a week. The system itself offers an addon no channel
 yet; once it does, it becomes a third one here.
 
+## A walk through the pages
+
+Pictures of every page of the addon, inside openccu-lite's shell (version `0.0.0-prod.4` on
+openccu-lite `1.0.0-rc.3`; the UI is German here, the app also speaks English). They show a real
+system: 67 battery devices, 149 battery changes taken over from a list of its own and an older
+measurement archive; the recording itself has been running there for one day only. Names, rooms,
+serial numbers and SGTINs are changed. Every picture comes in the light and the dark theme; your
+browser shows the one that matches its setting.
+
+### Devices (Geräte)
+
+<picture><source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/01-geraete-dunkel.png"><img alt="Devices" src="docs/screenshots/01-geraete.png"></picture>
+
+Every battery device with its picture, status (unreachable, low battery, OK), the batteries from
+the battery table, the last voltage, how long its batteries lasted so far, how long the current
+ones have been in, when the next change is due and when it last reported. Every column sorts and
+filters; the box at the top adds the mains- and bus-powered devices. *Gewechselt …* (Changed…)
+records a change straight from the list.
+
+### A device
+
+<picture><source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/02-geraet-dunkel.png"><img alt="A device" src="docs/screenshots/02-geraet.png"></picture>
+
+A click on the name opens the device: batteries, voltage, the fresh and empty thresholds, the
+battery lives and the voltage curve over the whole record, with the changes as marks and the
+low-battery phases as bands. Below it every recorded change of the device, each editable and
+deletable; here the imported ones, their origin in the note.
+
+### Recording a change
+
+<picture><source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/03-wechsel-dunkel.png"><img alt="Recording a change" src="docs/screenshots/03-wechsel.png"></picture>
+
+*Gewechselt …* asks when, and per battery slot what went in: vendor and product line (suggested
+from the ones entered before), the price per battery (suggested: the last one paid) and whether
+they are rechargeable. The size comes from the battery table.
+
+### Inbox (Eingang)
+
+<picture><source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/04-eingang-dunkel.png"><img alt="Inbox" src="docs/screenshots/04-eingang.png"></picture>
+
+What the detector takes for a battery change waits here for your answer: yes (with the batteries
+that went in), on another day, or no. On the system shown nothing is waiting. Below it every
+recorded change of every device.
+
+### Batteries (Batterien)
+
+<picture><source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/05-batterien-dunkel.png"><img alt="Batteries" src="docs/screenshots/05-batterien.png"></picture>
+
+Every battery ever entered, by vendor, product line and size: how many went in, in how many
+changes and devices, in which models, how long they lasted and what they cost per battery and
+per year.
+
+<picture><source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/06-batterien-modelle-dunkel.png"><img alt="Battery life per device model" src="docs/screenshots/06-batterien-modelle.png"></picture>
+
+How long a battery lasts depends on the device: *Je Modell* (per model) splits it by device model.
+
+<picture><source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/07-batterien-vergleich-dunkel.png"><img alt="Comparing batteries" src="docs/screenshots/07-batterien-vergleich.png"></picture>
+
+So batteries compare fairly only within one model or one size: here the batteries that were in
+the HM-CC-RT-DN radiator thermostats, sorted by life, with their cost per year. The number in
+brackets is how many lives the value rests on.
+
+### Shopping (Einkauf)
+
+<picture><source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/08-einkauf-dunkel.png"><img alt="Shopping" src="docs/screenshots/08-einkauf.png"></picture>
+
+Which devices report low now or fall due in the chosen period, what they need per battery size,
+set against the stock at home, and what to buy - copyable as a list. Below it the devices that
+are due.
+
+### Statistics (Statistik)
+
+<picture><source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/09-statistik-dunkel.png"><img alt="Statistics" src="docs/screenshots/09-statistik.png"></picture>
+
+The last twelve months in numbers, the devices with the shortest battery lives (the battery
+eaters) and the life per model and per size: the bar runs from the shortest to the longest, the
+mark is the median. Further down, out of the picture, the exports.
+
+### Settings
+
+<picture><source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/10-einstellungen-datenbank-dunkel.png"><img alt="Settings: database" src="docs/screenshots/10-einstellungen-datenbank.png"></picture>
+
+The settings page (on openccu-lite under *Zusatzsoftware → Batterie → Einstellungen*) shows where
+the database lives and how it is doing, and moves it between the user partition (in every backup)
+and a USB stick - here it is on the stick.
+
+<picture><source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/11-einstellungen-benachrichtigungen-dunkel.png"><img alt="Settings: notifications" src="docs/screenshots/11-einstellungen-benachrichtigungen.png"></picture>
+
+The notifications: the channel (ntfy or a webhook), what to report and the language of the
+messages; a test message checks the channel. Without a channel nothing is sent.
+
+<picture><source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/12-einstellungen-info-dunkel.png"><img alt="Settings: info" src="docs/screenshots/12-einstellungen-info.png"></picture>
+
+Info: the installed version, the system, and the check for a newer version, which goes to the
+internet only when you click it.
+
 ## What it records
 
 | Signal | Where | Devices |
