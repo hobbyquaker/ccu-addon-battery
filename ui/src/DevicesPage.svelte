@@ -10,7 +10,7 @@
     import ChangeDialog, {type EditorResult} from './ChangeDialog.svelte';
     import DevicePicture from './DevicePicture.svelte';
     import {get, post} from './api.js';
-    import {compareDevices, describeSlots, formatDays, formatVoltage, isMains, lifeText, relativeTime, statusOf, type DeviceView} from './model.js';
+    import {compareDevices, describeSlots, dueText, formatDateTime, formatDays, formatVoltage, isMains, lifeText, relativeTime, statusOf, type DeviceForecast, type DeviceView, type Forecast} from './model.js';
 
     let {
         notices,
@@ -45,14 +45,18 @@
     }
 
     let devices = $state<DeviceView[]>([]);
+    let forecasts = $state<Record<string, Forecast>>({});
     let loading = $state(true);
     let error = $state('');
     let now = $state(Date.now());
 
     async function load() {
         try {
-            const r = await get<{devices: DeviceView[]}>(`api/v1/devices?lang=${i18n.language}`);
+            const [r, f] = await Promise.all([get<{devices: DeviceView[]}>(`api/v1/devices?lang=${i18n.language}`), get<{devices: DeviceForecast[]}>(`api/v1/forecast?lang=${i18n.language}`)]);
             devices = r.devices.sort(compareDevices);
+            const map: Record<string, Forecast> = {};
+            for (const d of f.devices) map[`${d.interface}.${d.address}`] = d.forecast;
+            forecasts = map;
             error = '';
         } catch (e) {
             error = (e as Error).message;
@@ -83,9 +87,25 @@
         // sortable by the mean life (shortest first); devices without a completed life sort last
         {key: 'life', label: t('life.column'), width: 210, value: (d) => (d.life?.count ? d.life.avg_days : undefined), filterable: false},
         {key: 'running', label: t('life.running'), width: 90, value: (d) => d.life?.running_days, filterable: false},
+        // sortable by the days left; the low ones first, the unknown last
+        {key: 'due', label: t('forecast.column'), width: 120, fixed: true, value: (d) => dueSort(forecasts[`${d.interface}.${d.address}`]), filterable: false, align: 'center'},
         {key: 'last_report', label: t('Last report'), width: 100, value: (d) => relativeTime(d.last_report, now, lang)},
         {key: 'actions', label: '', width: 140, fixed: true, minWidth: 140, keepMinWidth: true, sortable: false, filterable: false},
     ]);
+
+    function dueSort(f: Forecast | undefined): number | undefined {
+        if (!f || f.state === 'unknown') return undefined;
+        if (f.state === 'low') return -1e9;
+        return f.days_left;
+    }
+
+    function dueTitle(f: Forecast | undefined): string {
+        if (!f || f.state === 'unknown') return t('forecast.unknown');
+        const parts = [t('forecast.basis.' + f.basis, {lives: f.lives ?? 0, days: formatDays(f.expected_days, lang)})];
+        if (f.due_at) parts.push(t('forecast.dueOn', {when: formatDateTime(f.due_at, lang)}));
+        if (f.trend?.reach_low_at) parts.push(t('forecast.trend', {mv: f.trend.mv_per_day, when: formatDateTime(f.trend.reach_low_at, lang)}));
+        return parts.join('\n');
+    }
 
     function lifeTitle(d: DeviceView): string {
         const l = d.life;
@@ -148,6 +168,9 @@
                     <span class="bat-mono" title={row.voltage_dp ?? t('No voltage')}>{formatVoltage(row.voltage, lang)}</span>
                 {:else if column.key === 'life'}
                     <span class="bat-life bat-truncate" class:short={row.life?.hint === 'short'} title={lifeTitle(row)}>{lifeText(row.life, lang) || '–'}</span>
+                {:else if column.key === 'due'}
+                    {@const f = forecasts[`${row.interface}.${row.address}`]}
+                    <span class="bat-pill fc-{f?.state ?? 'unknown'}" title={dueTitle(f)}>{dueText(f, lang) || '–'}</span>
                 {:else if column.key === 'running'}
                     <span class="bat-life" class:short={row.life?.hint === 'short'} title={lifeTitle(row)}>{row.life?.running_days !== undefined ? formatDays(row.life.running_days, lang) : '–'}</span>
                 {:else}

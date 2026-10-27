@@ -186,6 +186,61 @@ export interface StatsNames {
     [key: string]: {name: string; model: string; image?: string};
 }
 
+export interface Trend {
+    mv_per_day: number;
+    points: number;
+    span_days: number;
+    reach_low_at?: number;
+}
+
+export interface Forecast {
+    expected_days?: number;
+    basis: 'own' | 'model' | 'table' | 'trend' | 'none';
+    lives?: number;
+    due_at?: number;
+    days_left: number;
+    state: 'low' | 'due' | 'soon' | 'ok' | 'unknown';
+    trend?: Trend;
+}
+
+export interface DeviceForecast {
+    interface: string;
+    address: string;
+    name: string;
+    rooms: string[];
+    model: string;
+    image?: string;
+    slots: Slot[];
+    low_bat: boolean;
+    voltage: number | null;
+    forecast: Forecast;
+}
+
+export interface ShoppingItem {
+    type: string;
+    needed: number;
+    stock: number;
+    buy: number;
+    devices: string[];
+}
+
+/** The due column: "in 3 Mon." / "überfällig (12 T.)" / "leer"; "" when unknown. */
+export function dueText(f: Forecast | undefined, lang = 'en'): string {
+    if (!f) return '';
+    const de = lang === 'de';
+    switch (f.state) {
+        case 'low':
+            return de ? 'leer' : 'low';
+        case 'due':
+            return (de ? 'überfällig ' : 'overdue ') + formatDays(-f.days_left, lang);
+        case 'soon':
+        case 'ok':
+            return (de ? 'in ' : 'in ') + formatDays(f.days_left, lang);
+        default:
+            return '';
+    }
+}
+
 export interface StorageHealth {
     state: 'ok' | 'degraded' | 'unavailable';
     error?: string;

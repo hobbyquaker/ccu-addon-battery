@@ -556,3 +556,30 @@ button.bat-link.bat-truncate {
 .bat-detection-head .bat-devimg {
     margin-right: 6px;
 }
+
+/* P3: the due pill, the shopping list */
+.bat-pill.fc-low,
+.bat-pill.fc-due {
+    border-color: var(--hmm-error, #c0392b);
+    color: var(--hmm-error, #c0392b);
+}
+
+.bat-pill.fc-soon {
+    border-color: var(--hmm-warn, #b7791f);
+    color: var(--hmm-warn, #b7791f);
+}
+
+.bat-pill.fc-ok {
+    border-color: var(--hmm-ok, #2a8a3e);
+    color: var(--hmm-ok, #2a8a3e);
+}
+
+.bat-num {
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+}
+
+.bat-stock-input {
+    width: 5em;
+    text-align: right;
+}

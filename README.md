@@ -13,8 +13,8 @@ Batterien am besten abschneiden, was bald fällig ist und was zu kaufen ist.
 Batterietabelle (welches Gerät welche Batterien nimmt); die Wechselerkennung mit ihrem Eingang;
 von Hand gebuchte Wechsel mit den eingelegten Batterien (Hersteller, Typ, Preis); die
 Gerätebilder, die Haltedauern je Gerät, die Tabs Batterien und Statistik; die API zum Import
-vergangener Wechsel und Spannungsverläufe; die Wahl des Datenbank-Speicherorts. Die Prognosen und
-die Einkaufsliste folgen.
+vergangener Wechsel und Spannungsverläufe; die Wahl des Datenbank-Speicherorts. Die Prognosen, die
+Einkaufsliste und die Benachrichtigungen. Das Paket für die klassische CCU folgt.
 
 ## Die Seiten
 
@@ -33,13 +33,26 @@ mit dessen Design und Sprache):
   wurden, in welchen Geräten und Modellen, wie lange sie hielten, was sie pro Batterie und pro
   Jahr kosteten – und, weil die Haltedauer vom Gerät abhängt, die Haltedauer je Gerätemodell
   hinter jeder Zeile, dazu ein Vergleich innerhalb eines Modells oder einer Größe.
+- **Einkauf:** welche Geräte jetzt leer melden oder in einem Zeitraum Ihrer Wahl fällig werden, was
+  sie je Batteriegröße brauchen, gegen den Vorrat zu Hause gerechnet, und was zu kaufen ist – als
+  Liste kopierbar. Die Prognose dahinter steht in der Spalte *Fällig* der Geräteliste: die erwartete
+  Haltedauer ist der Median der eigenen Haltedauern des Geräts, bei weniger als zwei der Median
+  seines Modells hier, sonst die Angabe der Batterietabelle; fällig ist der letzte Wechsel plus
+  diese Dauer minus zwei Wochen, vorgezogen, wenn der Spannungstrend der letzten Wochen die
+  Leer-Schwelle früher erreicht.
 - **Statistik:** die letzten zwölf Monate in Zahlen, die Geräte mit den kürzesten Haltedauern, die
   Haltedauer je Modell und je Größe, und die Exporte.
 
 Die **Einstellungsseite** ist davon getrennt (auf openccu-lite unter *Addons → Batterie →
-Einstellungen*, auf einer CCU der *Einstellungen*-Knopf des Addons): der Speicherort der Datenbank
-und, auf einer CCU, der Dienst, sein Protokoll und die Version. Dienststeuerung und Protokoll sind
-auf openccu-lite die Seiten des Systems selbst.
+Einstellungen*, auf einer CCU der *Einstellungen*-Knopf des Addons): der Speicherort der Datenbank,
+die Benachrichtigungen und, auf einer CCU, der Dienst, sein Protokoll und die Version.
+Dienststeuerung und Protokoll sind auf openccu-lite die Seiten des Systems selbst.
+
+**Benachrichtigungen:** über [ntfy](https://ntfy.sh) oder einen eigenen Webhook meldet das Addon,
+wenn ein Gerät eine leere Batterie meldet, ein Wechsel fällig oder bald fällig ist oder ein
+erkannter Wechsel im Eingang wartet – jede Meldung einmal und frühestens nach einer Woche erneut.
+Das System selbst bietet einem Addon noch keinen Kanal; sobald es einen hat, wird er hier der
+dritte.
 
 ## Was aufgezeichnet wird
 

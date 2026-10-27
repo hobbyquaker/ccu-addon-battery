@@ -13,8 +13,8 @@ what to buy.
 (which device takes which batteries); the change detection with its inbox; changes recorded by
 hand, with the batteries that went in (vendor, product line, price); the device pictures, the
 battery lives per device, the Batteries and Statistics tabs; the API for importing past changes
-and voltage series; the choice of where the database lives. The forecasts and the shopping list
-follow.
+and voltage series; the choice of where the database lives. The forecasts, the shopping list and
+the notifications. The classic CCU package follows.
 
 ## The pages
 
@@ -32,12 +32,24 @@ and language):
   which devices and models, how long they lasted, what they cost per battery and per year - and,
   since a battery's life depends on the device, the life per device model behind each row, plus a
   comparison within one model or size.
+- **Shopping:** which devices are low now or due within a horizon you choose, what they need per
+  battery type against the stock you keep at home, and what to buy - copyable as a list. The
+  forecast behind it is in the Devices table's *Due* column: the expected life is the median of
+  the device's own lives, with fewer than two the median of its model here, else the battery
+  table's figure; due is the last change plus that minus a fortnight, pulled forward when the
+  voltage trend of the last weeks reaches the low level earlier.
 - **Statistics:** the last twelve months in numbers, the devices with the shortest lives, the life
   per model and per size, and the exports.
 
 The **settings page** is separate (on openccu-lite under *Addons → Battery → Settings*, on a CCU the
-addon's *Einstellungen* button): where the database lives and, on a CCU, the service, its log and
-the version. Service control and the log are the system's own pages on openccu-lite.
+addon's *Einstellungen* button): where the database lives, the notifications and, on a CCU, the
+service, its log and the version. Service control and the log are the system's own pages on
+openccu-lite.
+
+**Notifications:** over [ntfy](https://ntfy.sh) or a webhook of yours, the addon tells you when a
+device reports a low battery, a change is due or due soon, or a detected change waits in the
+inbox - each once, and again only after a week. The system itself offers an addon no channel
+yet; once it does, it becomes a third one here.
 
 ## What it records
 

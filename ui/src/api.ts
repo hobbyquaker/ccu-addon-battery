@@ -40,6 +40,10 @@ export async function post<T>(path: string, body: unknown): Promise<T> {
     return send<T>('POST', path, body);
 }
 
+export async function put<T>(path: string, body: unknown): Promise<T> {
+    return send<T>('PUT', path, body);
+}
+
 export async function patch<T>(path: string, body: unknown): Promise<T> {
     return send<T>('PATCH', path, body);
 }

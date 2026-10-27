@@ -11,6 +11,7 @@
     import DeviceDetail from './DeviceDetail.svelte';
     import DevicesPage from './DevicesPage.svelte';
     import InboxPage from './InboxPage.svelte';
+    import ShoppingPage from './ShoppingPage.svelte';
     import StatisticsPage from './StatisticsPage.svelte';
     import {get} from './api.js';
     import type {DeviceView, StorageHealth} from './model.js';
@@ -65,6 +66,7 @@
         {id: 'devices', label: t('Devices')},
         {id: 'inbox', label: t('Inbox'), ...(health?.inbox ? {badge: health.inbox} : {})},
         {id: 'batteries', label: t('Batteries')},
+        {id: 'shopping', label: t('Shopping')},
         {id: 'stats', label: t('Statistics')},
     ]);
 </script>
@@ -99,6 +101,8 @@
             <InboxPage {notices} onchanged={loadHealth} />
         {:else if tab === 'batteries'}
             <BatteriesPage />
+        {:else if tab === 'shopping'}
+            <ShoppingPage {notices} onopen={openDetailByKey} />
         {:else}
             <StatisticsPage onopen={openDetailByKey} />
         {/if}

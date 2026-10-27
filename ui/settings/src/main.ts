@@ -6,8 +6,12 @@ import 'occulite-ui/app.css';
 import {defineTabs, mountFrame} from 'ccu-addon-kit/frame';
 
 import strings from './i18n.js';
+import Notifications from './tabs/Notifications.svelte';
 import Storage from './tabs/Storage.svelte';
 
-const tabs = defineTabs([{id: 'storage', label: {de: 'Datenbank', en: 'Database'}, component: Storage}]);
+const tabs = defineTabs([
+    {id: 'storage', label: {de: 'Datenbank', en: 'Database'}, component: Storage},
+    {id: 'notifications', label: {de: 'Benachrichtigungen', en: 'Notifications'}, component: Notifications},
+]);
 
 void mountFrame(document.getElementById('app')!, {tabs, strings});

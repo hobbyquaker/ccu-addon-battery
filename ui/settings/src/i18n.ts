@@ -6,7 +6,7 @@ const strings: Record<string, {de: string; en: string}> = {
     cancel: {de: 'Abbrechen', en: 'Cancel'},
 };
 for (const [key, value] of Object.entries(MESSAGES)) {
-    if ((key.startsWith('storage.') || key === 'time.never') && typeof value.de === 'string' && typeof value.en === 'string') {
+    if ((key.startsWith('storage.') || key.startsWith('notify.') || key === 'time.never') && typeof value.de === 'string' && typeof value.en === 'string') {
         strings[key] = {de: value.de, en: value.en};
     }
 }
