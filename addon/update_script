@@ -61,8 +61,10 @@ ln -sf $ADDON_DIR/rc.d $CONF_DIR/rc.d/$ADDON
 
 # the classic CCU reads the lighttpd rule from its own directory; openccu-lite makes its own
 # validated copy of etc/lighttpd.conf and this directory is the system's there
+LIGHTTPD_NEW=0
 if ! grep -q '^LITE=' /VERSION 2>/dev/null && [ ! -x /usr/bin/occulited ]; then
     mkdir -p $CONF_DIR/lighttpd
+    [ -f $CONF_DIR/lighttpd/$ADDON.conf ] || LIGHTTPD_NEW=1
     cp -f $ADDON_DIR/etc/lighttpd.conf $CONF_DIR/lighttpd/$ADDON.conf
     # the Einstellungen button of the WebUI (the settings page)
     touch $CONF_DIR/hm_addons.cfg
@@ -81,6 +83,12 @@ if [ $EXITCODE -eq 0 ] && [ ! -f /etc/init.d/S00InstallAddon ]; then
         cd /
         $CONF_DIR/rc.d/$ADDON start
     fi
+fi
+
+# a new proxy rule on a running OpenCCU: lighttpd reads its fragments only when it starts (the
+# CCU3 firmware installs during the shutdown, so its boot reads it)
+if [ $LIGHTTPD_NEW -eq 1 ] && [ ! -f /etc/init.d/S00InstallAddon ] && [ -x /etc/init.d/S50lighttpd ]; then
+    /etc/init.d/S50lighttpd restart >/dev/null 2>&1
 fi
 
 exit $EXITCODE

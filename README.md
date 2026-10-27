@@ -14,7 +14,7 @@ Batterietabelle (welches Gerät welche Batterien nimmt); die Wechselerkennung mi
 von Hand gebuchte Wechsel mit den eingelegten Batterien (Hersteller, Typ, Preis); die
 Gerätebilder, die Haltedauern je Gerät, die Tabs Batterien und Statistik; die API zum Import
 vergangener Wechsel und Spannungsverläufe; die Wahl des Datenbank-Speicherorts. Die Prognosen, die
-Einkaufsliste und die Benachrichtigungen. Das Paket für die klassische CCU folgt.
+Einkaufsliste und die Benachrichtigungen. Die klassische CCU (CCU3, OpenCCU) wird unterstützt.
 
 ## Die Seiten
 
@@ -148,6 +148,20 @@ Die Einstellung ist `storage` in `/usr/local/addons/battery/etc/battery.json`
 Entfernt das Programm und behält `/usr/local/addons/battery/etc` (die Einstellungen) und `var`
 (die Datenbank) für eine Neuinstallation. Entfernen Sie dieses Verzeichnis von Hand, um die Daten
 loszuwerden.
+
+## Auf einer CCU3 oder OpenCCU
+
+Dasselbe Paket lässt sich als klassisches Addon installieren (*Einstellungen → Systemsteuerung →
+Zusatzsoftware*, oder `/bin/install_addon` auf OpenCCU). Dort zeichnet der Dienst direkt von den
+Schnittstellenprozessen auf – er meldet sich per XML-RPC auf dem Loopback (Port 8292) für ihre
+Ereignisse an, liest die Geräteliste und alle Viertelstunde den Kanal 0 der Homematic-IP-Geräte
+aus dem Cache des Prozesses – und nimmt Namen und Räume aus der ReGaHSS; der *Einstellungen*-Knopf
+des Addons in der WebUI öffnet die Einstellungsseite (Dienst, Protokoll, Datenbank,
+Benachrichtigungen, Version), deren Knopf *Batterie öffnen* die Anwendung mit der Sitzung der WebUI
+öffnet. Nach außen spricht nur der Webserver. Einstellungen und Datenbank liegen in
+`/usr/local/addons/battery/etc` und `var`, in jedem Backup; *Deinstallieren* behält sie, wie oben.
+Getestet auf OpenCCU 3.89 (x86_64; die Pakete für `armv7l` und `aarch64` entstehen genauso); eine
+CCU3 mit der Firmware von eQ-3 steht noch aus.
 
 ## Entwicklung
 

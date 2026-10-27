@@ -14,7 +14,7 @@ what to buy.
 hand, with the batteries that went in (vendor, product line, price); the device pictures, the
 battery lives per device, the Batteries and Statistics tabs; the API for importing past changes
 and voltage series; the choice of where the database lives. The forecasts, the shopping list and
-the notifications. The classic CCU package follows.
+the notifications. The classic CCU (CCU3, OpenCCU) is supported.
 
 ## The pages
 
@@ -137,6 +137,19 @@ The setting is `storage` in `/usr/local/addons/battery/etc/battery.json`
 
 Removes the program and keeps `/usr/local/addons/battery/etc` (the settings) and `var` (the
 database) for a reinstall. Remove that directory by hand to be rid of the data.
+
+## On a CCU3 or OpenCCU
+
+The same package installs as a classic addon (*Einstellungen → Systemsteuerung → Zusatzsoftware*,
+or `/bin/install_addon` on OpenCCU). There the daemon records from the interface processes
+themselves - it registers for their events over XML-RPC on the loopback (port 8292), lists the
+devices and reads the Homematic IP channel 0 from the process's cache every quarter of an hour -
+and takes the names and rooms from ReGaHSS; the WebUI's *Einstellungen* button of the addon opens
+the settings page (service, log, database, notifications, version), whose *Open Battery* button
+opens the app with the WebUI's session. Nothing but the web server faces the network. The
+settings and the database live in `/usr/local/addons/battery/etc` and `var`, in every backup;
+`Deinstallieren` keeps them, as above. Tested on OpenCCU 3.89 (x86_64, `armv7l` and `aarch64`
+packages are built the same way); a CCU3 with eQ-3's own firmware is still to be tried.
 
 ## Development
 
