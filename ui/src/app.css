@@ -408,6 +408,47 @@ button.bat-link.bat-truncate {
     font-weight: 500;
 }
 
+/* a table wider than a narrow card scrolls inside it instead of running out of it */
+.bat-table-scroll {
+    max-width: 100%;
+    overflow-x: auto;
+}
+
+/* a change's note: wraps (a long word too), clamped to two lines with the full text as the
+   tooltip; a click shows it in full */
+.bat-note-cell {
+    min-width: 12em;
+}
+
+.bat-note {
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+    overflow: hidden;
+    overflow-wrap: anywhere;
+    white-space: normal;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    background: none;
+    color: inherit;
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+}
+
+.bat-note[aria-expanded='true'] {
+    display: block;
+    -webkit-line-clamp: unset;
+    line-clamp: none;
+}
+
+.bat-note:focus-visible {
+    outline: 2px solid var(--hmm-accent, #2c6fb3);
+    outline-offset: 2px;
+}
+
 .bat-row-actions {
     white-space: nowrap;
     text-align: right;

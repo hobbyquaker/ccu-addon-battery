@@ -22,6 +22,8 @@
     let editorOpen = $state(false);
     let editorMode = $state<'record' | 'edit'>('record');
     let editing = $state<Change | undefined>();
+    // the notes shown in full (a long one is clamped to two lines; a click opens it)
+    let openNotes = $state<Record<number, boolean>>({});
 
     const lang = $derived(i18n.language);
     const key = $derived(`${device.interface}.${device.address}`);
@@ -167,26 +169,32 @@
             {#if accepted.length === 0}
                 <p class="bat-empty">{t('changes.empty')}</p>
             {:else}
-                <table class="bat-plain">
-                    <thead>
-                        <tr><th>{t('change.at')}</th><th>{t('Batteries')}</th><th>{t('change.cost')}</th><th>{t('change.kind')}</th><th>{t('change.note')}</th><th></th></tr>
-                    </thead>
-                    <tbody>
-                        {#each accepted as c (c.id)}
-                            <tr>
-                                <td>{formatDateTime(c.at, lang)}</td>
-                                <td>{c.batteries.map((b) => `${b.count ?? 1}× ${batteryName(b, t('battery.unnamed'))}${b.rechargeable ? ' ⟳' : ''}`).join(' + ') || '–'}</td>
-                                <td class="bat-mono">{formatCents(slotCost(c), lang) || '–'}</td>
-                                <td><span class="bat-pill kind" title={t('kind.' + c.kind)}>{t('kind.' + c.kind)}</span></td>
-                                <td class="bat-truncate">{c.note}</td>
-                                <td class="bat-row-actions">
-                                    <button type="button" class="bat-cell-button" onclick={() => openEdit(c)} disabled={busy}>{t('Edit')}</button>
-                                    <button type="button" class="bat-cell-button" onclick={() => (confirmDelete = c)} disabled={busy}>{t('Delete')}</button>
-                                </td>
-                            </tr>
-                        {/each}
-                    </tbody>
-                </table>
+                <div class="bat-table-scroll">
+                    <table class="bat-plain">
+                        <thead>
+                            <tr><th>{t('change.at')}</th><th>{t('Batteries')}</th><th>{t('change.cost')}</th><th>{t('change.kind')}</th><th>{t('change.note')}</th><th></th></tr>
+                        </thead>
+                        <tbody>
+                            {#each accepted as c (c.id)}
+                                <tr>
+                                    <td>{formatDateTime(c.at, lang)}</td>
+                                    <td>{c.batteries.map((b) => `${b.count ?? 1}× ${batteryName(b, t('battery.unnamed'))}${b.rechargeable ? ' ⟳' : ''}`).join(' + ') || '–'}</td>
+                                    <td class="bat-mono">{formatCents(slotCost(c), lang) || '–'}</td>
+                                    <td><span class="bat-pill kind" title={t('kind.' + c.kind)}>{t('kind.' + c.kind)}</span></td>
+                                    <td class="bat-note-cell">
+                                        {#if c.note}
+                                            <button type="button" class="bat-note" title={c.note} aria-expanded={!!openNotes[c.id]} onclick={() => (openNotes[c.id] = !openNotes[c.id])}>{c.note}</button>
+                                        {/if}
+                                    </td>
+                                    <td class="bat-row-actions">
+                                        <button type="button" class="bat-cell-button" onclick={() => openEdit(c)} disabled={busy}>{t('Edit')}</button>
+                                        <button type="button" class="bat-cell-button" onclick={() => (confirmDelete = c)} disabled={busy}>{t('Delete')}</button>
+                                    </td>
+                                </tr>
+                            {/each}
+                        </tbody>
+                    </table>
+                </div>
             {/if}
         </section>
     {/if}
