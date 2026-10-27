@@ -88,7 +88,7 @@
         {key: 'life', label: t('life.column'), width: 210, value: (d) => (d.life?.count ? d.life.avg_days : undefined), filterable: false},
         {key: 'running', label: t('life.running'), width: 90, value: (d) => d.life?.running_days, filterable: false},
         // sortable by the days left; the low ones first, the unknown last
-        {key: 'due', label: t('forecast.column'), width: 120, fixed: true, value: (d) => dueSort(forecasts[`${d.interface}.${d.address}`]), filterable: false, align: 'center'},
+        {key: 'due', label: t('forecast.column'), width: 136, fixed: true, value: (d) => dueSort(forecasts[`${d.interface}.${d.address}`]), filterable: false, align: 'center'},
         {key: 'last_report', label: t('Last report'), width: 100, value: (d) => relativeTime(d.last_report, now, lang)},
         {key: 'actions', label: '', width: 140, fixed: true, minWidth: 140, keepMinWidth: true, sortable: false, filterable: false},
     ]);

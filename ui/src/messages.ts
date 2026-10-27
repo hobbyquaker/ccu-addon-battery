@@ -103,7 +103,7 @@ export const MESSAGES: Catalogue = {
     'forecast.column': {de: 'Fällig', en: 'Due'},
     'forecast.unknown': {de: 'Keine Prognose: kein gebuchter Wechsel und keine Angabe in der Batterietabelle.', en: 'No forecast: no recorded change and nothing in the battery table.'},
     'forecast.low': {de: 'Batterie leer', en: 'Battery low'},
-    'forecast.due': {de: 'überfällig seit {days} T.', en: 'overdue by {days} d'},
+    'forecast.due': {de: 'fällig seit {days} T.', en: 'due {days} d ago'},
     'forecast.soon': {de: 'in {days} T.', en: 'in {days} d'},
     'forecast.dueOn': {de: 'Voraussichtlich fällig am {when}.', en: 'Expected due on {when}.'},
     'forecast.trend': {de: 'Spannungstrend {mv} mV/Tag: erreicht die Leer-Schwelle am {when}.', en: 'Voltage trend {mv} mV/day: reaches the low level on {when}.'},

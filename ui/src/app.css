@@ -557,7 +557,11 @@ button.bat-link.bat-truncate {
     margin-right: 6px;
 }
 
-/* P3: the due pill, the shopping list */
+/* P3: the due pill (wider: "fällig seit 12 T."), the shopping list */
+.bat-pill[class*='fc-'] {
+    width: 9.5em;
+}
+
 .bat-pill.fc-low,
 .bat-pill.fc-due {
     border-color: var(--hmm-error, #c0392b);
@@ -582,4 +586,9 @@ button.bat-link.bat-truncate {
 .bat-stock-input {
     width: 5em;
     text-align: right;
+}
+
+.bat-form select#bat-horizon {
+    width: auto;
+    min-width: 14em;
 }
