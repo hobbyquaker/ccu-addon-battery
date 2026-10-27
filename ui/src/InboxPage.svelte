@@ -135,7 +135,7 @@
         {key: 'batteries', label: t('Batteries'), width: 200, value: (c) => batteriesText(c)},
         {key: 'cost', label: t('change.cost'), width: 80, align: 'right', value: (c) => cost(c)},
         {key: 'note', label: t('change.note'), width: 160},
-        {key: 'actions', label: '', width: 150, fixed: true, minWidth: 150, keepMinWidth: true, sortable: false, filterable: false},
+        {key: 'actions', label: '', width: 200, fixed: true, minWidth: 200, keepMinWidth: true, sortable: false, filterable: false},
     ]);
 
     function batteriesText(c: Change): string {

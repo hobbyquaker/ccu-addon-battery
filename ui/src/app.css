@@ -277,6 +277,11 @@ body,
     white-space: nowrap;
 }
 
+.bat-detection-head strong {
+    flex: 1;
+    text-align: left;
+}
+
 .bat-detection-head .bat-pill {
     flex: none;
 }
