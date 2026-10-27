@@ -77,6 +77,11 @@ Start() {
     [ -x $DAEMON ] || { echo "Starting $ADDON: FAILED ($DAEMON missing)"; log err "$DAEMON missing"; return 1; }
     rm -f $PIDFILE
     mkdir -p $ADDON_DIR/var $ADDON_DIR/etc
+    # openccu-lite closes the addon's directory to other users (0751) before every start, and its
+    # own server, which serves the settings page's files from www/, cannot open a tree it may not
+    # read: it answers 404 for every file then. The directory is the addon's own, so the addon
+    # opens it for reading again (the files inside keep their modes).
+    if InUnit; then chmod 755 $ADDON_DIR 2>/dev/null; fi
     cd /
     log info "Starting $ADDON $VERSION_ADDON"
     if InUnit; then

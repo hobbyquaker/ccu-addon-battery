@@ -7,6 +7,9 @@ export default defineConfig({
     base: './',
     plugins: [svelte()],
     resolve: {dedupe: ['svelte']},
+    // the kit belongs to the settings page (settings/vite.config.mjs); the app does not import it,
+    // and the dev server's dependency scan must not pre-bundle its .svelte.ts sources
+    optimizeDeps: {exclude: ['ccu-addon-kit']},
     build: {
         outDir: 'dist',
         emptyOutDir: true,

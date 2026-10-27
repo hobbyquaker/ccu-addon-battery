@@ -8,7 +8,7 @@
     import type {DataTableColumn} from 'occulite-ui/table';
 
     import {get} from './api.js';
-    import {batteryName, formatCents, formatDays, type BatteryRow, type ModelLife, type Stats} from './model.js';
+    import {batteryName, formatCents, formatDays, formatRange, type BatteryRow, type ModelLife, type Stats} from './model.js';
 
     let stats = $state<Stats | undefined>();
     let error = $state('');
@@ -69,7 +69,7 @@
     function rangeText(r: BatteryRow): string {
         if (!r.life.count) return '–';
         if (r.life.count === 1) return `${formatDays(r.life.avg_days, lang)} (1×)`;
-        return `${formatDays(r.life.min_days, lang)} – ${formatDays(r.life.max_days, lang)} (${r.life.count}×)`;
+        return `${formatRange(r.life.min_days, r.life.max_days, lang)} (${r.life.count}×)`;
     }
 </script>
 
@@ -127,7 +127,7 @@
                             <tr>
                                 <td>{m.model || t('profile.unknown')}</td>
                                 <td>Ø {formatDays(m.avg_days, lang)}</td>
-                                <td>{m.count === 1 ? '(1×)' : `${formatDays(m.min_days, lang)} – ${formatDays(m.max_days, lang)} (${m.count}×)`}</td>
+                                <td>{m.count === 1 ? '(1×)' : `${formatRange(m.min_days, m.max_days, lang)} (${m.count}×)`}</td>
                                 <td class="bat-mono">{m.priced_lives ? formatCents(m.cost_per_year_cents, lang) : '–'}</td>
                             </tr>
                         {/each}

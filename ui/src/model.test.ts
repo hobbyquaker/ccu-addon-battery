@@ -1,6 +1,6 @@
 import {describe, expect, it} from 'vitest';
 
-import {batteryName, compareDevices, describeSlots, evidenceSummary, formatBytes, formatCents, formatDays, formatVoltage, fromLocalInput, isMains, lifeText, modelInitials, parsePrice, priceInput, relativeTime, statusOf, toLocalInput, type DeviceView} from './model.js';
+import {batteryName, compareDevices, describeSlots, evidenceSummary, formatBytes, formatCents, formatDays, formatRange, formatVoltage, fromLocalInput, isMains, lifeText, modelInitials, parsePrice, priceInput, relativeTime, statusOf, toLocalInput, type DeviceView} from './model.js';
 
 const dev = (p: Partial<DeviceView>): DeviceView => ({
     interface: 'HmIP-RF',
@@ -125,6 +125,9 @@ describe('durations and prices', () => {
         expect(lifeText({count: 0})).toBe('');
         expect(lifeText({count: 1, avg_days: 400, min_days: 400, max_days: 400}, 'de')).toBe('1 J. 1 Mon. (1×)');
         expect(lifeText({count: 3, avg_days: 426, min_days: 274, max_days: 578}, 'de')).toBe('Ø 1 J. 2 Mon. (9 Mon. – 1 J. 7 Mon., 3×)');
+        expect(lifeText({count: 3, avg_days: 300, min_days: 274, max_days: 335}, 'de')).toBe('Ø 10 Mon. (9–11 Mon., 3×)');
+        expect(formatRange(12, 30, 'en')).toBe('12–30 d');
+        expect(formatRange(40, 40, 'de')).toBe('1 Mon.');
     });
     it('parses and formats prices', () => {
         expect(parsePrice('0,89')).toBe(89);

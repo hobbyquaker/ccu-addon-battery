@@ -49,11 +49,14 @@ find $ADDON_DIR/www -name '*.cgi' -exec chmod 755 {} +
 # the program directories are not worth a backup; the data in var/ and etc/ is
 touch $ADDON_DIR/bin/.nobackup $ADDON_DIR/app/.nobackup $ADDON_DIR/www/.nobackup $ADDON_DIR/lib/.nobackup
 
-# links: -n because busybox ln -T refuses to replace an existing directory symlink; the link of
-# an earlier version at /addons/battery/ goes (the app is proxied there now)
-rm -f $CONF_DIR/addons/www/$ADDON
-rmdir $WWW_DIR 2>/dev/null
+# links: -n because busybox ln -T refuses to replace an existing directory symlink. The settings
+# page is /addons/$WWW/; the link named after the addon stays as well, pointing at the same tree:
+# /addons/battery/ is proxied to the daemon before any file could be served from it, and
+# openccu-lite keeps only the tree behind the link named after the addon world-readable when it
+# closes the addon's files to other users (without it the settings page answers 404 there).
+rmdir $WWW_DIR $CONF_DIR/addons/www/$ADDON 2>/dev/null
 ln -sfn $ADDON_DIR/www $WWW_DIR
+ln -sfn $ADDON_DIR/www $CONF_DIR/addons/www/$ADDON
 ln -sf $ADDON_DIR/rc.d $CONF_DIR/rc.d/$ADDON
 
 # the classic CCU reads the lighttpd rule from its own directory; openccu-lite makes its own

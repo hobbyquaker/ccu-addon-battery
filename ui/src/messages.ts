@@ -245,7 +245,7 @@ export const MESSAGES: Catalogue = {
     'change.note': {de: 'Notiz', en: 'Note'},
     'change.vendor': {de: 'Hersteller', en: 'Vendor'},
     'kind.detected': {de: 'erkannt', en: 'detected'},
-    'kind.confirmed': {de: 'erkannt + erfasst', en: 'detected + entered'},
+    'kind.confirmed': {de: 'bestätigt', en: 'confirmed'},
     'kind.manual': {de: 'von Hand', en: 'by hand'},
     'kind.import': {de: 'importiert', en: 'imported'},
     'change.record.button': {de: 'Gewechselt …', en: 'Changed…'},

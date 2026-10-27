@@ -99,7 +99,7 @@
                         ctx.save();
                         // the low-battery phases as bands
                         ctx.fillStyle = warn;
-                        ctx.globalAlpha = 0.14;
+                        ctx.globalAlpha = 0.22;
                         for (const [a, b] of lowPhases) {
                             const x0 = u.valToPos(a, 'x', true);
                             const x1 = u.valToPos(b, 'x', true);

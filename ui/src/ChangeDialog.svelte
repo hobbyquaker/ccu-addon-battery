@@ -5,6 +5,7 @@
     // from the profile, the vendor and the product line (with the values recorded so far as
     // suggestions, the product lines narrowed to the vendor), rechargeable, and the price of one
     // battery - prefilled with the last price recorded for that vendor and product line.
+    import {untrack} from 'svelte';
     import {Dialog} from 'occulite-ui';
     import {i18n, t} from 'occulite-ui/i18n';
 
@@ -74,18 +75,24 @@
         }));
     }
 
+    // (re)filled when the dialog opens; untracked, so what the prefill writes into the slots does
+    // not run this again
     $effect(() => {
         if (!open) return;
-        value = toLocalInput(change?.at ?? at);
-        note = change?.note ?? '';
-        slots = initialSlots();
-        get<{suggestions: {value: string}[]}>('api/v1/suggestions?field=vendor&limit=50')
-            .then((r) => (vendors = r.suggestions.map((s) => s.value)))
-            .catch(() => (vendors = []));
-        for (const s of slots) {
-            if (s.vendor) void loadProducts(s.vendor);
-            if (!s.price && (s.vendor || s.product)) void prefillPrice(s);
-        }
+        const c = change;
+        const openedAt = at;
+        untrack(() => {
+            value = toLocalInput(c?.at ?? openedAt);
+            note = c?.note ?? '';
+            slots = initialSlots();
+            get<{suggestions: {value: string}[]}>('api/v1/suggestions?field=vendor&limit=50')
+                .then((r) => (vendors = r.suggestions.map((s) => s.value)))
+                .catch(() => (vendors = []));
+            for (const s of slots) {
+                if (s.vendor) void loadProducts(s.vendor);
+                if (!s.price && (s.vendor || s.product)) void prefillPrice(s);
+            }
+        });
     });
 
     async function loadProducts(vendor: string): Promise<void> {
@@ -180,7 +187,7 @@
                 <label for="bat-price-{i}">{t('change.price')}</label>
                 <span class="bat-price-field">
                     <input id="bat-price-{i}" class="hmm-input bat-price-input" type="text" inputmode="decimal" bind:value={s.price} maxlength="10" placeholder={lang === 'de' ? '0,89' : '0.89'} oninput={() => (s.prefilled = false)} aria-invalid={prices[i] !== undefined && Number.isNaN(prices[i])} />
-                    <span class="bat-muted">€ {t('change.price.each')}{#if s.prefilled} · {t('change.price.prefilled')}{/if}</span>
+                    <span class="bat-muted">€ {t('change.price.each')}{#if s.prefilled}{' · '}{t('change.price.prefilled')}{/if}</span>
                 </span>
                 <label for="bat-rech-{i}">{t('change.rechargeable')}</label>
                 <span><input id="bat-rech-{i}" type="checkbox" bind:checked={s.rechargeable} /></span>

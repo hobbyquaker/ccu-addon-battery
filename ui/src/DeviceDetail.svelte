@@ -132,7 +132,7 @@
             <dt>{t('Batteries')}</dt>
             <dd>{describeSlots(device.profile?.slots) || t('profile.unknown')} <span class="bat-muted">({device.profile ? t('profile.' + device.profile.source) : ''})</span></dd>
             <dt>{t('Voltage')}</dt>
-            <dd class="bat-mono">{formatVoltage(device.voltage, lang) || '–'}{#if device.voltage_ts} <span class="bat-muted">{relativeTime(device.voltage_ts, Date.now(), lang)}</span>{/if}</dd>
+            <dd class="bat-mono">{formatVoltage(device.voltage, lang) || '–'}{#if device.voltage_ts}{' '}<span class="bat-muted">{relativeTime(device.voltage_ts, Date.now(), lang)}</span>{/if}</dd>
             {#if device.profile?.fresh}
                 <dt>{t('detail.levels')}</dt>
                 <dd class="bat-mono">{formatVoltage(device.profile.fresh, lang)} / {formatVoltage(device.profile.low, lang)}</dd>

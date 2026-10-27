@@ -231,11 +231,24 @@ export function formatDays(days: number | undefined, lang = 'en'): string {
     return rest === 0 ? `${years} ${u.y}` : `${years} ${u.y} ${rest} ${u.mo}`;
 }
 
+/** A range of days, compact where both ends share a unit: "9–19 Mon.", "12–30 T.", else "9 Mon. – 1 J. 7 Mon.". */
+export function formatRange(min: number | undefined, max: number | undefined, lang = 'en'): string {
+    if (min === undefined || max === undefined) return '';
+    const u = UNIT[lang] ?? UNIT.en!;
+    const a = Math.round(min);
+    const b = Math.round(max);
+    if (b < 31) return a === b ? `${a} ${u.d}` : `${a}–${b} ${u.d}`;
+    const ma = Math.round(a / 30.4375);
+    const mb = Math.round(b / 30.4375);
+    if (a >= 31 && mb < 12) return ma === mb ? `${ma} ${u.mo}` : `${ma}–${mb} ${u.mo}`;
+    return `${formatDays(min, lang)} – ${formatDays(max, lang)}`;
+}
+
 /** The life column: "Ø 14 Mon. (9–19 Mon., 3×)"; "" without a completed life. */
 export function lifeText(life: Pick<DeviceLife, 'count' | 'min_days' | 'max_days' | 'avg_days'> | undefined, lang = 'en'): string {
     if (!life || life.count === 0 || life.avg_days === undefined) return '';
     if (life.count === 1) return `${formatDays(life.avg_days, lang)} (1×)`;
-    return `Ø ${formatDays(life.avg_days, lang)} (${formatDays(life.min_days, lang)} – ${formatDays(life.max_days, lang)}, ${life.count}×)`;
+    return `Ø ${formatDays(life.avg_days, lang)} (${formatRange(life.min_days, life.max_days, lang)}, ${life.count}×)`;
 }
 
 /** A money amount in cents, "0,89 €" / "€0.89"; "" for none. */

@@ -81,7 +81,7 @@
         {key: 'batteries', label: t('Batteries'), width: 100, value: (d) => describeSlots(d.profile?.slots) || (d.profile?.source === 'none' ? t('profile.unknown') : '')},
         {key: 'voltage', label: t('Voltage'), width: 76, align: 'right', value: (d) => (d.voltage === null ? '' : d.voltage)},
         // sortable by the mean life (shortest first); devices without a completed life sort last
-        {key: 'life', label: t('life.column'), width: 170, value: (d) => (d.life?.count ? d.life.avg_days : undefined), filterable: false},
+        {key: 'life', label: t('life.column'), width: 210, value: (d) => (d.life?.count ? d.life.avg_days : undefined), filterable: false},
         {key: 'running', label: t('life.running'), width: 90, value: (d) => d.life?.running_days, filterable: false},
         {key: 'last_report', label: t('Last report'), width: 100, value: (d) => relativeTime(d.last_report, now, lang)},
         {key: 'actions', label: '', width: 140, fixed: true, minWidth: 140, keepMinWidth: true, sortable: false, filterable: false},
