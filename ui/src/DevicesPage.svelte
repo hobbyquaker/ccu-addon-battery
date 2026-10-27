@@ -71,7 +71,7 @@
         {key: 'voltage', label: t('Voltage'), width: 80, align: 'right', value: (d) => (d.voltage === null ? '' : d.voltage)},
         {key: 'low_bat_since', label: t('Low since'), width: 110, value: (d) => (d.low_bat ? relativeTime(d.low_bat_since, now, lang) : '')},
         {key: 'last_report', label: t('Last report'), width: 110, value: (d) => relativeTime(d.last_report, now, lang)},
-        {key: 'actions', label: '', width: 120, fixed: true, minWidth: 120, keepMinWidth: true, sortable: false, filterable: false},
+        {key: 'actions', label: '', width: 140, fixed: true, minWidth: 140, keepMinWidth: true, sortable: false, filterable: false},
     ]);
 </script>
 

@@ -36,6 +36,9 @@ func (s *Service) Create(ctx context.Context, in Input, by string, dry bool) (Ou
 		return nil
 	})
 	if errors.Is(err, errDryRun) {
+		if out.Status == "created" {
+			out.ID = 0 // the row was rolled back; its id would be another's
+		}
 		return out, nil
 	}
 	if err != nil {

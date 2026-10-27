@@ -165,6 +165,21 @@ func (s *Service) Bulk(ctx context.Context, ins []Input, rows []int, by string, 
 			return res, err
 		}
 		res.Applied = err == nil
+		if !res.Applied {
+			// rolled back: those ids are not there, nor is a duplicate's that points at one
+			gone := map[int64]bool{}
+			for i := range res.Rows {
+				if res.Rows[i].Status == "created" {
+					gone[res.Rows[i].ID] = true
+					res.Rows[i].ID = 0
+				}
+			}
+			for i := range res.Rows {
+				if gone[res.Rows[i].ID] {
+					res.Rows[i].ID, res.Rows[i].MergedInto = 0, 0
+				}
+			}
+		}
 		if res.Applied {
 			for _, a := range afters {
 				a()

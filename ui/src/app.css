@@ -224,7 +224,7 @@ body,
 /* a button inside a table cell keeps its box: fixed width, the label cut with a tooltip */
 .bat-cell-button {
     box-sizing: border-box;
-    width: 7.5em;
+    width: 9.5em;
     font: inherit;
     font-size: 0.85em;
     padding: 0 8px;
@@ -250,7 +250,7 @@ body,
     margin: 0 0 12px;
     padding: 0;
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(22rem, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 26rem), 1fr));
     gap: 10px;
 }
 

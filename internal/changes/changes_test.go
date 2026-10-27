@@ -121,7 +121,7 @@ func TestCreateMergeDuplicate(t *testing.T) {
 	}
 	// dry run: nothing written
 	before := len(list(t, s))
-	if o, err := s.Create(ctx, Input{Device: wrc2.Address, At: Time(t0 - 100*day)}, "alice", true); err != nil || o.Status != "created" {
+	if o, err := s.Create(ctx, Input{Device: wrc2.Address, At: Time(t0 - 100*day)}, "alice", true); err != nil || o.Status != "created" || o.ID != 0 {
 		t.Fatalf("%+v %v", o, err)
 	}
 	if len(list(t, s)) != before {
@@ -254,7 +254,7 @@ func TestBulkCSV(t *testing.T) {
 	}
 	// dry run
 	r, err := s.Bulk(ctx, ins, rows, "script", true, false)
-	if err != nil || r.Applied || r.Counts["created"] != 2 || r.Counts["error"] != 1 || r.Counts["duplicate"] != 1 {
+	if err != nil || r.Applied || r.Counts["created"] != 2 || r.Counts["error"] != 1 || r.Counts["duplicate"] != 1 || r.Rows[0].ID != 0 {
 		t.Fatalf("dry: %+v %v", r, err)
 	}
 	if len(list(t, s)) != 0 {
