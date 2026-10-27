@@ -489,17 +489,23 @@ button.bat-link.bat-truncate {
     font-variant-numeric: tabular-nums;
 }
 
+/* the strips of a list share one grid (each row a subgrid), so the labels, the bars and the
+   values line up across the rows whatever a row's text is; a label longer than its column is cut
+   with its full text as the tooltip */
 .bat-strips {
     list-style: none;
     margin: 0;
     padding: 0;
+    display: grid;
+    grid-template-columns: minmax(9em, min(20em, 40%)) minmax(4em, 1fr) max-content;
+    column-gap: 12px;
 }
 
 .bat-strip {
     display: grid;
-    grid-template-columns: minmax(10em, 18em) 1fr minmax(9em, max-content);
+    grid-column: 1 / -1;
+    grid-template-columns: subgrid;
     align-items: center;
-    gap: 12px;
     padding: 3px 0;
     font-size: var(--hmm-font-size-small, 0.9em);
 }
@@ -509,6 +515,34 @@ button.bat-link.bat-truncate {
     align-items: center;
     gap: 6px;
     min-width: 0;
+}
+
+/* a label of two lines: the name (or model) above, the model (or count) below */
+.bat-strip-names {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    line-height: 1.3;
+}
+
+.bat-strip-names > * {
+    max-width: 100%;
+}
+
+.bat-strip-names .bat-link {
+    margin-left: 0;
+    align-self: flex-start;
+}
+
+@media (max-width: 480px) {
+    /* a phone: the label on its own line, the bar and the value below it */
+    .bat-strips {
+        grid-template-columns: minmax(4em, 1fr) max-content;
+    }
+
+    .bat-strip-label {
+        grid-column: 1 / -1;
+    }
 }
 
 .bat-strip-bar {

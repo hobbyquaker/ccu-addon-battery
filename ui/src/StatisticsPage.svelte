@@ -99,9 +99,11 @@
                 {#each worst as s (s.key)}
                     <li class="bat-strip">
                         <span class="bat-strip-label">
-                            <DevicePicture model={s.model ?? ''} src={s.image} size={20} />
-                            <button type="button" class="bat-link bat-truncate" onclick={() => onopen?.(s.key)}>{s.label}</button>
-                            <span class="bat-muted bat-truncate">{s.sub}</span>
+                            <DevicePicture model={s.model ?? ''} src={s.image} size={28} />
+                            <span class="bat-strip-names">
+                                <button type="button" class="bat-link bat-truncate" title={s.label} onclick={() => onopen?.(s.key)}>{s.label}</button>
+                                {#if s.sub}<span class="bat-muted bat-truncate" title={s.sub}>{s.sub}</span>{/if}
+                            </span>
                         </span>
                         <span class="bat-strip-bar" title={t('life.tooltip', {avg: formatDays(s.life.avg_days, lang), min: formatDays(s.life.min_days, lang), max: formatDays(s.life.max_days, lang), median: formatDays(s.life.median_days, lang), count: s.life.count})}>
                             <span class="bat-strip-range" style:left={pct(s.life.min_days)} style:width={`calc(${pct(s.life.max_days)} - ${pct(s.life.min_days)})`}></span>
@@ -119,7 +121,12 @@
             <ul class="bat-strips">
                 {#each models as s (s.key)}
                     <li class="bat-strip">
-                        <span class="bat-strip-label"><span class="bat-truncate">{s.label}</span> <span class="bat-muted bat-truncate">{s.sub}</span></span>
+                        <span class="bat-strip-label">
+                            <span class="bat-strip-names">
+                                <span class="bat-truncate" title={s.label}>{s.label}</span>
+                                {#if s.sub}<span class="bat-muted bat-truncate" title={s.sub}>{s.sub}</span>{/if}
+                            </span>
+                        </span>
                         <span class="bat-strip-bar" title={t('life.tooltip', {avg: formatDays(s.life.avg_days, lang), min: formatDays(s.life.min_days, lang), max: formatDays(s.life.max_days, lang), median: formatDays(s.life.median_days, lang), count: s.life.count})}>
                             <span class="bat-strip-range" style:left={pct(s.life.min_days)} style:width={`calc(${pct(s.life.max_days)} - ${pct(s.life.min_days)})`}></span>
                             <span class="bat-strip-median" style:left={pct(s.life.median_days)}></span>
@@ -135,7 +142,7 @@
             <ul class="bat-strips">
                 {#each types as s (s.key)}
                     <li class="bat-strip">
-                        <span class="bat-strip-label"><span class="bat-truncate">{s.label}</span></span>
+                        <span class="bat-strip-label"><span class="bat-truncate" title={s.label}>{s.label}</span></span>
                         <span class="bat-strip-bar" title={t('life.tooltip', {avg: formatDays(s.life.avg_days, lang), min: formatDays(s.life.min_days, lang), max: formatDays(s.life.max_days, lang), median: formatDays(s.life.median_days, lang), count: s.life.count})}>
                             <span class="bat-strip-range" style:left={pct(s.life.min_days)} style:width={`calc(${pct(s.life.max_days)} - ${pct(s.life.min_days)})`}></span>
                             <span class="bat-strip-median" style:left={pct(s.life.median_days)}></span>
