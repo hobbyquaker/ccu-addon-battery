@@ -6,7 +6,7 @@
     "de": "Zeichnet die Batteriespannungen und Batterie-leer-Meldungen aller Geräte auf, erkennt Batteriewechsel und zeigt, wie lange Batterien halten.",
     "en": "Records the battery voltages and low-battery flags of every device, detects battery changes and shows how long batteries last."
   },
-  "version": "1.0.0",
+  "version": "1.0.1",
   "homepage": "https://github.com/hobbyquaker/ccu-addon-battery",
   "licence": "MIT",
   "release": {

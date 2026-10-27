@@ -132,10 +132,23 @@ case "$1" in
         ;;
     uninstall)
         Stop
-        rm -f $CONF_DIR/rc.d/$ADDON $WWW_DIR $CONF_DIR/addons/www/$ADDON
-        rm -f $CONF_DIR/lighttpd/$ADDON.conf
         rm -f $LOGFILE $LOGFILE.0
-        IsLite || [ -x $ADDON_DIR/bin/update_addon ] && $ADDON_DIR/bin/update_addon $ADDON 2>/dev/null
+        # openccu-lite runs this as the addon's user and removes the links, the proxy rule and the
+        # button itself afterwards; the addon may not touch them there
+        if ! IsLite; then
+            rm -f $CONF_DIR/rc.d/$ADDON $WWW_DIR $CONF_DIR/addons/www/$ADDON
+            [ -x $ADDON_DIR/bin/update_addon ] && $ADDON_DIR/bin/update_addon $ADDON 2>/dev/null
+            # the running lighttpd keeps the proxy rule until it restarts (503 instead of 404): restart
+            # it when the rule was there, a few seconds later, so the WebUI's answer to the uninstall
+            # still gets through; the directory goes when the rule was its last file
+            if [ -f $CONF_DIR/lighttpd/$ADDON.conf ]; then
+                rm -f $CONF_DIR/lighttpd/$ADDON.conf
+                rmdir $CONF_DIR/lighttpd 2>/dev/null
+                if [ -x /etc/init.d/S50lighttpd ]; then
+                    (sleep 3; /etc/init.d/S50lighttpd restart) >/dev/null 2>&1 </dev/null &
+                fi
+            fi
+        fi
         # the program goes; etc/ (the settings) and var/ (the database) stay for a reinstall -
         # remove /usr/local/addons/battery by hand to be rid of the data
         rm -rf $ADDON_DIR/bin $ADDON_DIR/app $ADDON_DIR/www $ADDON_DIR/lib $ADDON_DIR/rc.d $ADDON_DIR/versions $ADDON_DIR/etc/lighttpd.conf

@@ -10,7 +10,9 @@
 #   The web app is built with npm in ui/ and copied to addon/battery/app (the daemon serves it at
 #   /addons/battery/); the settings page - the ccu-addon-kit frame with the Storage tab - is built
 #   the same way and vendored with the kit's CGIs into addon/battery/www (/addons/battery-config/),
-#   together with addon/static; the daemon is a static Go binary (CGO_ENABLED=0) per architecture.
+#   together with addon/static (the 503 page); the manifest's icons are tracked in addon/battery/www
+#   itself, where the catalogue reads them from the repository at the release tag; the daemon is a
+#   static Go binary (CGO_ENABLED=0) per architecture.
 #
 set -e
 cd "$(dirname "$0")/.."

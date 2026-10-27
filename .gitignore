@@ -3,7 +3,11 @@
 /.testtmp/
 /ui/node_modules/
 /ui/dist/
-/addon/battery/www/
+# the build fills www/; the manifest's images live there in the repository too, because the
+# catalogue reads them beside the manifest at the release tag
+/addon/battery/www/*
+!/addon/battery/www/icon.svg
+!/addon/battery/www/icon-dark.svg
 /addon/battery/app/
 /addon/battery/lib/
 /addon/battery/bin/
