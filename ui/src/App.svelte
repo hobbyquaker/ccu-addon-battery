@@ -5,13 +5,14 @@
     import {cycleTheme, theme} from 'occulite-ui/theme';
 
     import DevicesPage from './DevicesPage.svelte';
+    import InboxPage from './InboxPage.svelte';
     import StoragePage from './StoragePage.svelte';
     import {get} from './api.js';
     import type {StorageHealth} from './model.js';
 
     const notices = new NoticesStore();
     let tab = $state('devices');
-    let health = $state<{ok: boolean; recorder: string; storage: StorageHealth} | undefined>();
+    let health = $state<{ok: boolean; recorder: string; storage: StorageHealth; inbox?: number} | undefined>();
 
     async function loadHealth() {
         try {
@@ -29,6 +30,7 @@
 
     const tabs = $derived([
         {id: 'devices', label: t('Devices')},
+        {id: 'inbox', label: t('Inbox')},
         {id: 'storage', label: t('Storage')},
     ]);
 </script>
@@ -54,7 +56,9 @@
     {/if}
     <main class="bat-page">
         {#if tab === 'devices'}
-            <DevicesPage {notices} />
+            <DevicesPage {notices} inbox={health?.inbox ?? 0} onshowinbox={() => (tab = 'inbox')} />
+        {:else if tab === 'inbox'}
+            <InboxPage {notices} onchanged={loadHealth} />
         {:else}
             <StoragePage {notices} onchanged={loadHealth} />
         {/if}

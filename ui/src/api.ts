@@ -37,11 +37,23 @@ export async function get<T>(path: string): Promise<T> {
 }
 
 export async function post<T>(path: string, body: unknown): Promise<T> {
+    return send<T>('POST', path, body);
+}
+
+export async function patch<T>(path: string, body: unknown): Promise<T> {
+    return send<T>('PATCH', path, body);
+}
+
+export async function del(path: string): Promise<void> {
+    await send<unknown>('DELETE', path, undefined);
+}
+
+async function send<T>(method: string, path: string, body: unknown): Promise<T> {
     const res = await fetch(apiUrl(path), {
-        method: 'POST',
+        method,
         headers: {Accept: 'application/json', 'Content-Type': 'application/json', 'X-CCU-Addon-Request': '1'},
         credentials: 'same-origin',
-        body: JSON.stringify(body),
+        body: body === undefined ? undefined : JSON.stringify(body),
     });
     return parse<T>(res);
 }

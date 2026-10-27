@@ -202,3 +202,110 @@ body,
     text-align: center;
     opacity: 0.7;
 }
+
+.bat-toolbar {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    margin: 0 0 6px;
+}
+
+.bat-link {
+    font: inherit;
+    padding: 0;
+    margin-left: 8px;
+    border: 0;
+    background: none;
+    color: var(--hmm-accent, #2c6fb3);
+    text-decoration: underline;
+    cursor: pointer;
+}
+
+/* a button inside a table cell keeps its box: fixed width, the label cut with a tooltip */
+.bat-cell-button {
+    box-sizing: border-box;
+    width: 7.5em;
+    font: inherit;
+    font-size: 0.85em;
+    padding: 0 8px;
+    line-height: 1.6;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    border-radius: 4px;
+    border: 1px solid var(--hmm-border, #8884);
+    background: var(--hmm-surface-2, transparent);
+    color: inherit;
+    cursor: pointer;
+}
+
+.bat-inbox h2,
+.bat-section {
+    font-size: 0.95rem;
+    margin: 4px 0 6px;
+}
+
+.bat-cards {
+    list-style: none;
+    margin: 0 0 12px;
+    padding: 0;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(22rem, 1fr));
+    gap: 10px;
+}
+
+.bat-detection {
+    max-width: none;
+    margin: 0;
+}
+
+.bat-detection p {
+    margin: 6px 0;
+}
+
+.bat-detection-head {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.bat-truncate {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.bat-detection-head .bat-pill {
+    flex: none;
+}
+
+.bat-pill.conf-high {
+    border-color: var(--hmm-success, #2a8a3e);
+    color: var(--hmm-success, #2a8a3e);
+}
+
+.bat-pill.conf-medium {
+    border-color: var(--hmm-info, #2c6fb3);
+    color: var(--hmm-info, #2c6fb3);
+}
+
+.bat-pill.conf-low {
+    border-color: var(--hmm-warning, #b7791f);
+    color: var(--hmm-warning, #b7791f);
+}
+
+.bat-form input[type='datetime-local'] {
+    font: inherit;
+    padding: 4px 6px;
+    color: inherit;
+    background: var(--hmm-input-bg, transparent);
+    border: 1px solid var(--hmm-border, #8884);
+    border-radius: 4px;
+    color-scheme: light dark;
+}
+
+.bat-page {
+    overflow: auto;
+}

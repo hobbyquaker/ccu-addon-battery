@@ -20,6 +20,76 @@ export interface DeviceView {
     unreach_since?: number;
     last_report?: number;
     first_seen: number;
+    profile?: Profile;
+}
+
+export interface Slot {
+    count: number;
+    type: string;
+    chemistry?: string;
+}
+
+export interface Profile {
+    source: 'table' | 'override' | 'guess' | 'none';
+    model?: string;
+    power: string;
+    slots: Slot[];
+    fresh?: number;
+    low?: number;
+    step?: number;
+    outdoor?: boolean;
+    life_years?: number;
+    confidence?: string;
+}
+
+export interface Evidence {
+    triggers: string[];
+    voltage_before?: number;
+    max_before?: number;
+    voltage_after?: number;
+    voltage_confirmed?: number;
+    confirmed_at?: number;
+    low_bat_before?: boolean;
+    booted?: boolean;
+    unreach_gap_s?: number;
+    silence_s?: number;
+    fresh?: number;
+    step?: number;
+    window_s?: number;
+    last_trigger: number;
+    reason?: string;
+}
+
+export interface Battery {
+    slot?: number;
+    count?: number;
+    type?: string;
+    chemistry?: string;
+    rechargeable?: boolean;
+    vendor?: string;
+    product?: string;
+    price_cents?: number;
+    lot?: string;
+}
+
+export interface Change {
+    id: number;
+    interface: string;
+    address: string;
+    name?: string;
+    model?: string;
+    at: number;
+    kind: 'detected' | 'confirmed' | 'manual' | 'import';
+    confidence?: '' | 'high' | 'medium' | 'low';
+    rule?: string;
+    status: 'candidate' | 'pending' | 'accepted' | 'rejected' | 'discarded';
+    evidence?: Evidence;
+    batteries: Battery[];
+    note: string;
+    source: string;
+    external_id?: string;
+    created_at: number;
+    updated_at: number;
 }
 
 export interface StorageHealth {
@@ -53,7 +123,7 @@ export type Status = 'low' | 'unreach' | 'external' | 'ok' | 'unknown';
 export function statusOf(d: Pick<DeviceView, 'low_bat' | 'unreach' | 'voltage_status' | 'power' | 'voltage'>): Status {
     if (d.unreach === true) return 'unreach';
     if (d.low_bat === true) return 'low';
-    if (d.voltage_status === 'EXTERNAL' || d.power === 'external' || d.power === 'mains') return 'external';
+    if (d.voltage_status === 'EXTERNAL' || isMains(d.power)) return 'external';
     if (d.low_bat === false || d.voltage !== null) return 'ok';
     return 'unknown';
 }
@@ -92,4 +162,48 @@ export function compareDevices(a: DeviceView, b: DeviceView): number {
     const d = rank[statusOf(a)] - rank[statusOf(b)];
     if (d !== 0) return d;
     return (a.name || a.address).localeCompare(b.name || b.address);
+}
+
+/** Powered from outside: the battery statistics leave such a device out. */
+export function isMains(power: string | undefined): boolean {
+    return power === 'external' || power === 'mains' || power === 'bus' || power === 'host';
+}
+
+/** "2× AAA", "1× CR2032 + 2× AA"; "" for none. */
+export function describeSlots(slots: Slot[] | undefined): string {
+    if (!slots || slots.length === 0) return '';
+    return slots.map((s) => `${s.count}× ${s.type}`).join(' + ');
+}
+
+/** The voltage story of a detection: "2.80 V → 3.10 V, 3.08 V after 24 h". */
+export function evidenceSummary(ev: Evidence | undefined, lang = 'en', after = 'after'): string {
+    if (!ev) return '';
+    const parts: string[] = [];
+    if (ev.voltage_before !== undefined && ev.voltage_after !== undefined) {
+        parts.push(`${formatVoltage(ev.voltage_before, lang)} → ${formatVoltage(ev.voltage_after, lang)}`);
+    } else if (ev.voltage_after !== undefined) {
+        parts.push(formatVoltage(ev.voltage_after, lang));
+    }
+    if (ev.voltage_confirmed !== undefined && ev.window_s) {
+        parts.push(`${formatVoltage(ev.voltage_confirmed, lang)} ${after} ${Math.round(ev.window_s / 3600)} h`);
+    }
+    return parts.join(', ');
+}
+
+/** A date and time in the user's language, "27.10.2026, 11:26". */
+export function formatDateTime(ms: number, lang = 'en'): string {
+    return new Date(ms).toLocaleString(lang, {year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit'});
+}
+
+/** The value of a datetime-local input for ms, in local time. */
+export function toLocalInput(ms: number): string {
+    const d = new Date(ms);
+    const p = (n: number) => String(n).padStart(2, '0');
+    return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}`;
+}
+
+/** ms from a datetime-local input's value (local time); NaN when empty or invalid. */
+export function fromLocalInput(v: string): number {
+    if (!v) return NaN;
+    return new Date(v).getTime();
 }
