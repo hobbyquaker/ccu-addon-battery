@@ -1,0 +1,8967 @@
+{
+ "$schema": "./batteries.schema.json",
+ "version": 1,
+ "license": "CC0-1.0",
+ "updated": "2026-10-27",
+ "sources": {
+  "eq3-site": {
+   "name": "homematic-ip.com product pages (eQ-3 AG), field 'Versorgungsspannung'",
+   "url": "https://homematic-ip.com/de/produkte",
+   "license": "facts from the manufacturer's data; no text reproduced beyond the supply line",
+   "kind": "manufacturer",
+   "read": "2026-10-27"
+  },
+  "eq3-manual": {
+   "name": "eQ-3 installation and operating manual (Technische Daten)",
+   "url": "https://www.eq-3.de/service/downloads.html",
+   "license": "facts from the manufacturer's manual; the supply line is quoted",
+   "kind": "manufacturer",
+   "read": "2026-10-27"
+  },
+  "elv-manual": {
+   "name": "eQ-3 manual or datasheet as hosted by ELV (media.elv.com)",
+   "url": "https://de.elv.com",
+   "license": "facts from the manufacturer's manual; the supply line is quoted",
+   "kind": "manufacturer",
+   "read": "2026-10-27"
+  },
+  "battery-notes": {
+   "name": "Home Assistant Battery Notes, library/library.json",
+   "url": "https://github.com/andrew-codechimp/HA-Battery-Notes/blob/main/library/library.json",
+   "license": "MIT (Copyright (c) 2023-2025 Andrew Jackson)",
+   "kind": "prior-art",
+   "read": "2026-10-27",
+   "note": "commit ef1809cc, 2026-10-26"
+  },
+  "aiohomematic": {
+   "name": "aiohomematic, aiohomematic/model/calculated/operating_voltage_level.py (_BATTERY_DATA)",
+   "url": "https://github.com/SukramJ/aiohomematic/blob/main/aiohomematic/model/calculated/operating_voltage_level.py",
+   "license": "MIT",
+   "kind": "prior-art",
+   "read": "2026-10-27",
+   "note": "the table behind homematicip_local's operating-voltage-level sensor; prefix matching"
+  },
+  "openhab": {
+   "name": "openHAB Homematic binding, src/main/resources/homematic/batteries.properties",
+   "url": "https://github.com/openhab/openhab-addons/blob/main/bundles/org.openhab.binding.homematic/src/main/resources/homematic/batteries.properties",
+   "license": "EPL-2.0",
+   "kind": "prior-art",
+   "read": "2026-10-27"
+  },
+  "iobroker-servicemeldungen": {
+   "name": "ioBroker script Servicemeldungen-Homematic (Baenker), func_Batterie",
+   "url": "https://github.com/Baenker/Servicemeldungen-Homematic/blob/master/Servicemeldungen.js",
+   "license": "none stated (all rights reserved by default): used only as a cross-check, never as a row's only source",
+   "kind": "prior-art",
+   "read": "2026-10-27"
+  },
+  "corpus": {
+   "name": "hm-simulator device corpus, data/paramset-descriptions.json (descriptions read from real devices)",
+   "url": "https://github.com/hobbyquaker/hm-simulator",
+   "license": "MIT",
+   "kind": "corpus",
+   "read": "2026-10-27",
+   "note": "LOW_BAT_LIMIT defaults and which battery datapoints a type has"
+  },
+  "classification": {
+   "name": "device class by model name and description (actuators on 230 V, DIN-rail, plug-in, wired bus)",
+   "url": "https://github.com/hobbyquaker/homematic-manager",
+   "license": "model names only",
+   "kind": "corpus",
+   "read": "2026-10-27",
+   "note": "homematic-manager's device data (openccu-data model names and descriptions)"
+  }
+ },
+ "types": {
+  "AA": {
+   "iec": "LR6",
+   "names": [
+    "Mignon",
+    "R6"
+   ],
+   "nominal_v": 1.5,
+   "chemistry": "alkaline"
+  },
+  "AAA": {
+   "iec": "LR03",
+   "names": [
+    "Micro",
+    "R03"
+   ],
+   "nominal_v": 1.5,
+   "chemistry": "alkaline"
+  },
+  "C": {
+   "iec": "LR14",
+   "names": [
+    "Baby",
+    "R14"
+   ],
+   "nominal_v": 1.5,
+   "chemistry": "alkaline"
+  },
+  "D": {
+   "iec": "LR20",
+   "names": [
+    "Mono",
+    "R20"
+   ],
+   "nominal_v": 1.5,
+   "chemistry": "alkaline"
+  },
+  "9V": {
+   "iec": "6LR61",
+   "names": [
+    "E-Block",
+    "PP3"
+   ],
+   "nominal_v": 9.0,
+   "chemistry": "alkaline"
+  },
+  "LR44": {
+   "iec": "LR44",
+   "names": [
+    "AG13",
+    "A76"
+   ],
+   "nominal_v": 1.5,
+   "chemistry": "alkaline-button"
+  },
+  "CR2016": {
+   "iec": "CR2016",
+   "nominal_v": 3.0,
+   "chemistry": "lithium-coin"
+  },
+  "CR2032": {
+   "iec": "CR2032",
+   "nominal_v": 3.0,
+   "chemistry": "lithium-coin"
+  },
+  "CR2450": {
+   "iec": "CR2450",
+   "nominal_v": 3.0,
+   "chemistry": "lithium-coin"
+  },
+  "CR123A": {
+   "iec": "CR17345",
+   "nominal_v": 3.0,
+   "chemistry": "lithium"
+  },
+  "fixed": {
+   "names": [
+    "built in, not replaceable"
+   ],
+   "nominal_v": 3.0,
+   "chemistry": "lithium",
+   "replaceable": false
+  },
+  "pack": {
+   "names": [
+    "a device-specific rechargeable pack"
+   ],
+   "nominal_v": 3.6,
+   "chemistry": "nimh"
+  },
+  "lead12V": {
+   "names": [
+    "12 V lead-acid"
+   ],
+   "nominal_v": 12.0,
+   "chemistry": "lead"
+  }
+ },
+ "chemistries": {
+  "alkaline": {
+   "fresh": 1.48,
+   "low": 1.1,
+   "step": 0.12,
+   "note": "a fresh cell reads 1.5-1.6 V; 2 cells: fresh 2.95 V, step 0.25 V (the detection rules, docs/detection.md)"
+  },
+  "alkaline-button": {
+   "fresh": 1.48,
+   "low": 1.2,
+   "step": 0.1,
+   "note": "LR44: small capacity, flat curve until a late knee (assumed)"
+  },
+  "lithium-coin": {
+   "fresh": 2.95,
+   "low": 2.4,
+   "step": 0.15,
+   "note": "CR20xx: 3.0-3.2 V fresh, 2.4 V is HmIP's default limit (FCI1)"
+  },
+  "lithium": {
+   "fresh": 2.95,
+   "low": 2.5,
+   "step": 0.15,
+   "note": "3 V lithium (CR123A, fixed smoke-alarm cells)"
+  },
+  "lithium-aa": {
+   "fresh": 1.7,
+   "low": 1.2,
+   "step": 0.1,
+   "note": "Li-FeS2 AA/AAA (Energizer Ultimate): 1.7-1.8 V fresh; set per device by the user"
+  },
+  "nimh": {
+   "fresh": 1.33,
+   "low": 1.1,
+   "step": 0.06,
+   "note": "NiMH: 1.35-1.4 V fresh off the charger, flat curve; 2 cells: fresh 2.6 V, step 0.12 V"
+  },
+  "lead": {
+   "fresh": 2.1,
+   "low": 1.75,
+   "step": 0.08,
+   "note": "per cell of a 12 V lead pack (6 cells): 12.6 V full, HM-Sec-SFA-SM's limit 10.5 V"
+  }
+ },
+ "models": {
+  "ALPHA-IP-RBG": {
+   "power": "battery",
+   "family": "HmIP-RF",
+   "slots": [
+    {
+     "count": 2,
+     "type": "AAA"
+    }
+   ],
+   "confidence": "assumed",
+   "note": "only the unlicensed ioBroker script names it; re-derive from the manual",
+   "sources": [
+    {
+     "id": "iobroker-servicemeldungen",
+     "says": "2x AAA"
+    }
+   ]
+  },
+  "ELV-SH-CTH": {
+   "power": "battery",
+   "family": "HmIP-RF",
+   "slots": [
+    {
+     "count": 1,
+     "type": "CR2032"
+    }
+   ],
+   "confidence": "prior-art",
+   "sources": [
+    {
+     "id": "battery-notes",
+     "says": "1x CR2032"
+    },
+    {
+     "id": "aiohomematic",
+     "says": "1x CR2032"
+    }
+   ]
+  },
+  "ELV-SH-SMSI": {
+   "power": "battery",
+   "family": "HmIP-RF",
+   "slots": [
+    {
+     "count": 2,
+     "type": "AA"
+    }
+   ],
+   "confidence": "manufacturer",
+   "sources": [
+    {
+     "id": "elv-manual",
+     "url": "https://media.elv.com/file/161792_um.pdf",
+     "quote": "2x 1,5 V LR6/Mignon/AA"
+    }
+   ]
+  },
+  "ELV-SH-SW1-BAT": {
+   "power": "battery",
+   "family": "HmIP-RF",
+   "slots": [
+    {
+     "count": 2,
+     "type": "AA"
+    }
+   ],
+   "confidence": "single-source",
+   "sources": [
+    {
+     "id": "aiohomematic",
+     "says": "2x AA"
+    }
+   ]
+  },
+  "ELV-SH-TACO": {
+   "power": "battery",
+   "family": "HmIP-RF",
+   "slots": [
+    {
+     "count": 1,
+     "type": "AAA"
+    }
+   ],
+   "outdoor": true,
+   "confidence": "single-source",
+   "sources": [
+    {
+     "id": "aiohomematic",
+     "says": "1x AAA"
+    }
+   ]
+  },
+  "ELV-SH-WSM": {
+   "power": "battery",
+   "family": "HmIP-RF",
+   "slots": [
+    {
+     "count": 2,
+     "type": "AA"
+    }
+   ],
+   "confidence": "prior-art",
+   "sources": [
+    {
+     "id": "battery-notes",
+     "says": "2x AA"
+    },
+    {
+     "id": "aiohomematic",
+     "says": "2x AA"
+    }
+   ]
+  },
+  "HBW-LC-RGBWW-IN6-DR": {
+   "power": "bus",
+   "family": "BidCos-RF",
+   "confidence": "assumed",
+   "sources": [
+    {
+     "id": "classification",
+     "says": "wired bus device (24 V bus supply)"
+    }
+   ]
+  },
+  "HBW-LC4-IN4-DR": {
+   "power": "bus",
+   "family": "BidCos-RF",
+   "confidence": "assumed",
+   "sources": [
+    {
+     "id": "classification",
+     "says": "wired bus device (24 V bus supply)"
+    }
+   ]
+  },
+  "HM-CC-RT-DN": {
+   "power": "battery",
+   "family": "BidCos-RF",
+   "slots": [
+    {
+     "count": 2,
+     "type": "AA"
+    }
+   ],
+   "voltage": {
+    "dp": "4/BATTERY_STATE",
+    "low": 2.1
+   },
+   "low_bat_limit": 2.1,
+   "life_years": 1.5,
+   "aliases": [
+    "HM-CC-RT-DN-BoM"
+   ],
+   "confidence": "manufacturer",
+   "sources": [
+    {
+     "id": "eq3-manual",
+     "url": "https://www.eq-3.de/Downloads/eq3/downloads_produktkatalog/homematic/bda/HM-CC-RT-DN_UM_GE_eQ-3_web.pdf",
+     "quote": "2x 1,5V LR6/Mignon/AA"
+    },
+    {
+     "id": "corpus",
+     "says": "BATTERY_STATE, LOWBAT; LOW_BAT_LIMIT 2.1"
+    },
+    {
+     "id": "battery-notes",
+     "says": "2x AA"
+    },
+    {
+     "id": "aiohomematic",
+     "says": "2x AA"
+    },
+    {
+     "id": "openhab",
+     "says": "2x AA"
+    },
+    {
+     "id": "iobroker-servicemeldungen",
+     "says": "2x AA"
+    }
+   ]
+  },
+  "HM-CC-TC": {
+   "power": "battery",
+   "family": "BidCos-RF",
+   "slots": [
+    {
+     "count": 2,
+     "type": "AA"
+    }
+   ],
+   "voltage": null,
+   "confidence": "prior-art",
+   "sources": [
+    {
+     "id": "battery-notes",
+     "says": "2x AA"
+    },
+    {
+     "id": "openhab",
+     "says": "2x AA"
+    },
+    {
+     "id": "iobroker-servicemeldungen",
+     "says": "2x AA"
+    },
+    {
+     "id": "corpus",
+     "says": "LOWBAT"
+    }
+   ]
+  },
+  "HM-CC-VD": {
+   "power": "battery",
+   "family": "BidCos-RF",
+   "slots": [
+    {
+     "count": 2,
+     "type": "AA"
+    }
+   ],
+   "voltage": null,
+   "confidence": "prior-art",
+   "sources": [
+    {
+     "id": "battery-notes",
+     "says": "2x AA"
+    },
+    {
+     "id": "openhab",
+     "says": "2x AA"
+    },
+    {
+     "id": "iobroker-servicemeldungen",
+     "says": "2x AA"
+    },
+    {
+     "id": "corpus",
+     "says": "LOWBAT"
+    }
+   ]
+  },
+  "HM-Dis-EP-WM55": {
+   "power": "battery",
+   "family": "BidCos-RF",
+   "slots": [
+    {
+     "count": 2,
+     "type": "AAA"
+    }
+   ],
+   "voltage": null,
+   "confidence": "prior-art",
+   "sources": [
+    {
+     "id": "battery-notes",
+     "says": "2x AAA"
+    },
+    {
+     "id": "aiohomematic",
+     "says": "2x AAA"
+    },
+    {
+     "id": "openhab",
+     "says": "2x AAA"
+    },
+    {
+     "id": "iobroker-servicemeldungen",
+     "says": "2x AAA"
+    },
+    {
+     "id": "corpus",
+     "says": "LOWBAT"
+    }
+   ]
+  },
+  "HM-Dis-TD-T": {
+   "power": "battery",
+   "family": "BidCos-RF",
+   "slots": [
+    {
+     "count": 2,
+     "type": "AA"
+    }
+   ],
+   "confidence": "single-source",
+   "sources": [
+    {
+     "id": "openhab",
+     "says": "2x AA"
+    },
+    {
+     "id": "iobroker-servicemeldungen",
+     "says": "2x AA"
+    }
+   ]
+  },
+  "HM-Dis-WM55": {
+   "power": "battery",
+   "family": "BidCos-RF",
+   "slots": [
+    {
+     "count": 2,
+     "type": "AAA"
+    }
+   ],
+   "voltage": null,
+   "confidence": "single-source",
+   "sources": [
+    {
+     "id": "openhab",
+     "says": "2x AAA"
+    },
+    {
+     "id": "iobroker-servicemeldungen",
+     "says": "2x AAA"
+    },
+    {
+     "id": "corpus",
+     "says": "LOWBAT"
+    }
+   ]
+  },
+  "HM-DW-WM": {
+   "power": "mains",
+   "family": "BidCos-RF",
+   "confidence": "assumed",
+   "sources": [
+    {
+     "id": "classification",
+     "says": "mains actuator by model and description: Wireless Dimming Actuator 2-channel PWM LED"
+    }
+   ]
+  },
+  "HM-ES-PMSW1-DR": {
+   "power": "mains",
+   "family": "BidCos-RF",
+   "confidence": "assumed",
+   "sources": [
+    {
+     "id": "classification",
+     "says": "mains actuator by model and description: Wireless Switch Actuator with power measurement, DIN rail mount"
+    }
+   ]
+  },
+  "HM-ES-PMSw1-Pl": {
+   "power": "mains",
+   "family": "BidCos-RF",
+   "confidence": "assumed",
+   "sources": [
+    {
+     "id": "classification",
+     "says": "mains actuator by model and description: Wireless Switch Actuator with power measurement"
+    },
+    {
+     "id": "corpus",
+     "says": ""
+    }
+   ]
+  },
+  "HM-ES-PMSW1-PL-DN-R1": {
+   "power": "mains",
+   "family": "BidCos-RF",
+   "confidence": "assumed",
+   "sources": [
+    {
+     "id": "classification",
+     "says": "mains actuator by model and description: Wireless Switch Actuator with power measurement"
+    }
+   ]
+  },
+  "HM-ES-PMSW1-PL-DN-R2": {
+   "power": "mains",
+   "family": "BidCos-RF",
+   "confidence": "assumed",
+   "sources": [
+    {
+     "id": "classification",
+     "says": "mains actuator by model and description: Wireless Switch Actuator with power measurement"
+    }
+   ]
+  },
+  "HM-ES-PMSW1-PL-DN-R3": {
+   "power": "mains",
+   "family": "BidCos-RF",
+   "confidence": "assumed",
+   "sources": [
+    {
+     "id": "classification",
+     "says": "mains actuator by model and description: Wireless Switch Actuator with power measurement"
+    }
+   ]
+  },
+  "HM-ES-PMSW1-PL-DN-R4": {
+   "power": "mains",
+   "family": "BidCos-RF",
+   "confidence": "assumed",
+   "sources": [
+    {
+     "id": "classification",
+     "says": "mains actuator by model and description: Wireless Switch Actuator with power measurement"
+    }
+   ]
+  },
+  "HM-ES-PMSW1-PL-DN-R5": {
+   "power": "mains",
+   "family": "BidCos-RF",
+   "confidence": "assumed",
+   "sources": [
+    {
+     "id": "classification",
+     "says": "mains actuator by model and description: Wireless Switch Actuator with power measurement"
+    }
+   ]
+  },
+  "HM-ES-PMSW1-SM": {
+   "power": "mains",
+   "family": "BidCos-RF",
+   "confidence": "assumed",
+   "sources": [
+    {
+     "id": "classification",
+     "says": "mains actuator by model and description: Wireless Switch Actuator with power measurement"
+    }
+   ]
+  },
+  "HM-ES-TX-WM": {
+   "power": "battery",
+   "family": "BidCos-RF",
+   "slots": [
+    {
+     "count": 4,
+     "type": "AA"
+    }
+   ],
+   "confidence": "prior-art",
+   "sources": [
+    {
+     "id": "battery-notes",
+     "says": "4x AA"
+    },
+    {
+     "id": "aiohomematic",
+     "says": "4x AA"
+    },
+    {
+     "id": "openhab",
+     "says": "4x AA"
+    },
+    {
+     "id": "iobroker-servicemeldungen",
+     "says": "4x AA"
+    }
+   ]
+  },
+  "HM-LC-AO-SM": {
+   "power": "mains",
+   "family": "BidCos-RF",
+   "confidence": "assumed",
+   "sources": [
+    {
+     "id": "classification",
+     "says": "mains actuator by model and description: Wireless 0-10V Actuator"
+    }
+   ]
+  },
+  "HM-LC-Bl1-FM": {
+   "power": "mains",
+   "family": "BidCos-RF",
+   "confidence": "assumed",
+   "sources": [
+    {
+     "id": "classification",
+     "says": "mains actuator by model and description: Wireless Blind Actuator 1-channel, flush-mount"
+    },
+    {
+     "id": "corpus",
+     "says": ""
+    }
+   ]
+  },
+  "HM-LC-BL1-FM-2": {
+   "power": "mains",
+   "family": "BidCos-RF",
+   "confidence": "assumed",
+   "sources": [
+    {
+     "id": "classification",
+     "says": "mains actuator by model and description: Wireless Blind Actuator 1-channel, flush-mount"
+    }
+   ]
+  },
+  "HM-LC-BL1-PB-FM": {
+   "power": "mains",
+   "family": "BidCos-RF",
+   "confidence": "assumed",
+   "sources": [
+    {
+     "id": "classification",
+     "says": "mains actuator by model and description: Wireless Blind Actuator 1-channel, flush-mount with push-button"
+    }
+   ]
+  },
+  "HM-LC-BL1-SM": {
+   "power": "mains",
+   "family": "BidCos-RF",
+   "confidence": "assumed",
+   "sources": [
+    {
+     "id": "classification",
+     "says": "mains actuator by model and description: Wireless Blind Actuator 1-channel, surface-mount"
+    }
+   ]
+  },
+  "HM-LC-BL1-SM-2": {
+   "power": "mains",
+   "family": "BidCos-RF",
+   "confidence": "assumed",
+   "sources": [
+    {
+     "id": "classification",
+     "says": "mains actuator by model and description: Wireless Blind Actuator 1-channel, surface-mount"
+    }
+   ]
+  },
+  "HM-LC-Bl1PBU-FM": {
+   "power": "mains",
+   "family": "BidCos-RF",
+   "confidence": "assumed",
+   "sources": [
+    {
+     "id": "classification",
+     "says": "mains actuator by model and description: Wireless Shutter Actuator 1-channel for brand switch systems, flush-mount"
+    },
+    {
+     "id": "corpus",
+     "says": ""
+    }
+   ]
+  },
+  "HM-LC-DDC1-PCB": {
+   "power": "mains",
+   "family": "BidCos-RF",
+   "confidence": "assumed",
+   "sources": [
+    {
+     "id": "classification",
+     "says": "mains actuator by model and description: Wireless Receiver 1-channel"
+    }
+   ]
+  },
+  "HM-LC-Dim1L-CV": {
+   "power": "mains",
+   "family": "BidCos-RF",
+   "confidence": "assumed",
+   "sources": [
+    {
+     "id": "classification",
+     "says": "mains actuator by model and description: Wireless Dimming Actuator 1-channel leading edge, ceiling void mount"
+    },
+    {
+     "id": "corpus",
+     "says": ""
+    }
+   ]
+  },
+  "HM-LC-DIM1L-CV-2": {
+   "power": "mains",
+   "family": "BidCos-RF",
+   "confidence": "assumed",
+   "sources": [
+    {
+     "id": "classification",
+     "says": "mains actuator by model and description: Wireless Dimming Actuator 1-channel, leading edge, ceiling void mount"
+    }
+   ]
+  },
+  "HM-LC-DIM1L-CV-644": {
+   "power": "mains",
+   "family": "BidCos-RF",
+   "confidence": "assumed",
+   "sources": [
+    {
+     "id": "classification",
+     "says": "mains actuator by model and description: ?"
+    }
+   ]
+  },
+  "HM-LC-Dim1L-Pl": {
+   "power": "mains",
+   "family": "BidCos-RF",
+   "confidence": "assumed",
+   "sources": [
+    {
+     "id": "classification",
+     "says": "mains actuator by model and description: Wireless Dimming Actuator 1-channel, plug adapter, phase control"
+    },
+    {
+     "id": "corpus",
+     "says": ""
+    }
+   ]
+  },
+  "HM-LC-DIM1L-PL-2": {
+   "power": "mains",
+   "family": "BidCos-RF",
+   "confidence": "assumed",
+   "sources": [
+    {
+     "id": "classification",
+     "says": "mains actuator by model and description: Wireless Dimming Actuator 1-channel, plug adapter, phase control"
+    }
+   ]
+  },
+  "HM-LC-DIM1L-PL-3": {
+   "power": "mains",
+   "family": "BidCos-RF",
+   "confidence": "assumed",
+   "sources": [
+    {
+     "id": "classification",
+     "says": "mains actuator by model and description: Wireless Dimming Actuator 1-channel, plug adapter, phase control"
+    }
+   ]
+  },
+  "HM-LC-DIM1L-PL-644": {
+   "power": "mains",
+   "family": "BidCos-RF",
+   "confidence": "assumed",
+   "sources": [
+    {
+     "id": "classification",
+     "says": "mains actuator by model and description: ?"
+    }
+   ]
+  },
+  "HM-LC-DIM1PWM-CV": {
+   "power": "mains",
+   "family": "BidCos-RF",
+   "confidence": "assumed",
+   "sources": [
+    {
+     "id": "classification",
+     "says": "mains actuator by model and description: Wireless Dimming Actuator 1-channel PWM LED, ceiling-void mount"
+    }
+   ]
+  },
+  "HM-LC-DIM1PWM-CV-2": {
+   "power": "mains",
+   "family": "BidCos-RF",
+   "confidence": "assumed",
+   "sources": [
+    {
+     "id": "classification",
+     "says": "mains actuator by model and description: Wireless Dimming Actuator 1-channel PWM LED, ceiling void mount"
+    }
+   ]
+  },
+  "HM-LC-DIM1T-CV": {
+   "power": "mains",
+   "family": "BidCos-RF",
+   "confidence": "assumed",
+   "sources": [
+    {
+     "id": "classification",
+     "says": "mains actuator by model and description: Wireless Dimming Actuator 1-channel, trailing edge, ceiling void mount"
+    }
+   ]
+  },
+  "HM-LC-DIM1T-CV-2": {
+   "power": "mains",
+   "family": "BidCos-RF",
+   "confidence": "assumed",
+   "sources": [
+    {
+     "id": "classification",
+     "says": "mains actuator by model and description: Wireless Dimming Actuator 1-channel, trailing edge, ceiling void mount"
+    }
+   ]
+  },
+  "HM-LC-DIM1T-CV-644": {
+   "power": "mains",
+   "family": "BidCos-RF",
+   "confidence": "assumed",
+   "sources": [
+    {
+     "id": "classification",
+     "says": "mains actuator by model and description: ?"
+    }
+   ]
+  },
+  "HM-LC-DIM1T-DR": {
+   "power": "mains",
+   "family": "BidCos-RF",
+   "confidence": "assumed",
+   "sources": [
+    {
+     "id": "classification",
+     "says": "mains actuator by model and description: Wireless Dimming Actuator 1-channel, trailing edge, DIN rail mount"
+    }
+   ]
+  },
+  "HM-LC-DIM1T-FM": {
+   "power": "mains",
+   "family": "BidCos-RF",
+   "confidence": "assumed",
+   "sources": [
+    {
+     "id": "classification",
+     "says": "mains actuator by model and description: Wireless Dimming Actuator 1-channel, trailing edge, flush-mount"
+    }
+   ]
+  },
+  "HM-LC-DIM1T-FM-2": {
+   "power": "mains",
+   "family": "BidCos-RF",
+   "confidence": "assumed",
+   "sources": [
+    {
+     "id": "classification",
+     "says": "mains actuator by model and description: Wireless Dimming Actuator 1-channel, trailing edge, flush-mount"
+    }
+   ]
+  },
+  "HM-LC-DIM1T-FM-644": {
+   "power": "mains",
+   "family": "BidCos-RF",
+   "confidence": "assumed",
+   "sources": [
+    {
+     "id": "classification",
+     "says": "mains actuator by model and description: ?"
+    }
+   ]
+  },
+  "HM-LC-DIM1T-FM-LF": {
+   "power": "mains",
+   "family": "BidCos-RF",
+   "confidence": "assumed",
+   "sources": [
+    {
+     "id": "classification",
+     "says": "mains actuator by model and description: Wireless Dimming Actuator 1-channel, trailing edge, flush-mount (LED-friendly)"
+    }
+   ]
+  },
+  "HM-LC-DIM1T-PL": {
+   "power": "mains",
+   "family": "BidCos-RF",
+   "confidence": "assumed",
+   "sources": [
+    {
+     "id": "classification",
+     "says": "mains actuator by model and description: Wireless Dimming Actuator 1-channel, plug adapter, trailing edge"
+    }
+   ]
+  },
+  "HM-LC-DIM1T-PL-2": {
+   "power": "mains",
+   "family": "BidCos-RF",
+   "confidence": "assumed",
+   "sources": [
+    {
+     "id": "classification",
+     "says": "mains actuator by model and description: Wireless Dimming Actuator 1-channel, plug adapter, trailing edge"
+    }
+   ]
+  },
+  "HM-LC-DIM1T-PL-3": {
+   "power": "mains",
+   "family": "BidCos-RF",
+   "confidence": "assumed",
+   "sources": [
+    {
+     "id": "classification",
+     "says": "mains actuator by model and description: Wireless Dimming Actuator 1-channel, plug adapter, trailing edge"
+    }
+   ]
+  },
+  "HM-LC-DIM1T-PL-644": {
+   "power": "mains",
+   "family": "BidCos-RF",
+   "confidence": "assumed",
+   "sources": [
+    {
+     "id": "classification",
+     "says": "mains actuator by model and description: ?"
+    }
+   ]
+  },
+  "HM-LC-Dim1TPBU-FM": {
+   "power": "mains",
+   "family": "BidCos-RF",
+   "confidence": "assumed",
+   "sources": [
+    {
+     "id": "classification",
+     "says": "mains actuator by model and description: Wireless Dimming Actuator 1-channel, trailing edge, flush-mount"
+    },
+    {
+     "id": "corpus",
+     "says": ""
+    }
+   ]
+  },
+  "HM-LC-DIM1TPBU-FM-2": {
+   "power": "mains",
+   "family": "BidCos-RF",
+   "confidence": "assumed",
+   "sources": [
+    {
+     "id": "classification",
+     "says": "mains actuator by model and description: Wireless Dimming Actuator 1-channel, trailing edge, flush-mount"
+    }
+   ]
+  },
+  "HM-LC-DIM2L-CV": {
+   "power": "mains",
+   "family": "BidCos-RF",
+   "confidence": "assumed",
+   "sources": [
+    {
+     "id": "classification",
+     "says": "mains actuator by model and description: Wireless Dimming Actuator 2-channel, leading edge, ceiling void mount"
+    }
+   ]
+  },
+  "HM-LC-DIM2L-SM": {
+   "power": "mains",
+   "family": "BidCos-RF",
+   "confidence": "assumed",
+   "sources": [
+    {
+     "id": "classification",
+     "says": "mains actuator by model and description: Wireless Dimming Actuator 2-channel, leading edge, surface-mount"
+    }
+   ]
+  },
+  "HM-LC-DIM2L-SM-2": {
+   "power": "mains",
+   "family": "BidCos-RF",
+   "confidence": "assumed",
+   "sources": [
+    {
+     "id": "classification",
+     "says": "mains actuator by model and description: Wireless Dimming Actuator 2-channel, leading edge, surface-mount"
+    }
+   ]
+  },
+  "HM-LC-DIM2L-SM-644": {
+   "power": "mains",
+   "family": "BidCos-RF",
+   "confidence": "assumed",
+   "sources": [
+    {
+     "id": "classification",
+     "says": "mains actuator by model and description: ?"
+    }
+   ]
+  },
+  "HM-LC-DIM2T-SM": {
+   "power": "mains",
+   "family": "BidCos-RF",
+   "confidence": "assumed",
+   "sources": [
+    {
+     "id": "classification",
+     "says": "mains actuator by model and description: Wireless Dimming Actuator 2-channel, trailing edge, surface-mount"
+    }
+   ]
+  },
+  "HM-LC-DIM2T-SM-2": {
+   "power": "mains",
+   "family": "BidCos-RF",
+   "confidence": "assumed",
+   "sources": [
+    {
+     "id": "classification",
+     "says": "mains actuator by model and description: Wireless Dimming Actuator 2-channel, trailing edge, surface-mount"
+    }
+   ]
+  },
+  "HM-LC-DIM2T-SM-644": {
+   "power": "mains",
+   "family": "BidCos-RF",
+   "confidence": "assumed",
+   "sources": [
+    {
+     "id": "classification",
+     "says": "mains actuator by model and description: ?"
+    }
+   ]
+  },
+  "HM-LC-DW-WM": {
+   "power": "mains",
+   "family": "BidCos-RF",
+   "confidence": "assumed",
+   "sources": [
+    {
+     "id": "classification",
+     "says": "mains actuator by model and description: Wireless controller for dual white LEDs"
+    }
+   ]
+  },
+  "HM-LC-JA1PBU-FM": {
+   "power": "mains",
+   "family": "BidCos-RF",
+   "confidence": "assumed",
+   "sources": [
+    {
+     "id": "classification",
+     "says": "mains actuator by model and description: Wireless Blind Actuator 1-channel, flush-mount with push-button"
+    }
+   ]
+  },
+  "HM-LC-RGBW-WM": {
+   "power": "mains",
+   "family": "BidCos-RF",
+   "confidence": "assumed",
+   "note": "only the unlicensed ioBroker script names it; re-derive from the manual",
+   "sources": [
+    {
+     "id": "iobroker-servicemeldungen",
+     "says": "mains"
+    },
+    {
+     "id": "corpus",
+     "says": "LOWBAT"
+    }
+   ]
+  },
+  "HM-LC-Sw1-Ba-PCB": {
+   "power": "battery-or-dc",
+   "family": "BidCos-RF",
+   "confidence": "manufacturer",
+   "note": "a board for a battery of the builder's choice (5-15 V); no defined slot. prior art disagrees with the manufacturer: iobroker-servicemeldungen says 9V",
+   "sources": [
+    {
+     "id": "eq3-manual",
+     "url": "https://www.eq-3.de/Downloads/eq3/downloads_produktkatalog/homematic/bda/HM-LC-Sw1-Ba-PCB_UM_GE_eQ-3_web.pdf",
+     "quote": "Spannungsversorgung: Batteriebetrieb, 5 - 15 VDC"
+    },
+    {
+     "id": "iobroker-servicemeldungen",
+     "says": "9V"
+    }
+   ]
+  },
+  "HM-LC-Sw1-DR": {
+   "power": "mains",
+   "family": "BidCos-RF",
+   "confidence": "assumed",
+   "note": "only the unlicensed ioBroker script names it; re-derive from the manual",
+   "sources": [
+    {
+     "id": "iobroker-servicemeldungen",
+     "says": "mains"
+    },
+    {
+     "id": "corpus",
+     "says": "LOWBAT"
+    }
+   ]
+  },
+  "HM-LC-Sw1-FM": {
+   "power": "mains",
+   "family": "BidCos-RF",
+   "confidence": "assumed",
+   "note": "only the unlicensed ioBroker script names it; re-derive from the manual",
+   "sources": [
+    {
+     "id": "iobroker-servicemeldungen",
+     "says": "mains"
+    },
+    {
+     "id": "corpus",
+     "says": "LOWBAT"
+    }
+   ]
+  },
+  "HM-LC-SW1-FM-2": {
+   "power": "mains",
+   "family": "BidCos-RF",
+   "confidence": "assumed",
+   "sources": [
+    {
+     "id": "classification",
+     "says": "mains actuator by model and description: Wireless Switch Actuator 1-channel, flush-mount"
+    }
+   ]
+  },
+  "HM-LC-SW1-PB-FM": {
+   "power": "mains",
+   "family": "BidCos-RF",
+   "confidence": "assumed",
+   "sources": [
+    {
+     "id": "classification",
+     "says": "mains actuator by model and description: Wireless Switch Actuator 1-channel, flush-mount"
+    }
+   ]
+  },
+  "HM-LC-Sw1-PCB": {
+   "power": "mains",
+   "family": "BidCos-RF",
+   "confidence": "assumed",
+   "note": "only the unlicensed ioBroker script names it; re-derive from the manual",
+   "sources": [
+    {
+     "id": "iobroker-servicemeldungen",
+     "says": "mains"
+    }
+   ]
+  },
+  "HM-LC-Sw1-Pl": {
+   "power": "mains",
+   "family": "BidCos-RF",
+   "confidence": "assumed",
+   "note": "only the unlicensed ioBroker script names it; re-derive from the manual",
+   "sources": [
+    {
+     "id": "iobroker-servicemeldungen",
+     "says": "mains"
+    },
+    {
+     "id": "corpus",
+     "says": "LOWBAT"
+    }
+   ]
+  },
+  "HM-LC-Sw1-Pl-2": {
+   "power": "mains",
+   "family": "BidCos-RF",
+   "confidence": "assumed",
+   "note": "only the unlicensed ioBroker script names it; re-derive from the manual",
+   "sources": [
+    {
+     "id": "iobroker-servicemeldungen",
+     "says": "mains"
+    },
+    {
+     "id": "corpus",
+     "says": "LOWBAT"
+    }
+   ]
+  },
+  "HM-LC-SW1-PL-3": {
+   "power": "mains",
+   "family": "BidCos-RF",
+   "confidence": "assumed",
+   "sources": [
+    {
+     "id": "classification",
+     "says": "mains actuator by model and description: Wireless Switch Actuator 1-channel, socket adapter"
+    }
+   ]
+  },
+  "HM-LC-Sw1-Pl-CT-R1": {
+   "power": "mains",
+   "family": "BidCos-RF",
+   "confidence": "assumed",
+   "note": "only the unlicensed ioBroker script names it; re-derive from the manual",
+   "sources": [
+    {
+     "id": "iobroker-servicemeldungen",
+     "says": "mains"
+    },
+    {
+     "id": "corpus",
+     "says": "LOWBAT"
+    }
+   ]
+  },
+  "HM-LC-SW1-PL-CT-R2": {
+   "power": "mains",
+   "family": "BidCos-RF",
+   "confidence": "assumed",
+   "sources": [
+    {
+     "id": "classification",
+     "says": "mains actuator by model and description: Wireless Switch Actuator 1-channel, socket adapter, countdown timer"
+    }
+   ]
+  },
+  "HM-LC-SW1-PL-CT-R3": {
+   "power": "mains",
+   "family": "BidCos-RF",
+   "confidence": "assumed",
+   "sources": [
+    {
+     "id": "classification",
+     "says": "mains actuator by model and description: Wireless Switch Actuator 1-channel, socket adapter, countdown timer"
+    }
+   ]
+  },
+  "HM-LC-SW1-PL-CT-R4": {
+   "power": "mains",
+   "family": "BidCos-RF",
+   "confidence": "assumed",
+   "sources": [
+    {
+     "id": "classification",
+     "says": "mains actuator by model and description: Wireless Switch Actuator 1-channel, socket adapter, countdown timer"
+    }
+   ]
+  },
+  "HM-LC-SW1-PL-CT-R5": {
+   "power": "mains",
+   "family": "BidCos-RF",
+   "confidence": "assumed",
+   "sources": [
+    {
+     "id": "classification",
+     "says": "mains actuator by model and description: Wireless Switch Actuator 1-channel, socket adapter, countdown timer"
+    }
+   ]
+  },
+  "HM-LC-Sw1-Pl-DN-R1": {
+   "power": "mains",
+   "family": "BidCos-RF",
+   "confidence": "assumed",
+   "note": "only the unlicensed ioBroker script names it; re-derive from the manual",
+   "sources": [
+    {
+     "id": "iobroker-servicemeldungen",
+     "says": "mains"
+    }
+   ]
+  },
+  "HM-LC-SW1-PL-DN-R2": {
+   "power": "mains",
+   "family": "BidCos-RF",
+   "confidence": "assumed",
+   "sources": [
+    {
+     "id": "classification",
+     "says": "mains actuator by model and description: Wireless Switch Actuator 1-channel, socket adapter"
+    }
+   ]
+  },
+  "HM-LC-SW1-PL-DN-R3": {
+   "power": "mains",
+   "family": "BidCos-RF",
+   "confidence": "assumed",
+   "sources": [
+    {
+     "id": "classification",
+     "says": "mains actuator by model and description: Wireless Switch Actuator 1-channel, socket adapter"
+    }
+   ]
+  },
+  "HM-LC-SW1-PL-DN-R4": {
+   "power": "mains",
+   "family": "BidCos-RF",
+   "confidence": "assumed",
+   "sources": [
+    {
+     "id": "classification",
+     "says": "mains actuator by model and description: Wireless Switch Actuator 1-channel, socket adapter"
+    }
+   ]
+  },
+  "HM-LC-SW1-PL-DN-R5": {
+   "power": "mains",
+   "family": "BidCos-RF",
+   "confidence": "assumed",
+   "sources": [
+    {
+     "id": "classification",
+     "says": "mains actuator by model and description: Wireless Switch Actuator 1-channel, socket adapter"
+    }
+   ]
+  },
+  "HM-LC-SW1-PL-OM54": {
+   "power": "mains",
+   "family": "BidCos-RF",
+   "confidence": "assumed",
+   "sources": [
+    {
+     "id": "classification",
+     "says": "mains actuator by model and description: Wireless Switch, 1-channel"
+    }
+   ]
+  },
+  "HM-LC-Sw1-SM": {
+   "power": "mains",
+   "family": "BidCos-RF",
+   "confidence": "assumed",
+   "note": "only the unlicensed ioBroker script names it; re-derive from the manual",
+   "sources": [
+    {
+     "id": "iobroker-servicemeldungen",
+     "says": "mains"
+    }
+   ]
+  },
+  "HM-LC-SW1-SM-2": {
+   "power": "mains",
+   "family": "BidCos-RF",
+   "confidence": "assumed",
+   "sources": [
+    {
+     "id": "classification",
+     "says": "mains actuator by model and description: Wireless Switch Actuator 1-channel, surface-mount"
+    }
+   ]
+  },
+  "HM-LC-SW1-SM-ATMEGA168": {
+   "power": "mains",
+   "family": "BidCos-RF",
+   "confidence": "assumed",
+   "sources": [
+    {
+     "id": "classification",
+     "says": "mains actuator by model and description: Wireless Switch Actuator 1-channel, surface-mount"
+    }
+   ]
+  },
+  "HM-LC-Sw1PBU-FM": {
+   "power": "mains",
+   "family": "BidCos-RF",
+   "confidence": "assumed",
+   "note": "only the unlicensed ioBroker script names it; re-derive from the manual",
+   "sources": [
+    {
+     "id": "iobroker-servicemeldungen",
+     "says": "mains"
+    },
+    {
+     "id": "corpus",
+     "says": "LOWBAT"
+    }
+   ]
+  },
+  "HM-LC-SW2-DR": {
+   "power": "mains",
+   "family": "BidCos-RF",
+   "confidence": "assumed",
+   "sources": [
+    {
+     "id": "classification",
+     "says": "mains actuator by model and description: Wireless Switch Actuator 2-channel, DIN rail mount"
+    }
+   ]
+  },
+  "HM-LC-SW2-DR-2": {
+   "power": "mains",
+   "family": "BidCos-RF",
+   "confidence": "assumed",
+   "sources": [
+    {
+     "id": "classification",
+     "says": "mains actuator by model and description: Wireless Switch Actuator 2-channel, DIN rail mount"
+    }
+   ]
+  },
+  "HM-LC-Sw2-FM": {
+   "power": "mains",
+   "family": "BidCos-RF",
+   "confidence": "assumed",
+   "note": "only the unlicensed ioBroker script names it; re-derive from the manual",
+   "sources": [
+    {
+     "id": "iobroker-servicemeldungen",
+     "says": "mains"
+    },
+    {
+     "id": "corpus",
+     "says": "LOWBAT"
+    }
+   ]
+  },
+  "HM-LC-SW2-FM-2": {
+   "power": "mains",
+   "family": "BidCos-RF",
+   "confidence": "assumed",
+   "sources": [
+    {
+     "id": "classification",
+     "says": "mains actuator by model and description: Wireless Switch Actuator 2-channel, flush-mount"
+    }
+   ]
+  },
+  "HM-LC-SW2-PB-FM": {
+   "power": "mains",
+   "family": "BidCos-RF",
+   "confidence": "assumed",
+   "sources": [
+    {
+     "id": "classification",
+     "says": "mains actuator by model and description: Wireless Switch Actuator 2-channel, flush-mount"
+    }
+   ]
+  },
+  "HM-LC-SW2-SM": {
+   "power": "mains",
+   "family": "BidCos-RF",
+   "confidence": "assumed",
+   "sources": [
+    {
+     "id": "classification",
+     "says": "mains actuator by model and description: Wireless Switch Actuator 2-channel, surface-mount"
+    }
+   ]
+  },
+  "HM-LC-Sw2PBU-FM": {
+   "power": "mains",
+   "family": "BidCos-RF",
+   "confidence": "assumed",
+   "note": "only the unlicensed ioBroker script names it; re-derive from the manual",
+   "sources": [
+    {
+     "id": "iobroker-servicemeldungen",
+     "says": "mains"
+    }
+   ]
+  },
+  "HM-LC-Sw4-Ba-PCB": {
+   "power": "mains",
+   "family": "BidCos-RF",
+   "confidence": "assumed",
+   "note": "only the unlicensed ioBroker script names it; re-derive from the manual",
+   "sources": [
+    {
+     "id": "iobroker-servicemeldungen",
+     "says": "mains"
+    }
+   ]
+  },
+  "HM-LC-Sw4-DR": {
+   "power": "mains",
+   "family": "BidCos-RF",
+   "confidence": "assumed",
+   "note": "only the unlicensed ioBroker script names it; re-derive from the manual",
+   "sources": [
+    {
+     "id": "iobroker-servicemeldungen",
+     "says": "mains"
+    }
+   ]
+  },
+  "HM-LC-Sw4-DR-2": {
+   "power": "mains",
+   "family": "BidCos-RF",
+   "confidence": "assumed",
+   "note": "only the unlicensed ioBroker script names it; re-derive from the manual",
+   "sources": [
+    {
+     "id": "iobroker-servicemeldungen",
+     "says": "mains"
+    }
+   ]
+  },
+  "HM-LC-Sw4-PCB": {
+   "power": "battery",
+   "family": "BidCos-RF",
+   "slots": [
+    {
+     "count": 1,
+     "type": "9V"
+    }
+   ],
+   "voltage": null,
+   "confidence": "assumed",
+   "note": "only the unlicensed ioBroker script names it; re-derive from the manual",
+   "sources": [
+    {
+     "id": "iobroker-servicemeldungen",
+     "says": "9V"
+    },
+    {
+     "id": "corpus",
+     "says": "LOWBAT"
+    }
+   ]
+  },
+  "HM-LC-Sw4-SM": {
+   "power": "mains",
+   "family": "BidCos-RF",
+   "confidence": "assumed",
+   "note": "only the unlicensed ioBroker script names it; re-derive from the manual",
+   "sources": [
+    {
+     "id": "iobroker-servicemeldungen",
+     "says": "mains"
+    }
+   ]
+  },
+  "HM-LC-SW4-SM-2": {
+   "power": "mains",
+   "family": "BidCos-RF",
+   "confidence": "assumed",
+   "sources": [
+    {
+     "id": "classification",
+     "says": "mains actuator by model and description: Wireless Switch Actuator 4-channel, surface-mount"
+    }
+   ]
+  },
+  "HM-LC-SW4-SM-ATMEGA168": {
+   "power": "mains",
+   "family": "BidCos-RF",
+   "confidence": "assumed",
+   "sources": [
+    {
+     "id": "classification",
+     "says": "mains actuator by model and description: Wireless Switch Actuator 4-channel, surface-mount"
+    }
+   ]
+  },
+  "HM-LC-Sw4-WM": {
+   "power": "mains",
+   "family": "BidCos-RF",
+   "confidence": "manufacturer",
+   "note": "an external DC supply. prior art disagrees with the manufacturer: iobroker-servicemeldungen says 9V",
+   "sources": [
+    {
+     "id": "eq3-manual",
+     "url": "https://www.eq-3.de/Downloads/eq3/downloads_produktkatalog/homematic/bda/HM-LC-Sw4-WM_UM_GE_eQ-3_web.pdf",
+     "quote": "Spannungsversorgung: 7–15 VDC"
+    },
+    {
+     "id": "corpus",
+     "says": "LOWBAT"
+    },
+    {
+     "id": "iobroker-servicemeldungen",
+     "says": "9V"
+    }
+   ]
+  },
+  "HM-MOD-EM-8": {
+   "power": "battery",
+   "family": "BidCos-RF",
+   "slots": [
+    {
+     "count": 1,
+     "type": "9V"
+    }
+   ],
+   "confidence": "assumed",
+   "note": "only the unlicensed ioBroker script names it; re-derive from the manual",
+   "sources": [
+    {
+     "id": "iobroker-servicemeldungen",
+     "says": "9V"
+    }
+   ]
+  },
+  "HM-MOD-Re-8": {
+   "power": "battery",
+   "family": "BidCos-RF",
+   "slots": [
+    {
+     "count": 1,
+     "type": "9V"
+    }
+   ],
+   "confidence": "assumed",
+   "note": "only the unlicensed ioBroker script names it; re-derive from the manual",
+   "sources": [
+    {
+     "id": "iobroker-servicemeldungen",
+     "says": "9V"
+    }
+   ]
+  },
+  "HM-OU-CF-PL": {
+   "power": "mains",
+   "family": "BidCos-RF",
+   "confidence": "assumed",
+   "sources": [
+    {
+     "id": "classification",
+     "says": "mains actuator by model and description: Wireless Door Chime with light flash"
+    }
+   ]
+  },
+  "HM-OU-CFM-Pl": {
+   "power": "mains",
+   "family": "BidCos-RF",
+   "confidence": "manufacturer",
+   "note": "prior art disagrees with the manufacturer: iobroker-servicemeldungen says 2x C",
+   "sources": [
+    {
+     "id": "eq3-manual",
+     "url": "https://www.eq-3.de/Downloads/eq3/downloads_produktkatalog/homematic/bda/HM-OU-CFM-Pl_UM_GE_eQ-3_web.pdf",
+     "quote": "Versorgungsspannung: 230 V/50 Hz"
+    },
+    {
+     "id": "corpus",
+     "says": "LOWBAT"
+    },
+    {
+     "id": "iobroker-servicemeldungen",
+     "says": "2x C"
+    }
+   ]
+  },
+  "HM-OU-CFM-TW": {
+   "power": "battery",
+   "family": "BidCos-RF",
+   "slots": [
+    {
+     "count": 2,
+     "type": "C"
+    }
+   ],
+   "confidence": "manufacturer",
+   "sources": [
+    {
+     "id": "eq3-manual",
+     "url": "https://www.eq-3.de/Downloads/eq3/downloads_produktkatalog/homematic/bda/HM-OU-CFM-TW_UM_GE_eQ-3_web.pdf",
+     "quote": "2x 1,5 V LR14/Baby/C"
+    },
+    {
+     "id": "battery-notes",
+     "says": "2x C"
+    },
+    {
+     "id": "aiohomematic",
+     "says": "2x C"
+    },
+    {
+     "id": "openhab",
+     "says": "2x C"
+    },
+    {
+     "id": "iobroker-servicemeldungen",
+     "says": "2x C"
+    }
+   ]
+  },
+  "HM-OU-CM-PCB": {
+   "power": "battery",
+   "family": "BidCos-RF",
+   "slots": [
+    {
+     "count": 1,
+     "type": "9V"
+    }
+   ],
+   "confidence": "assumed",
+   "note": "only the unlicensed ioBroker script names it; re-derive from the manual",
+   "sources": [
+    {
+     "id": "iobroker-servicemeldungen",
+     "says": "9V"
+    }
+   ]
+  },
+  "HM-OU-LED16": {
+   "power": "mains",
+   "family": "BidCos-RF",
+   "confidence": "manufacturer",
+   "sources": [
+    {
+     "id": "eq3-manual",
+     "url": "https://www.eq-3.de/Downloads/eq3/downloads_produktkatalog/homematic/bda/HM-OU-LED16_UM_GE_eQ-3_web.pdf",
+     "quote": "Versorgungsspannung: 7,5 VDC"
+    }
+   ]
+  },
+  "HM-PB-2-FM": {
+   "power": "battery",
+   "family": "BidCos-RF",
+   "slots": [
+    {
+     "count": 2,
+     "type": "AAA"
+    }
+   ],
+   "confidence": "prior-art",
+   "sources": [
+    {
+     "id": "battery-notes",
+     "says": "2x AAA"
+    },
+    {
+     "id": "aiohomematic",
+     "says": "2x AAA"
+    },
+    {
+     "id": "iobroker-servicemeldungen",
+     "says": "2x AAA"
+    }
+   ]
+  },
+  "HM-PB-2-WM": {
+   "power": "battery",
+   "family": "BidCos-RF",
+   "slots": [
+    {
+     "count": 1,
+     "type": "CR2032"
+    }
+   ],
+   "confidence": "single-source",
+   "sources": [
+    {
+     "id": "openhab",
+     "says": "1x CR2032"
+    },
+    {
+     "id": "iobroker-servicemeldungen",
+     "says": "1x CR2032"
+    }
+   ]
+  },
+  "HM-PB-2-WM55": {
+   "power": "battery",
+   "family": "BidCos-RF",
+   "slots": [
+    {
+     "count": 2,
+     "type": "AAA"
+    }
+   ],
+   "confidence": "manufacturer",
+   "sources": [
+    {
+     "id": "eq3-manual",
+     "url": "https://www.eq-3.de/downloads/download/homematic/bda/hm-pb-2-wm55_um_ge_eq-3_web.pdf",
+     "quote": "Batterien: 2x Micro / AAA / LR03"
+    },
+    {
+     "id": "battery-notes",
+     "says": "2x AAA"
+    },
+    {
+     "id": "aiohomematic",
+     "says": "2x AAA"
+    },
+    {
+     "id": "openhab",
+     "says": "2x AAA"
+    },
+    {
+     "id": "iobroker-servicemeldungen",
+     "says": "2x AAA"
+    }
+   ]
+  },
+  "HM-PB-2-WM55-2": {
+   "power": "battery",
+   "family": "BidCos-RF",
+   "slots": [
+    {
+     "count": 2,
+     "type": "AAA"
+    }
+   ],
+   "voltage": null,
+   "confidence": "manufacturer",
+   "sources": [
+    {
+     "id": "eq3-manual",
+     "url": "https://www.eq-3.de/Downloads/eq3/downloads_produktkatalog/homematic/bda/HM-PB-2-WM55-2_UM_GE_eQ-3_web.pdf",
+     "quote": "Batterien: 2x Micro / AAA / LR03"
+    },
+    {
+     "id": "corpus",
+     "says": "LOWBAT"
+    },
+    {
+     "id": "battery-notes",
+     "says": "2x AAA"
+    },
+    {
+     "id": "openhab",
+     "says": "2x AAA"
+    },
+    {
+     "id": "iobroker-servicemeldungen",
+     "says": "2x AAA"
+    }
+   ]
+  },
+  "HM-PB-4-WM": {
+   "power": "battery",
+   "family": "BidCos-RF",
+   "slots": [
+    {
+     "count": 1,
+     "type": "CR2032"
+    }
+   ],
+   "confidence": "prior-art",
+   "sources": [
+    {
+     "id": "battery-notes",
+     "says": "1x CR2032"
+    },
+    {
+     "id": "openhab",
+     "says": "1x CR2032"
+    },
+    {
+     "id": "iobroker-servicemeldungen",
+     "says": "1x CR2032"
+    }
+   ]
+  },
+  "HM-PB-4Dis-WM": {
+   "power": "battery",
+   "family": "BidCos-RF",
+   "slots": [
+    {
+     "count": 3,
+     "type": "AAA"
+    }
+   ],
+   "voltage": null,
+   "confidence": "single-source",
+   "sources": [
+    {
+     "id": "openhab",
+     "says": "3x AAA"
+    },
+    {
+     "id": "iobroker-servicemeldungen",
+     "says": "3x AAA"
+    },
+    {
+     "id": "corpus",
+     "says": "LOWBAT"
+    }
+   ]
+  },
+  "HM-PB-4Dis-WM-2": {
+   "power": "battery",
+   "family": "BidCos-RF",
+   "slots": [
+    {
+     "count": 3,
+     "type": "AAA"
+    }
+   ],
+   "voltage": null,
+   "confidence": "manufacturer",
+   "sources": [
+    {
+     "id": "eq3-manual",
+     "url": "https://www.eq-3.de/Downloads/eq3/downloads_produktkatalog/homematic/bda/HM-PB-4Dis-WM-2_UM_GE_eQ-3_web.pdf",
+     "quote": "3x 1,5 V LR03/Micro/AAA"
+    },
+    {
+     "id": "corpus",
+     "says": "LOWBAT"
+    },
+    {
+     "id": "battery-notes",
+     "says": "3x AAA"
+    },
+    {
+     "id": "iobroker-servicemeldungen",
+     "says": "3x AAA"
+    }
+   ]
+  },
+  "HM-PB-6-WM55": {
+   "power": "battery",
+   "family": "BidCos-RF",
+   "slots": [
+    {
+     "count": 2,
+     "type": "AAA"
+    }
+   ],
+   "voltage": null,
+   "confidence": "manufacturer",
+   "sources": [
+    {
+     "id": "eq3-manual",
+     "url": "https://www.eq-3.de/Downloads/eq3/downloads_produktkatalog/homematic/bda/HM-PB-6-WM55_UM_GE_eQ-3_web.pdf",
+     "quote": "2 x 1,5 V LR03/Micro AAA"
+    },
+    {
+     "id": "corpus",
+     "says": "LOWBAT"
+    },
+    {
+     "id": "battery-notes",
+     "says": "2x AAA"
+    },
+    {
+     "id": "aiohomematic",
+     "says": "2x AAA"
+    },
+    {
+     "id": "openhab",
+     "says": "2x AAA"
+    },
+    {
+     "id": "iobroker-servicemeldungen",
+     "says": "2x AAA"
+    }
+   ]
+  },
+  "HM-PBI-2-FM": {
+   "power": "battery",
+   "family": "BidCos-RF",
+   "slots": [
+    {
+     "count": 2,
+     "type": "AAA"
+    }
+   ],
+   "confidence": "assumed",
+   "note": "only the unlicensed ioBroker script names it; re-derive from the manual",
+   "sources": [
+    {
+     "id": "iobroker-servicemeldungen",
+     "says": "2x AAA"
+    }
+   ]
+  },
+  "HM-PBI-4-FM": {
+   "power": "battery",
+   "family": "BidCos-RF",
+   "slots": [
+    {
+     "count": 1,
+     "type": "CR2032"
+    }
+   ],
+   "voltage": null,
+   "confidence": "manufacturer",
+   "sources": [
+    {
+     "id": "eq3-manual",
+     "url": "https://www.eq-3.de/Downloads/eq3/downloads_produktkatalog/homematic/bda/HM-PBI-4-FM_UM_GE_eQ-3_web.pdf",
+     "quote": "Power supply: 1x Lithium button cell CR2032"
+    },
+    {
+     "id": "corpus",
+     "says": "LOWBAT"
+    },
+    {
+     "id": "battery-notes",
+     "says": "1x CR2032"
+    },
+    {
+     "id": "aiohomematic",
+     "says": "1x CR2032"
+    },
+    {
+     "id": "openhab",
+     "says": "1x CR2032"
+    },
+    {
+     "id": "iobroker-servicemeldungen",
+     "says": "1x CR2032"
+    }
+   ]
+  },
+  "HM-RC-12": {
+   "power": "battery",
+   "family": "BidCos-RF",
+   "slots": [
+    {
+     "count": 3,
+     "type": "AAA"
+    }
+   ],
+   "voltage": null,
+   "confidence": "single-source",
+   "sources": [
+    {
+     "id": "openhab",
+     "says": "3x AAA"
+    },
+    {
+     "id": "iobroker-servicemeldungen",
+     "says": "3x AAA(NiMH)"
+    },
+    {
+     "id": "corpus",
+     "says": "LOWBAT"
+    }
+   ]
+  },
+  "HM-RC-12-B": {
+   "power": "battery",
+   "family": "BidCos-RF",
+   "slots": [
+    {
+     "count": 3,
+     "type": "AAA"
+    }
+   ],
+   "voltage": null,
+   "confidence": "prior-art",
+   "sources": [
+    {
+     "id": "battery-notes",
+     "says": "3x AAA"
+    },
+    {
+     "id": "openhab",
+     "says": "3x AAA"
+    },
+    {
+     "id": "iobroker-servicemeldungen",
+     "says": "3x AAA(NiMH)"
+    },
+    {
+     "id": "corpus",
+     "says": "LOWBAT"
+    }
+   ]
+  },
+  "HM-RC-12-W": {
+   "power": "battery",
+   "family": "BidCos-RF",
+   "slots": [
+    {
+     "count": 3,
+     "type": "AAA"
+    }
+   ],
+   "confidence": "single-source",
+   "sources": [
+    {
+     "id": "openhab",
+     "says": "3x AAA"
+    },
+    {
+     "id": "iobroker-servicemeldungen",
+     "says": "3x AAA(NiMH)"
+    }
+   ]
+  },
+  "HM-RC-19": {
+   "power": "battery",
+   "family": "BidCos-RF",
+   "slots": [
+    {
+     "count": 3,
+     "type": "AAA"
+    }
+   ],
+   "voltage": null,
+   "confidence": "single-source",
+   "sources": [
+    {
+     "id": "openhab",
+     "says": "3x AAA"
+    },
+    {
+     "id": "iobroker-servicemeldungen",
+     "says": "3x AAA(NiMH)"
+    },
+    {
+     "id": "corpus",
+     "says": "LOWBAT"
+    }
+   ]
+  },
+  "HM-RC-19-B": {
+   "power": "battery",
+   "family": "BidCos-RF",
+   "slots": [
+    {
+     "count": 3,
+     "type": "AAA"
+    }
+   ],
+   "confidence": "single-source",
+   "sources": [
+    {
+     "id": "openhab",
+     "says": "3x AAA"
+    },
+    {
+     "id": "iobroker-servicemeldungen",
+     "says": "3x AAA(NiMH)"
+    }
+   ]
+  },
+  "HM-RC-19-SW": {
+   "power": "rechargeable",
+   "family": "BidCos-RF",
+   "slots": [
+    {
+     "count": 1,
+     "type": "pack"
+    }
+   ],
+   "voltage": null,
+   "confidence": "assumed",
+   "note": "only the unlicensed ioBroker script names it; re-derive from the manual",
+   "sources": [
+    {
+     "id": "iobroker-servicemeldungen",
+     "says": "pack"
+    },
+    {
+     "id": "corpus",
+     "says": "LOWBAT"
+    }
+   ]
+  },
+  "HM-RC-19-W": {
+   "power": "battery",
+   "family": "BidCos-RF",
+   "slots": [
+    {
+     "count": 3,
+     "type": "AAA"
+    }
+   ],
+   "confidence": "single-source",
+   "sources": [
+    {
+     "id": "openhab",
+     "says": "3x AAA"
+    }
+   ]
+  },
+  "HM-RC-2-PBU-FM": {
+   "power": "mains",
+   "family": "BidCos-RF",
+   "confidence": "manufacturer",
+   "sources": [
+    {
+     "id": "eq3-manual",
+     "url": "https://www.eq-3.de/Downloads/eq3/downloads_produktkatalog/homematic/bda/HM-RC-2-PBU-FM_UM_GE_eQ-3_web.pdf",
+     "quote": "Versorgungsspannung: 230 V/50 Hz"
+    }
+   ]
+  },
+  "HM-RC-2-PBU-FM-2": {
+   "power": "mains",
+   "family": "BidCos-RF",
+   "confidence": "assumed",
+   "sources": [
+    {
+     "id": "classification",
+     "says": "mains actuator by model and description: Wireless Transmitter 2-channel for brand switch systems, flush-mount"
+    }
+   ]
+  },
+  "HM-RC-4": {
+   "power": "battery",
+   "family": "BidCos-RF",
+   "slots": [
+    {
+     "count": 1,
+     "type": "CR2016"
+    }
+   ],
+   "confidence": "single-source",
+   "sources": [
+    {
+     "id": "openhab",
+     "says": "1x CR2016"
+    },
+    {
+     "id": "iobroker-servicemeldungen",
+     "says": "1x CR2016"
+    }
+   ]
+  },
+  "HM-RC-4-2": {
+   "power": "battery",
+   "family": "BidCos-RF",
+   "slots": [
+    {
+     "count": 1,
+     "type": "AAA"
+    }
+   ],
+   "voltage": null,
+   "confidence": "prior-art",
+   "sources": [
+    {
+     "id": "battery-notes",
+     "says": "1x AAA"
+    },
+    {
+     "id": "aiohomematic",
+     "says": "1x AAA"
+    },
+    {
+     "id": "openhab",
+     "says": "1x AAA"
+    },
+    {
+     "id": "iobroker-servicemeldungen",
+     "says": "1x AAA"
+    },
+    {
+     "id": "corpus",
+     "says": "LOWBAT"
+    }
+   ]
+  },
+  "HM-RC-4-3": {
+   "power": "battery",
+   "family": "BidCos-RF",
+   "slots": [
+    {
+     "count": 1,
+     "type": "AAA"
+    }
+   ],
+   "voltage": null,
+   "confidence": "manufacturer",
+   "sources": [
+    {
+     "id": "eq3-manual",
+     "url": "https://www.eq-3.de/Downloads/eq3/downloads_produktkatalog/homematic/bda/HM-RC-4-3_UM_GE_eQ-3_web.pdf",
+     "quote": "1 x 1,5 V LR03/Micro/AAA"
+    },
+    {
+     "id": "corpus",
+     "says": "LOWBAT"
+    },
+    {
+     "id": "battery-notes",
+     "says": "1x AAA"
+    },
+    {
+     "id": "iobroker-servicemeldungen",
+     "says": "1x AAA"
+    }
+   ]
+  },
+  "HM-RC-4-B": {
+   "power": "battery",
+   "family": "BidCos-RF",
+   "slots": [
+    {
+     "count": 1,
+     "type": "CR2016"
+    }
+   ],
+   "voltage": null,
+   "confidence": "single-source",
+   "sources": [
+    {
+     "id": "openhab",
+     "says": "1x CR2016"
+    },
+    {
+     "id": "iobroker-servicemeldungen",
+     "says": "1x CR2016"
+    },
+    {
+     "id": "corpus",
+     "says": "LOWBAT"
+    }
+   ]
+  },
+  "HM-RC-8": {
+   "power": "battery",
+   "family": "BidCos-RF",
+   "slots": [
+    {
+     "count": 2,
+     "type": "AAA"
+    }
+   ],
+   "voltage": null,
+   "confidence": "manufacturer",
+   "sources": [
+    {
+     "id": "eq3-manual",
+     "url": "https://www.eq-3.de/Downloads/eq3/downloads_produktkatalog/homematic/bda/HM-RC-8_UM_GE_eQ-3_web.pdf",
+     "quote": "2x 1,5 V LR03/Micro/AAA"
+    },
+    {
+     "id": "corpus",
+     "says": "LOWBAT"
+    },
+    {
+     "id": "battery-notes",
+     "says": "2x AAA"
+    },
+    {
+     "id": "aiohomematic",
+     "says": "2x AAA"
+    },
+    {
+     "id": "openhab",
+     "says": "2x AAA"
+    },
+    {
+     "id": "iobroker-servicemeldungen",
+     "says": "2x AAA"
+    }
+   ]
+  },
+  "HM-RC-Dis-H-x-EU": {
+   "power": "battery",
+   "family": "BidCos-RF",
+   "slots": [
+    {
+     "count": 3,
+     "type": "AAA"
+    }
+   ],
+   "voltage": null,
+   "confidence": "single-source",
+   "sources": [
+    {
+     "id": "openhab",
+     "says": "3x AAA"
+    },
+    {
+     "id": "iobroker-servicemeldungen",
+     "says": "3x AAA"
+    },
+    {
+     "id": "corpus",
+     "says": ""
+    }
+   ]
+  },
+  "HM-RC-Key3": {
+   "power": "battery",
+   "family": "BidCos-RF",
+   "slots": [
+    {
+     "count": 1,
+     "type": "CR2016"
+    }
+   ],
+   "confidence": "single-source",
+   "sources": [
+    {
+     "id": "openhab",
+     "says": "1x CR2016"
+    },
+    {
+     "id": "iobroker-servicemeldungen",
+     "says": "1x CR2016"
+    }
+   ]
+  },
+  "HM-RC-Key3-B": {
+   "power": "battery",
+   "family": "BidCos-RF",
+   "slots": [
+    {
+     "count": 1,
+     "type": "CR2016"
+    }
+   ],
+   "voltage": null,
+   "confidence": "single-source",
+   "sources": [
+    {
+     "id": "openhab",
+     "says": "1x CR2016"
+    },
+    {
+     "id": "iobroker-servicemeldungen",
+     "says": "1x CR2016"
+    },
+    {
+     "id": "corpus",
+     "says": "LOWBAT"
+    }
+   ]
+  },
+  "HM-RC-Key4-2": {
+   "power": "battery",
+   "family": "BidCos-RF",
+   "slots": [
+    {
+     "count": 1,
+     "type": "AAA"
+    }
+   ],
+   "voltage": null,
+   "confidence": "prior-art",
+   "sources": [
+    {
+     "id": "battery-notes",
+     "says": "1x AAA"
+    },
+    {
+     "id": "openhab",
+     "says": "1x AAA"
+    },
+    {
+     "id": "iobroker-servicemeldungen",
+     "says": "1x AAA"
+    },
+    {
+     "id": "corpus",
+     "says": "LOWBAT"
+    }
+   ]
+  },
+  "HM-RC-Key4-3": {
+   "power": "battery",
+   "family": "BidCos-RF",
+   "slots": [
+    {
+     "count": 1,
+     "type": "AAA"
+    }
+   ],
+   "voltage": null,
+   "confidence": "prior-art",
+   "sources": [
+    {
+     "id": "battery-notes",
+     "says": "1x AAA"
+    },
+    {
+     "id": "aiohomematic",
+     "says": "1x AAA"
+    },
+    {
+     "id": "iobroker-servicemeldungen",
+     "says": "1x AAA"
+    },
+    {
+     "id": "corpus",
+     "says": "LOWBAT"
+    }
+   ]
+  },
+  "HM-RC-P1": {
+   "power": "battery",
+   "family": "BidCos-RF",
+   "slots": [
+    {
+     "count": 1,
+     "type": "CR2016"
+    }
+   ],
+   "voltage": null,
+   "confidence": "single-source",
+   "sources": [
+    {
+     "id": "openhab",
+     "says": "1x CR2016"
+    },
+    {
+     "id": "iobroker-servicemeldungen",
+     "says": "1x CR2016"
+    },
+    {
+     "id": "corpus",
+     "says": "LOWBAT"
+    }
+   ]
+  },
+  "HM-RC-Sec3": {
+   "power": "battery",
+   "family": "BidCos-RF",
+   "slots": [
+    {
+     "count": 1,
+     "type": "CR2016"
+    }
+   ],
+   "confidence": "single-source",
+   "sources": [
+    {
+     "id": "openhab",
+     "says": "1x CR2016"
+    },
+    {
+     "id": "iobroker-servicemeldungen",
+     "says": "1x CR2016"
+    }
+   ]
+  },
+  "HM-RC-Sec3-B": {
+   "power": "battery",
+   "family": "BidCos-RF",
+   "slots": [
+    {
+     "count": 1,
+     "type": "CR2016"
+    }
+   ],
+   "confidence": "single-source",
+   "sources": [
+    {
+     "id": "openhab",
+     "says": "1x CR2016"
+    },
+    {
+     "id": "iobroker-servicemeldungen",
+     "says": "1x CR2016"
+    }
+   ]
+  },
+  "HM-RC-Sec4-2": {
+   "power": "battery",
+   "family": "BidCos-RF",
+   "slots": [
+    {
+     "count": 1,
+     "type": "AAA"
+    }
+   ],
+   "confidence": "single-source",
+   "sources": [
+    {
+     "id": "openhab",
+     "says": "1x AAA"
+    },
+    {
+     "id": "iobroker-servicemeldungen",
+     "says": "1x AAA"
+    }
+   ]
+  },
+  "HM-RC-Sec4-3": {
+   "power": "battery",
+   "family": "BidCos-RF",
+   "slots": [
+    {
+     "count": 1,
+     "type": "AAA"
+    }
+   ],
+   "confidence": "assumed",
+   "note": "only the unlicensed ioBroker script names it; re-derive from the manual",
+   "sources": [
+    {
+     "id": "iobroker-servicemeldungen",
+     "says": "1x AAA"
+    }
+   ]
+  },
+  "HM-SCI-3-FM": {
+   "power": "battery",
+   "family": "BidCos-RF",
+   "slots": [
+    {
+     "count": 1,
+     "type": "CR2032"
+    }
+   ],
+   "voltage": null,
+   "confidence": "manufacturer",
+   "sources": [
+    {
+     "id": "eq3-manual",
+     "url": "https://www.eq-3.de/Downloads/eq3/downloads_produktkatalog/homematic/bda/HM-SCI-3-FM_UM_GE_eQ-3_web.pdf",
+     "quote": "Power supply: 1x lithium coin cell, type CR 2032"
+    },
+    {
+     "id": "corpus",
+     "says": "LOWBAT"
+    },
+    {
+     "id": "battery-notes",
+     "says": "1x CR2032"
+    },
+    {
+     "id": "aiohomematic",
+     "says": "1x CR2032"
+    },
+    {
+     "id": "openhab",
+     "says": "1x CR2032"
+    },
+    {
+     "id": "iobroker-servicemeldungen",
+     "says": "1x CR2032"
+    }
+   ]
+  },
+  "HM-Sec-Key": {
+   "power": "battery",
+   "family": "BidCos-RF",
+   "slots": [
+    {
+     "count": 3,
+     "type": "AA"
+    }
+   ],
+   "voltage": null,
+   "confidence": "manufacturer",
+   "note": "the manual covers HM-Sec-Key and HM-Sec-Key-S",
+   "sources": [
+    {
+     "id": "eq3-manual",
+     "url": "https://www.eq-3.de/Downloads/eq3/downloads_produktkatalog/homematic/bda/HM-Sec-Key_UM_GE_eQ-3_web.pdf",
+     "quote": "3x 1,5 V LR6/Mignon/AA"
+    },
+    {
+     "id": "corpus",
+     "says": "LOWBAT"
+    },
+    {
+     "id": "battery-notes",
+     "says": "3x AA"
+    },
+    {
+     "id": "aiohomematic",
+     "says": "3x AA"
+    },
+    {
+     "id": "openhab",
+     "says": "3x AA"
+    },
+    {
+     "id": "iobroker-servicemeldungen",
+     "says": "3x AA"
+    }
+   ]
+  },
+  "HM-Sec-Key-O": {
+   "power": "battery",
+   "family": "BidCos-RF",
+   "slots": [
+    {
+     "count": 3,
+     "type": "AA"
+    }
+   ],
+   "outdoor": true,
+   "confidence": "assumed",
+   "note": "only the unlicensed ioBroker script names it; re-derive from the manual",
+   "sources": [
+    {
+     "id": "iobroker-servicemeldungen",
+     "says": "3x AA"
+    }
+   ]
+  },
+  "HM-Sec-Key-S": {
+   "power": "battery",
+   "family": "BidCos-RF",
+   "slots": [
+    {
+     "count": 3,
+     "type": "AA"
+    }
+   ],
+   "confidence": "manufacturer",
+   "note": "the HM-Sec-Key manual covers HM-Sec-Key-S",
+   "sources": [
+    {
+     "id": "eq3-manual",
+     "url": "https://www.eq-3.de/Downloads/eq3/downloads_produktkatalog/homematic/bda/HM-Sec-Key_UM_GE_eQ-3_web.pdf",
+     "quote": "3x 1,5 V LR6/Mignon/AA"
+    },
+    {
+     "id": "openhab",
+     "says": "3x AA"
+    },
+    {
+     "id": "iobroker-servicemeldungen",
+     "says": "3x AA"
+    }
+   ]
+  },
+  "HM-Sec-MDIR": {
+   "power": "battery",
+   "family": "BidCos-RF",
+   "slots": [
+    {
+     "count": 3,
+     "type": "AA"
+    }
+   ],
+   "voltage": null,
+   "confidence": "prior-art",
+   "sources": [
+    {
+     "id": "battery-notes",
+     "says": "3x AA"
+    },
+    {
+     "id": "openhab",
+     "says": "3x AA"
+    },
+    {
+     "id": "iobroker-servicemeldungen",
+     "says": "3x AA"
+    },
+    {
+     "id": "corpus",
+     "says": "LOWBAT"
+    }
+   ]
+  },
+  "HM-Sec-MDIR-2": {
+   "power": "battery",
+   "family": "BidCos-RF",
+   "slots": [
+    {
+     "count": 3,
+     "type": "AA"
+    }
+   ],
+   "confidence": "prior-art",
+   "sources": [
+    {
+     "id": "battery-notes",
+     "says": "3x AA"
+    },
+    {
+     "id": "aiohomematic",
+     "says": "3x AA"
+    },
+    {
+     "id": "openhab",
+     "says": "3x AA"
+    },
+    {
+     "id": "iobroker-servicemeldungen",
+     "says": "3x AA"
+    }
+   ]
+  },
+  "HM-Sec-MDIR-3": {
+   "power": "battery",
+   "family": "BidCos-RF",
+   "slots": [
+    {
+     "count": 3,
+     "type": "AA"
+    }
+   ],
+   "confidence": "manufacturer",
+   "sources": [
+    {
+     "id": "eq3-manual",
+     "url": "https://www.eq-3.de/Downloads/eq3/downloads_produktkatalog/homematic/bda/HM-Sec-MDIR-3_UM_GE_eQ-3_web.pdf",
+     "quote": "3x 1,5 V LR6/Mignon/AA"
+    },
+    {
+     "id": "battery-notes",
+     "says": "3x AA"
+    },
+    {
+     "id": "iobroker-servicemeldungen",
+     "says": "3x AA"
+    }
+   ]
+  },
+  "HM-Sec-MDIR-O": {
+   "power": "battery",
+   "family": "BidCos-RF",
+   "slots": [
+    {
+     "count": 3,
+     "type": "AA"
+    }
+   ],
+   "outdoor": true,
+   "confidence": "single-source",
+   "sources": [
+    {
+     "id": "openhab",
+     "says": "3x AA"
+    }
+   ]
+  },
+  "HM-Sec-RHS": {
+   "power": "battery",
+   "family": "BidCos-RF",
+   "slots": [
+    {
+     "count": 2,
+     "type": "LR44"
+    }
+   ],
+   "voltage": null,
+   "life_years": 2,
+   "confidence": "manufacturer",
+   "sources": [
+    {
+     "id": "eq3-manual",
+     "url": "https://www.eq-3.de/Downloads/eq3/downloads_produktkatalog/homematic/bda/HM-Sec-RHS_UM_GE_eQ-3_web.pdf",
+     "quote": "Power supply: 2 x button cell LR44"
+    },
+    {
+     "id": "corpus",
+     "says": "LOWBAT"
+    },
+    {
+     "id": "battery-notes",
+     "says": "2x LR44"
+    },
+    {
+     "id": "aiohomematic",
+     "says": "2x LR44"
+    },
+    {
+     "id": "openhab",
+     "says": "2x LR44"
+    },
+    {
+     "id": "iobroker-servicemeldungen",
+     "says": "2x LR44"
+    }
+   ]
+  },
+  "HM-Sec-RHS-2": {
+   "power": "battery",
+   "family": "BidCos-RF",
+   "slots": [
+    {
+     "count": 1,
+     "type": "AAA"
+    }
+   ],
+   "confidence": "assumed",
+   "note": "only the unlicensed ioBroker script names it; re-derive from the manual",
+   "sources": [
+    {
+     "id": "iobroker-servicemeldungen",
+     "says": "1x AAA"
+    }
+   ]
+  },
+  "HM-Sec-SC": {
+   "power": "battery",
+   "family": "BidCos-RF",
+   "slots": [
+    {
+     "count": 2,
+     "type": "LR44"
+    }
+   ],
+   "voltage": null,
+   "confidence": "prior-art",
+   "sources": [
+    {
+     "id": "battery-notes",
+     "says": "2x LR44"
+    },
+    {
+     "id": "openhab",
+     "says": "2x LR44"
+    },
+    {
+     "id": "iobroker-servicemeldungen",
+     "says": "2x LR44"
+    },
+    {
+     "id": "corpus",
+     "says": "LOWBAT"
+    }
+   ]
+  },
+  "HM-Sec-SC-2": {
+   "power": "battery",
+   "family": "BidCos-RF",
+   "slots": [
+    {
+     "count": 2,
+     "type": "LR44"
+    }
+   ],
+   "voltage": null,
+   "confidence": "manufacturer",
+   "sources": [
+    {
+     "id": "eq3-manual",
+     "url": "https://www.eq-3.de/Downloads/eq3/downloads_produktkatalog/homematic/bda/HM-Sec-SC-2_UM_GE_eQ-3_web.pdf",
+     "quote": "2x 1,5 V LR44"
+    },
+    {
+     "id": "corpus",
+     "says": "LOWBAT"
+    },
+    {
+     "id": "battery-notes",
+     "says": "2x LR44"
+    },
+    {
+     "id": "aiohomematic",
+     "says": "2x LR44"
+    },
+    {
+     "id": "openhab",
+     "says": "2x LR44"
+    },
+    {
+     "id": "iobroker-servicemeldungen",
+     "says": "2x LR44"
+    }
+   ]
+  },
+  "HM-Sec-SC2L": {
+   "power": "battery",
+   "family": "BidCos-RF",
+   "slots": [
+    {
+     "count": 2,
+     "type": "LR44"
+    }
+   ],
+   "confidence": "assumed",
+   "note": "only the unlicensed ioBroker script names it; re-derive from the manual",
+   "sources": [
+    {
+     "id": "iobroker-servicemeldungen",
+     "says": "2x LR44"
+    }
+   ]
+  },
+  "HM-Sec-SCo": {
+   "power": "battery",
+   "family": "BidCos-RF",
+   "slots": [
+    {
+     "count": 1,
+     "type": "AAA"
+    }
+   ],
+   "voltage": null,
+   "confidence": "manufacturer",
+   "sources": [
+    {
+     "id": "eq3-manual",
+     "url": "https://www.eq-3.de/Downloads/eq3/downloads_produktkatalog/homematic/bda/HM-Sec-SCo_UM_GE_eQ-3_web.pdf",
+     "quote": "1x 1,5 V LR03/Micro/AAA"
+    },
+    {
+     "id": "corpus",
+     "says": "LOWBAT"
+    },
+    {
+     "id": "battery-notes",
+     "says": "1x AAA"
+    },
+    {
+     "id": "aiohomematic",
+     "says": "1x AAA"
+    },
+    {
+     "id": "openhab",
+     "says": "1x AAA"
+    },
+    {
+     "id": "iobroker-servicemeldungen",
+     "says": "1x AAA"
+    }
+   ]
+  },
+  "HM-Sec-SD": {
+   "power": "battery",
+   "family": "BidCos-RF",
+   "slots": [
+    {
+     "count": 3,
+     "type": "AA"
+    }
+   ],
+   "voltage": null,
+   "aliases": [
+    "HM-Sec-SD-Team"
+   ],
+   "confidence": "manufacturer",
+   "sources": [
+    {
+     "id": "eq3-manual",
+     "url": "https://www.eq-3.de/Downloads/eq3/downloads_produktkatalog/homematic/bda/HM-Sec-SD_GE_UM_V1.5_150407.pdf",
+     "quote": "Spannungsversorgung: 4,5 V/3 x LR 6"
+    },
+    {
+     "id": "corpus",
+     "says": "LOWBAT"
+    },
+    {
+     "id": "battery-notes",
+     "says": "3x AA"
+    },
+    {
+     "id": "aiohomematic",
+     "says": "3x AA"
+    },
+    {
+     "id": "openhab",
+     "says": "3x AA"
+    },
+    {
+     "id": "iobroker-servicemeldungen",
+     "says": "3x AA"
+    }
+   ]
+  },
+  "HM-Sec-SD-2": {
+   "power": "battery",
+   "family": "BidCos-RF",
+   "slots": [
+    {
+     "count": 2,
+     "type": "fixed",
+     "replaceable": false
+    }
+   ],
+   "voltage": null,
+   "life_years": 10,
+   "aliases": [
+    "HM-Sec-SD-2-Team"
+   ],
+   "confidence": "manufacturer",
+   "sources": [
+    {
+     "id": "eq3-manual",
+     "url": "https://www.eq-3.de/downloads/download/homematic/bda/hm-sec-sd-2_um_eq-3_ge_web.pdf",
+     "quote": "Spannungsversorgung: 2x fest verbaute 3 V Lithium-Batterie"
+    },
+    {
+     "id": "corpus",
+     "says": "LOWBAT"
+    },
+    {
+     "id": "battery-notes",
+     "says": "Irreplaceable"
+    },
+    {
+     "id": "aiohomematic",
+     "says": "UNKNOWN"
+    },
+    {
+     "id": "iobroker-servicemeldungen",
+     "says": "fixed"
+    }
+   ]
+  },
+  "HM-Sec-SFA-SM": {
+   "power": "rechargeable",
+   "family": "BidCos-RF",
+   "slots": [
+    {
+     "count": 1,
+     "type": "lead12V",
+     "note": "lead-gel back-up battery 12 V 1.2 Ah; runs on 230 V"
+    }
+   ],
+   "voltage": null,
+   "low_bat_limit": 10.5,
+   "confidence": "manufacturer",
+   "note": "mains with a rechargeable back-up; LOW_BAT_LIMIT and BAT_DEFECT_LIMIT watch the back-up battery. prior art disagrees with the manufacturer: iobroker-servicemeldungen says pack",
+   "sources": [
+    {
+     "id": "elv-manual",
+     "url": "https://media.elv.com/file/84392_um.pdf",
+     "quote": "Power supply: 230 V/50 Hz, max. 30 mA Back-up supply: Lead gel battery, 12 V, 1.2 Ah"
+    },
+    {
+     "id": "corpus",
+     "says": "LOWBAT; LOW_BAT_LIMIT 10.5"
+    },
+    {
+     "id": "iobroker-servicemeldungen",
+     "says": "pack"
+    }
+   ]
+  },
+  "HM-Sec-Sir-WM": {
+   "power": "battery",
+   "family": "BidCos-RF",
+   "slots": [
+    {
+     "count": 2,
+     "type": "C"
+    }
+   ],
+   "confidence": "manufacturer",
+   "sources": [
+    {
+     "id": "eq3-manual",
+     "url": "https://www.eq-3.de/Downloads/eq3/downloads_produktkatalog/homematic/bda/HM-Sec-Sir-WM_UM_GE_eQ-3_web.pdf",
+     "quote": "2x 1,5 V LR14/Baby/C"
+    },
+    {
+     "id": "battery-notes",
+     "says": "2x C"
+    },
+    {
+     "id": "aiohomematic",
+     "says": "2x C"
+    },
+    {
+     "id": "openhab",
+     "says": "2x C"
+    },
+    {
+     "id": "iobroker-servicemeldungen",
+     "says": "2x C"
+    }
+   ]
+  },
+  "HM-Sec-TiS": {
+   "power": "battery",
+   "family": "BidCos-RF",
+   "slots": [
+    {
+     "count": 1,
+     "type": "CR2032"
+    }
+   ],
+   "voltage": null,
+   "confidence": "manufacturer",
+   "sources": [
+    {
+     "id": "eq3-manual",
+     "url": "https://www.eq-3.de/downloads/download/homematic/bda/hm-sec-tis_um_ge_web.pdf",
+     "quote": "Power supply: 1 x lithium coin cell CR 2032"
+    },
+    {
+     "id": "corpus",
+     "says": "LOWBAT"
+    },
+    {
+     "id": "battery-notes",
+     "says": "1x CR2032"
+    },
+    {
+     "id": "aiohomematic",
+     "says": "1x CR2032"
+    },
+    {
+     "id": "openhab",
+     "says": "1x CR2032"
+    },
+    {
+     "id": "iobroker-servicemeldungen",
+     "says": "1x CR2032"
+    }
+   ]
+  },
+  "HM-Sec-WDS": {
+   "power": "battery",
+   "family": "BidCos-RF",
+   "slots": [
+    {
+     "count": 2,
+     "type": "AA"
+    }
+   ],
+   "voltage": null,
+   "confidence": "assumed",
+   "note": "only the unlicensed ioBroker script names it; re-derive from the manual",
+   "sources": [
+    {
+     "id": "iobroker-servicemeldungen",
+     "says": "2x AA"
+    },
+    {
+     "id": "corpus",
+     "says": "LOWBAT"
+    }
+   ]
+  },
+  "HM-Sec-WDS-2": {
+   "power": "battery",
+   "family": "BidCos-RF",
+   "slots": [
+    {
+     "count": 2,
+     "type": "AA"
+    }
+   ],
+   "confidence": "manufacturer",
+   "sources": [
+    {
+     "id": "eq3-manual",
+     "url": "https://www.eq-3.de/Downloads/eq3/downloads_produktkatalog/homematic/bda/HM-Sec-WDS-2_UM_GE_eQ-3_web.pdf",
+     "quote": "Power supply: 2 x 1.5 V LR6 batteries (mignon/AA)"
+    },
+    {
+     "id": "battery-notes",
+     "says": "2x AA"
+    },
+    {
+     "id": "openhab",
+     "says": "2x AA"
+    },
+    {
+     "id": "iobroker-servicemeldungen",
+     "says": "2x AA"
+    }
+   ]
+  },
+  "HM-Sec-Win": {
+   "power": "rechargeable",
+   "family": "BidCos-RF",
+   "slots": [
+    {
+     "count": 1,
+     "type": "pack",
+     "note": "WinMatic battery pack, 10.8 VDC"
+    }
+   ],
+   "confidence": "manufacturer",
+   "sources": [
+    {
+     "id": "eq3-manual",
+     "url": "https://www.eq-3.de/Downloads/eq3/downloads_produktkatalog/homematic/bda/HM-Sec-Win_UM_GE_eQ-3_web.pdf",
+     "quote": "Power supply: battery pack (10.8 VDC)"
+    },
+    {
+     "id": "battery-notes",
+     "says": "HM-Sec-Win-BaP"
+    },
+    {
+     "id": "aiohomematic",
+     "says": "UNKNOWN"
+    },
+    {
+     "id": "openhab",
+     "says": "Accu-Pack 10,8 V"
+    },
+    {
+     "id": "iobroker-servicemeldungen",
+     "says": "pack"
+    }
+   ]
+  },
+  "HM-Sen-DB-PCB": {
+   "power": "battery",
+   "family": "BidCos-RF",
+   "slots": [
+    {
+     "count": 2,
+     "type": "AAA"
+    }
+   ],
+   "confidence": "prior-art",
+   "sources": [
+    {
+     "id": "battery-notes",
+     "says": "2x AAA"
+    },
+    {
+     "id": "openhab",
+     "says": "2x AAA"
+    },
+    {
+     "id": "iobroker-servicemeldungen",
+     "says": "2x AAA"
+    }
+   ]
+  },
+  "HM-Sen-EP": {
+   "power": "battery",
+   "family": "BidCos-RF",
+   "slots": [
+    {
+     "count": 2,
+     "type": "AAA"
+    }
+   ],
+   "confidence": "single-source",
+   "sources": [
+    {
+     "id": "openhab",
+     "says": "2x AAA"
+    },
+    {
+     "id": "iobroker-servicemeldungen",
+     "says": "2x AAA"
+    }
+   ]
+  },
+  "HM-Sen-LI-O": {
+   "power": "battery",
+   "family": "BidCos-RF",
+   "slots": [
+    {
+     "count": 3,
+     "type": "AA"
+    }
+   ],
+   "outdoor": true,
+   "confidence": "single-source",
+   "sources": [
+    {
+     "id": "battery-notes",
+     "says": "3x AA"
+    },
+    {
+     "id": "iobroker-servicemeldungen",
+     "says": "3x AAA"
+    }
+   ]
+  },
+  "HM-Sen-MDIR": {
+   "power": "battery",
+   "family": "BidCos-RF",
+   "slots": [
+    {
+     "count": 2,
+     "type": "AAA"
+    }
+   ],
+   "confidence": "single-source",
+   "sources": [
+    {
+     "id": "openhab",
+     "says": "2x AAA"
+    },
+    {
+     "id": "iobroker-servicemeldungen",
+     "says": "3x AA"
+    }
+   ]
+  },
+  "HM-Sen-MDIR-O": {
+   "power": "battery",
+   "family": "BidCos-RF",
+   "slots": [
+    {
+     "count": 3,
+     "type": "AA"
+    }
+   ],
+   "voltage": null,
+   "outdoor": true,
+   "confidence": "prior-art",
+   "sources": [
+    {
+     "id": "battery-notes",
+     "says": "3x AA"
+    },
+    {
+     "id": "openhab",
+     "says": "3x AA"
+    },
+    {
+     "id": "iobroker-servicemeldungen",
+     "says": "3x AA"
+    },
+    {
+     "id": "corpus",
+     "says": "LOWBAT"
+    }
+   ]
+  },
+  "HM-Sen-MDIR-O-2": {
+   "power": "battery",
+   "family": "BidCos-RF",
+   "slots": [
+    {
+     "count": 3,
+     "type": "AA"
+    }
+   ],
+   "outdoor": true,
+   "confidence": "manufacturer",
+   "sources": [
+    {
+     "id": "eq3-manual",
+     "url": "https://www.eq-3.de/Downloads/eq3/downloads_produktkatalog/homematic/bda/HM-Sen-MDIR-O-2_UM_GE_eQ-3_web.pdf",
+     "quote": "3x 1,5 V LR6/Mignon/AA"
+    },
+    {
+     "id": "battery-notes",
+     "says": "3x AA"
+    },
+    {
+     "id": "aiohomematic",
+     "says": "3x AA"
+    },
+    {
+     "id": "iobroker-servicemeldungen",
+     "says": "3x AA"
+    }
+   ]
+  },
+  "HM-Sen-MDIR-O-3": {
+   "power": "battery",
+   "family": "BidCos-RF",
+   "slots": [
+    {
+     "count": 3,
+     "type": "AA"
+    }
+   ],
+   "outdoor": true,
+   "confidence": "manufacturer",
+   "sources": [
+    {
+     "id": "eq3-manual",
+     "url": "https://www.eq-3.de/downloads/download/homematic/bda/HM-Sen-MDIR-O-3_UM_GE_eQ-3_web.pdf",
+     "quote": "3x 1,5 V LR6/Mignon/AA"
+    },
+    {
+     "id": "iobroker-servicemeldungen",
+     "says": "3x AA"
+    }
+   ]
+  },
+  "HM-Sen-MDIR-SM": {
+   "power": "battery",
+   "family": "BidCos-RF",
+   "slots": [
+    {
+     "count": 3,
+     "type": "AA"
+    }
+   ],
+   "voltage": null,
+   "confidence": "prior-art",
+   "note": "prior art disagrees: openhab 2x AA, iobroker-servicemeldungen 2x AAA",
+   "sources": [
+    {
+     "id": "battery-notes",
+     "says": "3x AA"
+    },
+    {
+     "id": "aiohomematic",
+     "says": "3x AA"
+    },
+    {
+     "id": "openhab",
+     "says": "2x AA"
+    },
+    {
+     "id": "iobroker-servicemeldungen",
+     "says": "2x AAA"
+    },
+    {
+     "id": "corpus",
+     "says": "LOWBAT"
+    }
+   ]
+  },
+  "HM-Sen-MDIR-WM55": {
+   "power": "battery",
+   "family": "BidCos-RF",
+   "slots": [
+    {
+     "count": 2,
+     "type": "AAA"
+    }
+   ],
+   "voltage": null,
+   "confidence": "prior-art",
+   "sources": [
+    {
+     "id": "battery-notes",
+     "says": "2x AAA"
+    },
+    {
+     "id": "aiohomematic",
+     "says": "2x AAA"
+    },
+    {
+     "id": "openhab",
+     "says": "2x AAA"
+    },
+    {
+     "id": "iobroker-servicemeldungen",
+     "says": "2x AAA"
+    },
+    {
+     "id": "corpus",
+     "says": "LOWBAT"
+    }
+   ]
+  },
+  "HM-Sen-RD-O": {
+   "power": "battery",
+   "family": "BidCos-RF",
+   "slots": [
+    {
+     "count": 1,
+     "type": "9V"
+    }
+   ],
+   "voltage": null,
+   "outdoor": true,
+   "confidence": "assumed",
+   "note": "only the unlicensed ioBroker script names it; re-derive from the manual",
+   "sources": [
+    {
+     "id": "iobroker-servicemeldungen",
+     "says": "9V"
+    },
+    {
+     "id": "corpus",
+     "says": ""
+    }
+   ]
+  },
+  "HM-Sen-Wa-Od": {
+   "power": "battery",
+   "family": "BidCos-RF",
+   "slots": [
+    {
+     "count": 3,
+     "type": "AA"
+    }
+   ],
+   "outdoor": true,
+   "confidence": "prior-art",
+   "sources": [
+    {
+     "id": "battery-notes",
+     "says": "3x AA"
+    },
+    {
+     "id": "openhab",
+     "says": "3x AA"
+    },
+    {
+     "id": "iobroker-servicemeldungen",
+     "says": "3x AA"
+    }
+   ]
+  },
+  "HM-SwI-3-FM": {
+   "power": "battery",
+   "family": "BidCos-RF",
+   "slots": [
+    {
+     "count": 1,
+     "type": "CR2032"
+    }
+   ],
+   "confidence": "manufacturer",
+   "sources": [
+    {
+     "id": "elv-manual",
+     "url": "https://media.elv.com/file/76785_um.pdf",
+     "quote": "Power supply: 1 x Lithium button cell CR 2032"
+    },
+    {
+     "id": "battery-notes",
+     "says": "1x CR2032"
+    },
+    {
+     "id": "aiohomematic",
+     "says": "1x CR2032"
+    },
+    {
+     "id": "openhab",
+     "says": "1x CR2032"
+    },
+    {
+     "id": "iobroker-servicemeldungen",
+     "says": "1x CR2032"
+    }
+   ]
+  },
+  "HM-Sys-sRP-Pl": {
+   "power": "mains",
+   "family": "BidCos-RF",
+   "confidence": "assumed",
+   "note": "only the unlicensed ioBroker script names it; re-derive from the manual",
+   "sources": [
+    {
+     "id": "iobroker-servicemeldungen",
+     "says": "mains"
+    }
+   ]
+  },
+  "HM-TC-IT-WM-W-EU": {
+   "power": "battery",
+   "family": "BidCos-RF",
+   "slots": [
+    {
+     "count": 2,
+     "type": "AAA"
+    }
+   ],
+   "voltage": {
+    "dp": "2/BATTERY_STATE",
+    "low": 2.1
+   },
+   "low_bat_limit": 2.1,
+   "confidence": "manufacturer",
+   "sources": [
+    {
+     "id": "eq3-manual",
+     "url": "https://www.eq-3.de/Downloads/eq3/downloads_produktkatalog/homematic/bda/HM-TC-IT-WM-W-EU_UM_GE_eQ-3_web.pdf",
+     "quote": "2 x 1,5 V LR03/Micro/AAA"
+    },
+    {
+     "id": "corpus",
+     "says": "BATTERY_STATE, LOWBAT; LOW_BAT_LIMIT 2.1"
+    },
+    {
+     "id": "battery-notes",
+     "says": "2x AAA"
+    },
+    {
+     "id": "aiohomematic",
+     "says": "2x AAA"
+    },
+    {
+     "id": "openhab",
+     "says": "2x AAA"
+    },
+    {
+     "id": "iobroker-servicemeldungen",
+     "says": "2x AAA"
+    }
+   ]
+  },
+  "HM-WDC7000": {
+   "power": "battery-or-dc",
+   "family": "BidCos-RF",
+   "slots": [
+    {
+     "count": 4,
+     "type": "AA"
+    }
+   ],
+   "voltage": null,
+   "confidence": "manufacturer",
+   "note": "runs on the mains adapter; the 4 cells are the backup. prior art disagrees with the manufacturer: openhab says 3x AA",
+   "sources": [
+    {
+     "id": "eq3-manual",
+     "url": "https://www.eq-3.de/Downloads/eq3/downloads_produktkatalog/homematic/bda/HM-WDC7000_UM_GE_eQ-3_web.pdf",
+     "quote": "Basisstation (Hauptversorgung) 7,5 V DC über Steckernetzteil; Basisstation (Notbetrieb) 4 x Batterie LR6/Mignon/AA"
+    },
+    {
+     "id": "corpus",
+     "says": "LOWBAT"
+    },
+    {
+     "id": "openhab",
+     "says": "3x AA"
+    },
+    {
+     "id": "iobroker-servicemeldungen",
+     "says": "4x AA"
+    }
+   ]
+  },
+  "HM-WDS10-TH-O": {
+   "power": "battery",
+   "family": "BidCos-RF",
+   "slots": [
+    {
+     "count": 2,
+     "type": "AA"
+    }
+   ],
+   "voltage": null,
+   "outdoor": true,
+   "confidence": "manufacturer",
+   "sources": [
+    {
+     "id": "eq3-manual",
+     "url": "https://www.eq-3.de/Downloads/eq3/downloads_produktkatalog/homematic/bda/HM-WDS10-TH-O_UM_GE_eQ-3_web.pdf",
+     "quote": "2x 1,5 V LR6/ Mignon/AA"
+    },
+    {
+     "id": "corpus",
+     "says": "LOWBAT"
+    },
+    {
+     "id": "battery-notes",
+     "says": "2x AA"
+    },
+    {
+     "id": "aiohomematic",
+     "says": "2x AA"
+    },
+    {
+     "id": "openhab",
+     "says": "2x AA"
+    },
+    {
+     "id": "iobroker-servicemeldungen",
+     "says": "2x AA"
+    }
+   ]
+  },
+  "HM-WDS100-C6-O": {
+   "power": "battery",
+   "family": "BidCos-RF",
+   "slots": [
+    {
+     "count": 3,
+     "type": "AA"
+    }
+   ],
+   "voltage": null,
+   "outdoor": true,
+   "confidence": "prior-art",
+   "sources": [
+    {
+     "id": "battery-notes",
+     "says": "3x AA"
+    },
+    {
+     "id": "openhab",
+     "says": "3x AA"
+    },
+    {
+     "id": "iobroker-servicemeldungen",
+     "says": "3x AA"
+    },
+    {
+     "id": "corpus",
+     "says": "LOWBAT"
+    }
+   ]
+  },
+  "HM-WDS100-C6-O-2": {
+   "power": "battery",
+   "family": "BidCos-RF",
+   "slots": [
+    {
+     "count": 3,
+     "type": "AA"
+    }
+   ],
+   "voltage": null,
+   "outdoor": true,
+   "confidence": "manufacturer",
+   "sources": [
+    {
+     "id": "elv-manual",
+     "url": "https://media.elv.com/file/132192_um.pdf",
+     "quote": "3x 1,5 V LR6/Mignon/AA"
+    },
+    {
+     "id": "corpus",
+     "says": "LOWBAT"
+    },
+    {
+     "id": "battery-notes",
+     "says": "3x AA"
+    },
+    {
+     "id": "iobroker-servicemeldungen",
+     "says": "3x AA"
+    }
+   ]
+  },
+  "HM-WDS30-OT2-SM": {
+   "power": "battery",
+   "family": "BidCos-RF",
+   "slots": [
+    {
+     "count": 2,
+     "type": "AA"
+    }
+   ],
+   "confidence": "prior-art",
+   "note": "prior art disagrees: iobroker-servicemeldungen 2x AAA",
+   "sources": [
+    {
+     "id": "battery-notes",
+     "says": "2x AA"
+    },
+    {
+     "id": "aiohomematic",
+     "says": "2x AA"
+    },
+    {
+     "id": "openhab",
+     "says": "2x AA"
+    },
+    {
+     "id": "iobroker-servicemeldungen",
+     "says": "2x AAA"
+    }
+   ]
+  },
+  "HM-WDS30-OT2-SM-2": {
+   "power": "battery",
+   "family": "BidCos-RF",
+   "slots": [
+    {
+     "count": 2,
+     "type": "AA"
+    }
+   ],
+   "confidence": "assumed",
+   "note": "only the unlicensed ioBroker script names it; re-derive from the manual",
+   "sources": [
+    {
+     "id": "iobroker-servicemeldungen",
+     "says": "2x AA"
+    }
+   ]
+  },
+  "HM-WDS30-T-O": {
+   "power": "battery",
+   "family": "BidCos-RF",
+   "slots": [
+    {
+     "count": 2,
+     "type": "AAA"
+    }
+   ],
+   "voltage": null,
+   "outdoor": true,
+   "confidence": "manufacturer",
+   "note": "prior art disagrees with the manufacturer: openhab says 2x AA",
+   "sources": [
+    {
+     "id": "eq3-manual",
+     "url": "https://www.eq-3.de/Downloads/eq3/downloads_produktkatalog/homematic/bda/HM-WDS30-T-O_UM_GE_eQ-3_web.pdf",
+     "quote": "Power supply: 2 x LR03 (Micro)"
+    },
+    {
+     "id": "corpus",
+     "says": "LOWBAT"
+    },
+    {
+     "id": "battery-notes",
+     "says": "2x AAA"
+    },
+    {
+     "id": "aiohomematic",
+     "says": "2x AAA"
+    },
+    {
+     "id": "openhab",
+     "says": "2x AA"
+    },
+    {
+     "id": "iobroker-servicemeldungen",
+     "says": "2x AAA"
+    }
+   ]
+  },
+  "HM-WDS40-TH-I": {
+   "power": "battery",
+   "family": "BidCos-RF",
+   "slots": [
+    {
+     "count": 2,
+     "type": "AA"
+    }
+   ],
+   "voltage": null,
+   "confidence": "prior-art",
+   "sources": [
+    {
+     "id": "battery-notes",
+     "says": "2x AA"
+    },
+    {
+     "id": "aiohomematic",
+     "says": "2x AA"
+    },
+    {
+     "id": "openhab",
+     "says": "2x AA"
+    },
+    {
+     "id": "iobroker-servicemeldungen",
+     "says": "2x AA"
+    },
+    {
+     "id": "corpus",
+     "says": "LOWBAT"
+    }
+   ]
+  },
+  "HM-WDS40-TH-I-2": {
+   "power": "battery",
+   "family": "BidCos-RF",
+   "slots": [
+    {
+     "count": 2,
+     "type": "AA"
+    }
+   ],
+   "confidence": "manufacturer",
+   "sources": [
+    {
+     "id": "eq3-manual",
+     "url": "https://www.eq-3.de/Downloads/eq3/downloads_produktkatalog/homematic/bda/HM-WDS40-TH-I-2_UM_GE_eQ-3_web.pdf",
+     "quote": "2 x 1,5 V LR6/Mignon/AA"
+    },
+    {
+     "id": "battery-notes",
+     "says": "2x AA"
+    },
+    {
+     "id": "iobroker-servicemeldungen",
+     "says": "2x AA"
+    }
+   ]
+  },
+  "HmIP-ASIR": {
+   "power": "battery",
+   "family": "HmIP-RF",
+   "slots": [
+    {
+     "count": 3,
+     "type": "AA"
+    }
+   ],
+   "voltage": {
+    "dp": "0/OPERATING_VOLTAGE",
+    "low": 2.2
+   },
+   "low_bat_limit": 2.2,
+   "limit_note": "the manual says 3x AA, the device's LOW_BAT_LIMIT default is 2.2 V (a two-cell value); unresolved - check OPERATING_VOLTAGE on a device with fresh cells",
+   "life_years": 2,
+   "confidence": "manufacturer",
+   "sources": [
+    {
+     "id": "elv-manual",
+     "url": "https://media.elv.com/file/142801_um.pdf",
+     "quote": "3x 1.5 V LR6/mignon/AA"
+    },
+    {
+     "id": "corpus",
+     "says": "LOW_BAT, OPERATING_VOLTAGE; LOW_BAT_LIMIT 2.2"
+    },
+    {
+     "id": "battery-notes",
+     "says": "3x AA"
+    },
+    {
+     "id": "aiohomematic",
+     "says": "3x AA"
+    },
+    {
+     "id": "openhab",
+     "says": "3x AA"
+    },
+    {
+     "id": "iobroker-servicemeldungen",
+     "says": "3x AA"
+    }
+   ]
+  },
+  "HmIP-ASIR-2": {
+   "power": "battery",
+   "family": "HmIP-RF",
+   "slots": [
+    {
+     "count": 3,
+     "type": "AA"
+    }
+   ],
+   "life_years": 2.0,
+   "confidence": "manufacturer",
+   "sources": [
+    {
+     "id": "eq3-site",
+     "url": "https://homematic-ip.com/de/produkt/alarmsirene",
+     "quote": "3x 1,5 V LR6/Mignon/AA"
+    },
+    {
+     "id": "battery-notes",
+     "says": "3x AA"
+    }
+   ]
+  },
+  "HmIP-ASIR-O": {
+   "power": "rechargeable",
+   "family": "HmIP-RF",
+   "slots": [
+    {
+     "count": 1,
+     "type": "pack",
+     "note": "Solarzelle + Akkupack, NiMH, 3,6 V, 1200 mAh (3x 1,2 V HR6/ Mignon/AA)"
+    }
+   ],
+   "outdoor": true,
+   "confidence": "manufacturer",
+   "sources": [
+    {
+     "id": "eq3-site",
+     "url": "https://homematic-ip.com/de/produkt/alarmsirene-aussen",
+     "quote": "Solarzelle + Akkupack, NiMH, 3,6 V, 1200 mAh (3x 1,2 V HR6/ Mignon/AA)"
+    },
+    {
+     "id": "battery-notes",
+     "says": "Rechargeable"
+    },
+    {
+     "id": "aiohomematic",
+     "says": "UNKNOWN"
+    }
+   ]
+  },
+  "HmIP-BBL": {
+   "power": "mains",
+   "family": "HmIP-RF",
+   "confidence": "assumed",
+   "sources": [
+    {
+     "id": "classification",
+     "says": "mains actuator by model and description: Homematic IP Blinds Actuator for brand switches"
+    },
+    {
+     "id": "corpus",
+     "says": "OPERATING_VOLTAGE"
+    }
+   ]
+  },
+  "HmIP-BBL-2": {
+   "power": "mains",
+   "family": "HmIP-RF",
+   "confidence": "manufacturer",
+   "sources": [
+    {
+     "id": "eq3-site",
+     "url": "https://homematic-ip.com/de/produkt/jalousieaktor-fuer-markenschalter",
+     "quote": "230 V/50 Hz"
+    }
+   ]
+  },
+  "HmIP-BBL-I": {
+   "power": "mains",
+   "family": "HmIP-RF",
+   "confidence": "manufacturer",
+   "sources": [
+    {
+     "id": "eq3-site",
+     "url": "https://homematic-ip.com/de/produkt/jalousieaktor-fuer-markenschalter-international",
+     "quote": "230 V/50 Hz"
+    }
+   ]
+  },
+  "HmIP-BDT": {
+   "power": "mains",
+   "family": "HmIP-RF",
+   "confidence": "manufacturer",
+   "sources": [
+    {
+     "id": "eq3-site",
+     "url": "https://homematic-ip.com/de/produkt/dimmaktor-fuer-markenschalter-phasenabschnitt",
+     "quote": "230 V/50 Hz"
+    },
+    {
+     "id": "corpus",
+     "says": "OPERATING_VOLTAGE"
+    }
+   ]
+  },
+  "HmIP-BDT-I": {
+   "power": "mains",
+   "family": "HmIP-RF",
+   "confidence": "manufacturer",
+   "sources": [
+    {
+     "id": "eq3-site",
+     "url": "https://homematic-ip.com/de/produkt/dimmaktor-fuer-markenschalter-international",
+     "quote": "230 V/50 Hz"
+    }
+   ]
+  },
+  "HmIP-BRC2": {
+   "power": "mains",
+   "family": "HmIP-RF",
+   "confidence": "manufacturer",
+   "sources": [
+    {
+     "id": "eq3-manual",
+     "url": "https://homematic-ip.com/sites/default/files/downloads/hmip-brc2_um_web.pdf",
+     "quote": "Versorgungsspannung: 230 V/50 Hz"
+    }
+   ]
+  },
+  "HmIP-BRC2-2": {
+   "power": "mains",
+   "family": "HmIP-RF",
+   "confidence": "manufacturer",
+   "sources": [
+    {
+     "id": "eq3-site",
+     "url": "https://homematic-ip.com/de/produkt/wandtaster-fuer-markenschalter-2-fach",
+     "quote": "230 V/50 Hz"
+    }
+   ]
+  },
+  "HmIP-BROLL": {
+   "power": "mains",
+   "family": "HmIP-RF",
+   "confidence": "assumed",
+   "sources": [
+    {
+     "id": "classification",
+     "says": "mains actuator by model and description: Homematic IP Blind Actuator for brand switch systems, flush-mount"
+    },
+    {
+     "id": "corpus",
+     "says": "OPERATING_VOLTAGE"
+    }
+   ]
+  },
+  "HmIP-BROLL-2": {
+   "power": "mains",
+   "family": "HmIP-RF",
+   "confidence": "manufacturer",
+   "sources": [
+    {
+     "id": "eq3-site",
+     "url": "https://homematic-ip.com/de/produkt/rollladenaktor-fuer-markenschalter",
+     "quote": "230 V/50 Hz"
+    }
+   ]
+  },
+  "HmIP-BS2": {
+   "power": "mains",
+   "family": "HmIP-RF",
+   "confidence": "manufacturer",
+   "sources": [
+    {
+     "id": "eq3-site",
+     "url": "https://homematic-ip.com/de/produkt/schaltaktor-fuer-markenschalter-2-fach",
+     "quote": "230 V/50 Hz"
+    }
+   ]
+  },
+  "HmIP-BSL": {
+   "power": "mains",
+   "family": "HmIP-RF",
+   "confidence": "manufacturer",
+   "sources": [
+    {
+     "id": "eq3-site",
+     "url": "https://homematic-ip.com/de/produkt/schaltaktor-fuer-markenschalter-mit-signalleuchte",
+     "quote": "230 V/50 Hz"
+    }
+   ]
+  },
+  "HmIP-BSM": {
+   "power": "mains",
+   "family": "HmIP-RF",
+   "confidence": "manufacturer",
+   "sources": [
+    {
+     "id": "eq3-site",
+     "url": "https://homematic-ip.com/de/produkt/schalt-mess-aktor-fuer-markenschalter",
+     "quote": "230 V/50 Hz"
+    },
+    {
+     "id": "corpus",
+     "says": "OPERATING_VOLTAGE"
+    }
+   ]
+  },
+  "HmIP-BSM-I": {
+   "power": "mains",
+   "family": "HmIP-RF",
+   "confidence": "manufacturer",
+   "sources": [
+    {
+     "id": "eq3-site",
+     "url": "https://homematic-ip.com/de/produkt/schaltmodul-fuer-markenschalter-international",
+     "quote": "230 V/50 Hz"
+    }
+   ]
+  },
+  "HmIP-BWTH": {
+   "power": "mains",
+   "family": "HmIP-RF",
+   "confidence": "manufacturer",
+   "sources": [
+    {
+     "id": "eq3-site",
+     "url": "https://homematic-ip.com/de/produkt/wandthermostat-mit-schaltausgang-fuer-markenschalter-230-v",
+     "quote": "230 V/50 Hz"
+    },
+    {
+     "id": "corpus",
+     "says": "OPERATING_VOLTAGE"
+    }
+   ]
+  },
+  "HMIP-BWTH-A": {
+   "power": "mains",
+   "family": "HmIP-RF",
+   "confidence": "assumed",
+   "sources": [
+    {
+     "id": "classification",
+     "says": "mains actuator by model and description: ?"
+    }
+   ]
+  },
+  "HmIP-BWTH24": {
+   "power": "mains",
+   "family": "HmIP-RF",
+   "confidence": "manufacturer",
+   "sources": [
+    {
+     "id": "eq3-site",
+     "url": "https://homematic-ip.com/de/produkt/wandthermostat-mit-schaltausgang-fuer-markenschalter-24-v",
+     "quote": "24 V/50 Hz"
+    }
+   ]
+  },
+  "HmIP-CCU3": {
+   "power": "mains",
+   "family": "HmIP-RF",
+   "confidence": "manufacturer",
+   "sources": [
+    {
+     "id": "eq3-site",
+     "url": "https://homematic-ip.com/de/produkt/smart-home-zentrale-ccu3",
+     "quote": "Steckernetzteil 5 VDC (SELV)"
+    }
+   ]
+  },
+  "HmIP-DBB": {
+   "power": "battery",
+   "family": "HmIP-RF",
+   "slots": [
+    {
+     "count": 1,
+     "type": "AAA"
+    }
+   ],
+   "life_years": 1.0,
+   "confidence": "manufacturer",
+   "sources": [
+    {
+     "id": "eq3-site",
+     "url": "https://homematic-ip.com/de/produkt/klingeltaster",
+     "quote": "1,5 V LR03/Micro/AAA"
+    },
+    {
+     "id": "battery-notes",
+     "says": "1x AAA"
+    },
+    {
+     "id": "aiohomematic",
+     "says": "1x AAA"
+    },
+    {
+     "id": "iobroker-servicemeldungen",
+     "says": "1x AAA"
+    }
+   ]
+  },
+  "HmIP-DLD": {
+   "power": "battery",
+   "family": "HmIP-RF",
+   "slots": [
+    {
+     "count": 3,
+     "type": "AA"
+    }
+   ],
+   "life_years": 0.5,
+   "confidence": "manufacturer",
+   "sources": [
+    {
+     "id": "eq3-site",
+     "url": "https://homematic-ip.com/de/produkt/tuerschlossantrieb",
+     "quote": "3x 1,5 V LR6/Mignon/AA"
+    },
+    {
+     "id": "battery-notes",
+     "says": "3x AA"
+    },
+    {
+     "id": "aiohomematic",
+     "says": "3x AA"
+    },
+    {
+     "id": "iobroker-servicemeldungen",
+     "says": "3x AA"
+    }
+   ]
+  },
+  "HmIP-DLD-A": {
+   "power": "battery",
+   "family": "HmIP-RF",
+   "slots": [
+    {
+     "count": 3,
+     "type": "AA"
+    }
+   ],
+   "life_years": 0.5,
+   "confidence": "manufacturer",
+   "sources": [
+    {
+     "id": "eq3-site",
+     "url": "https://homematic-ip.com/de/produkt/tuerschlossantrieb-anthrazit",
+     "quote": "3x 1,5 V LR6/Mignon/AA"
+    }
+   ]
+  },
+  "HmIP-DLD-S": {
+   "power": "battery",
+   "family": "HmIP-RF",
+   "slots": [
+    {
+     "count": 3,
+     "type": "AA"
+    }
+   ],
+   "life_years": 0.5,
+   "confidence": "manufacturer",
+   "sources": [
+    {
+     "id": "eq3-site",
+     "url": "https://homematic-ip.com/de/produkt/tuerschlossantrieb-silber",
+     "quote": "3x 1,5 V LR6/Mignon/AA"
+    }
+   ]
+  },
+  "HmIP-DLP": {
+   "power": "battery",
+   "family": "HmIP-RF",
+   "slots": [
+    {
+     "count": 4,
+     "type": "AA"
+    }
+   ],
+   "life_years": 1.5,
+   "confidence": "manufacturer",
+   "sources": [
+    {
+     "id": "eq3-site",
+     "url": "https://homematic-ip.com/de/produkt/tuerschlossantrieb-pro",
+     "quote": "4x 1,5 V LR6/Mignon/AA"
+    },
+    {
+     "id": "battery-notes",
+     "says": "4x AA"
+    },
+    {
+     "id": "aiohomematic",
+     "says": "4x AA"
+    }
+   ]
+  },
+  "HmIP-DLP-A": {
+   "power": "battery",
+   "family": "HmIP-RF",
+   "slots": [
+    {
+     "count": 4,
+     "type": "AA"
+    }
+   ],
+   "life_years": 1.5,
+   "confidence": "manufacturer",
+   "sources": [
+    {
+     "id": "eq3-site",
+     "url": "https://homematic-ip.com/de/produkt/tuerschlossantrieb-pro-anthrazit",
+     "quote": "4x 1,5 V LR6/Mignon/AA"
+    }
+   ]
+  },
+  "HmIP-DLP-AS": {
+   "power": "battery",
+   "family": "HmIP-RF",
+   "slots": [
+    {
+     "count": 4,
+     "type": "AA"
+    }
+   ],
+   "life_years": 1.5,
+   "confidence": "manufacturer",
+   "sources": [
+    {
+     "id": "eq3-site",
+     "url": "https://homematic-ip.com/de/produkt/tuerschlossantrieb-pro-anthrazit-silber",
+     "quote": "4x 1,5 V LR6/Mignon/AA"
+    }
+   ]
+  },
+  "HmIP-DLP-WS": {
+   "power": "battery",
+   "family": "HmIP-RF",
+   "slots": [
+    {
+     "count": 4,
+     "type": "AA"
+    }
+   ],
+   "life_years": 1.5,
+   "confidence": "manufacturer",
+   "sources": [
+    {
+     "id": "eq3-site",
+     "url": "https://homematic-ip.com/de/produkt/tuerschlossantrieb-pro-weiss-silber",
+     "quote": "4x 1,5 V LR6/Mignon/AA"
+    }
+   ]
+  },
+  "HmIP-DLS": {
+   "power": "battery",
+   "family": "HmIP-RF",
+   "slots": [
+    {
+     "count": 1,
+     "type": "CR2032"
+    }
+   ],
+   "life_years": 2.0,
+   "confidence": "manufacturer",
+   "sources": [
+    {
+     "id": "eq3-site",
+     "url": "https://homematic-ip.com/de/produkt/tuerschlosssensor",
+     "quote": "1x 3 V CR2032"
+    },
+    {
+     "id": "battery-notes",
+     "says": "1x CR2032"
+    },
+    {
+     "id": "aiohomematic",
+     "says": "1x CR2032"
+    }
+   ]
+  },
+  "HmIP-DRBLI4": {
+   "power": "mains",
+   "family": "HmIP-RF",
+   "confidence": "manufacturer",
+   "sources": [
+    {
+     "id": "eq3-site",
+     "url": "https://homematic-ip.com/de/produkt/jalousieaktor-fuer-hutschienenmontage-4-fach",
+     "quote": "230 V~/50 Hz"
+    }
+   ]
+  },
+  "HmIP-DRDI3": {
+   "power": "mains",
+   "family": "HmIP-RF",
+   "confidence": "manufacturer",
+   "sources": [
+    {
+     "id": "eq3-site",
+     "url": "https://homematic-ip.com/de/produkt/dimmaktor-fuer-hutschienenmontage-3-fach",
+     "quote": "230 V~/50 Hz"
+    }
+   ]
+  },
+  "HMIP-DRG-DALI": {
+   "power": "mains",
+   "family": "HmIP-RF",
+   "confidence": "assumed",
+   "sources": [
+    {
+     "id": "classification",
+     "says": "mains actuator by model and description: Homematic IP DALI Gateway"
+    }
+   ]
+  },
+  "HMIP-DRS4": {
+   "power": "mains",
+   "family": "HmIP-RF",
+   "confidence": "assumed",
+   "sources": [
+    {
+     "id": "classification",
+     "says": "mains actuator by model and description: Homematic IP Switch Actuator for DIN rail mount - 4-fach"
+    }
+   ]
+  },
+  "HmIP-DRSI1": {
+   "power": "mains",
+   "family": "HmIP-RF",
+   "confidence": "manufacturer",
+   "sources": [
+    {
+     "id": "eq3-site",
+     "url": "https://homematic-ip.com/de/produkt/schaltaktor-fuer-hutschienenmontage",
+     "quote": "230 V~/50 Hz"
+    }
+   ]
+  },
+  "HmIP-DRSI4": {
+   "power": "mains",
+   "family": "HmIP-RF",
+   "confidence": "manufacturer",
+   "sources": [
+    {
+     "id": "eq3-site",
+     "url": "https://homematic-ip.com/de/produkt/schaltaktor-fuer-hutschienenmontage-4-fach",
+     "quote": "230 V~/50 Hz"
+    }
+   ]
+  },
+  "HmIP-DS55": {
+   "power": "battery",
+   "family": "HmIP-RF",
+   "slots": [
+    {
+     "count": 2,
+     "type": "AA"
+    }
+   ],
+   "confidence": "manufacturer",
+   "sources": [
+    {
+     "id": "eq3-site",
+     "url": "https://homematic-ip.com/de/produkt/tischaufsteller",
+     "quote": "2× 1,5 V LR6/Mignon/AA"
+    }
+   ]
+  },
+  "HmIP-DS55-A": {
+   "power": "battery",
+   "family": "HmIP-RF",
+   "slots": [
+    {
+     "count": 2,
+     "type": "AA"
+    }
+   ],
+   "confidence": "manufacturer",
+   "sources": [
+    {
+     "id": "eq3-site",
+     "url": "https://homematic-ip.com/de/produkt/tischaufsteller-anthrazit",
+     "quote": "2× 1,5 V LR6/Mignon/AA"
+    }
+   ]
+  },
+  "HmIP-DSD-PCB": {
+   "power": "battery",
+   "family": "HmIP-RF",
+   "slots": [
+    {
+     "count": 2,
+     "type": "AAA"
+    }
+   ],
+   "confidence": "prior-art",
+   "sources": [
+    {
+     "id": "battery-notes",
+     "says": "2x AAA"
+    },
+    {
+     "id": "aiohomematic",
+     "says": "2x AAA"
+    },
+    {
+     "id": "iobroker-servicemeldungen",
+     "says": "2x AAA"
+    }
+   ]
+  },
+  "HmIP-ESI": {
+   "power": "battery",
+   "family": "HmIP-RF",
+   "slots": [
+    {
+     "count": 2,
+     "type": "AA"
+    }
+   ],
+   "confidence": "prior-art",
+   "sources": [
+    {
+     "id": "battery-notes",
+     "says": "2x AA"
+    },
+    {
+     "id": "aiohomematic",
+     "says": "2x AA"
+    }
+   ]
+  },
+  "HmIP-ESI-GAS": {
+   "power": "battery",
+   "family": "HmIP-RF",
+   "slots": [
+    {
+     "count": 2,
+     "type": "AA"
+    }
+   ],
+   "life_years": 7.0,
+   "confidence": "manufacturer",
+   "sources": [
+    {
+     "id": "eq3-site",
+     "url": "https://homematic-ip.com/de/produkt/schnittstelle-gaszaehler",
+     "quote": "2x 1,5 V LR6/Mignon/AA"
+    }
+   ]
+  },
+  "HmIP-ESI-IEC": {
+   "power": "battery",
+   "family": "HmIP-RF",
+   "slots": [
+    {
+     "count": 2,
+     "type": "AA"
+    }
+   ],
+   "life_years": 5.0,
+   "confidence": "manufacturer",
+   "sources": [
+    {
+     "id": "eq3-site",
+     "url": "https://homematic-ip.com/de/produkt/schnittstelle-smart-meter",
+     "quote": "2x 1,5 V LR6/Mignon/AA"
+    }
+   ]
+  },
+  "HMIP-ESI-IND": {
+   "power": "mains",
+   "family": "HmIP-RF",
+   "confidence": "assumed",
+   "sources": [
+    {
+     "id": "classification",
+     "says": "mains actuator by model and description: ?"
+    }
+   ]
+  },
+  "HmIP-ESI-LED": {
+   "power": "battery",
+   "family": "HmIP-RF",
+   "slots": [
+    {
+     "count": 2,
+     "type": "AA"
+    }
+   ],
+   "life_years": 5.0,
+   "confidence": "manufacturer",
+   "sources": [
+    {
+     "id": "eq3-site",
+     "url": "https://homematic-ip.com/de/produkt/schnittstelle-digitale-stromzaehler",
+     "quote": "2x 1,5 V LR6/Mignon/AA"
+    }
+   ]
+  },
+  "HMIP-eTRV": {
+   "power": "battery",
+   "family": "HmIP-RF",
+   "slots": [
+    {
+     "count": 2,
+     "type": "AA"
+    }
+   ],
+   "voltage": {
+    "dp": "0/OPERATING_VOLTAGE",
+    "low": 2.2
+   },
+   "low_bat_limit": 2.2,
+   "confidence": "prior-art",
+   "sources": [
+    {
+     "id": "battery-notes",
+     "says": "2x AA"
+    },
+    {
+     "id": "aiohomematic",
+     "says": "2x AA"
+    },
+    {
+     "id": "openhab",
+     "says": "2x AA"
+    },
+    {
+     "id": "iobroker-servicemeldungen",
+     "says": "2x AA"
+    },
+    {
+     "id": "corpus",
+     "says": "LOW_BAT, OPERATING_VOLTAGE; LOW_BAT_LIMIT 2.2"
+    }
+   ]
+  },
+  "HmIP-eTRV-2": {
+   "power": "battery",
+   "family": "HmIP-RF",
+   "slots": [
+    {
+     "count": 2,
+     "type": "AA"
+    }
+   ],
+   "voltage": {
+    "dp": "0/OPERATING_VOLTAGE",
+    "low": 2.2
+   },
+   "low_bat_limit": 2.2,
+   "life_years": 2.0,
+   "confidence": "manufacturer",
+   "sources": [
+    {
+     "id": "eq3-site",
+     "url": "https://homematic-ip.com/de/produkt/heizkoerperthermostat",
+     "quote": "2x 1,5 V LR6/Mignon/AA"
+    },
+    {
+     "id": "corpus",
+     "says": "LOW_BAT, OPERATING_VOLTAGE; LOW_BAT_LIMIT 2.2"
+    },
+    {
+     "id": "battery-notes",
+     "says": "2x AA"
+    },
+    {
+     "id": "openhab",
+     "says": "2x AA"
+    },
+    {
+     "id": "iobroker-servicemeldungen",
+     "says": "2x AA"
+    }
+   ]
+  },
+  "HmIP-eTRV-2-UK": {
+   "power": "battery",
+   "family": "HmIP-RF",
+   "slots": [
+    {
+     "count": 2,
+     "type": "AA"
+    }
+   ],
+   "life_years": 2.0,
+   "confidence": "manufacturer",
+   "sources": [
+    {
+     "id": "eq3-site",
+     "url": "https://homematic-ip.com/de/produkt/heizkoerperthermostat-uk",
+     "quote": "2x 1,5 V LR6/Mignon/AA"
+    }
+   ]
+  },
+  "HmIP-eTRV-2_I9F": {
+   "power": "battery",
+   "family": "HmIP-RF",
+   "slots": [
+    {
+     "count": 2,
+     "type": "AA"
+    }
+   ],
+   "confidence": "single-source",
+   "sources": [
+    {
+     "id": "battery-notes",
+     "says": "2x AA"
+    }
+   ]
+  },
+  "HmIP-eTRV-3": {
+   "power": "battery",
+   "family": "HmIP-RF",
+   "slots": [
+    {
+     "count": 2,
+     "type": "AA"
+    }
+   ],
+   "life_years": 3.0,
+   "confidence": "manufacturer",
+   "sources": [
+    {
+     "id": "eq3-site",
+     "url": "https://homematic-ip.com/de/produkt/heizkoerperthermostat-pure",
+     "quote": "2x 1,5 V LR06/Mignon/AA"
+    },
+    {
+     "id": "battery-notes",
+     "says": "2x AA"
+    }
+   ]
+  },
+  "HmIP-eTRV-B": {
+   "power": "battery",
+   "family": "HmIP-RF",
+   "slots": [
+    {
+     "count": 2,
+     "type": "AA"
+    }
+   ],
+   "voltage": {
+    "dp": "0/OPERATING_VOLTAGE",
+    "low": 2.2
+   },
+   "low_bat_limit": 2.2,
+   "confidence": "manufacturer",
+   "sources": [
+    {
+     "id": "eq3-manual",
+     "url": "https://homematic-ip.com/sites/default/files/downloads/hmip-etrv-b_um_web.pdf",
+     "quote": "2x 1,5 V LR6/Mignon/AA"
+    },
+    {
+     "id": "corpus",
+     "says": "LOW_BAT, OPERATING_VOLTAGE; LOW_BAT_LIMIT 2.2"
+    },
+    {
+     "id": "battery-notes",
+     "says": "2x AA"
+    },
+    {
+     "id": "openhab",
+     "says": "2x AA"
+    },
+    {
+     "id": "iobroker-servicemeldungen",
+     "says": "2x AA"
+    }
+   ]
+  },
+  "HmIP-eTRV-B-2": {
+   "power": "battery",
+   "family": "HmIP-RF",
+   "slots": [
+    {
+     "count": 2,
+     "type": "AA"
+    }
+   ],
+   "life_years": 2.0,
+   "confidence": "manufacturer",
+   "sources": [
+    {
+     "id": "eq3-site",
+     "url": "https://homematic-ip.com/de/produkt/heizkoerperthermostat-basic",
+     "quote": "2x 1,5 V LR6/Mignon/AA"
+    }
+   ]
+  },
+  "HmIP-eTRV-B-2_R4M": {
+   "power": "battery",
+   "family": "HmIP-RF",
+   "slots": [
+    {
+     "count": 2,
+     "type": "AA"
+    }
+   ],
+   "confidence": "single-source",
+   "sources": [
+    {
+     "id": "battery-notes",
+     "says": "2x AA"
+    }
+   ]
+  },
+  "HmIP-eTRV-B1": {
+   "power": "battery",
+   "family": "HmIP-RF",
+   "slots": [
+    {
+     "count": 2,
+     "type": "AA"
+    }
+   ],
+   "voltage": {
+    "dp": "0/OPERATING_VOLTAGE",
+    "low": 2.2
+   },
+   "low_bat_limit": 2.2,
+   "confidence": "single-source",
+   "sources": [
+    {
+     "id": "battery-notes",
+     "says": "2x AA"
+    },
+    {
+     "id": "corpus",
+     "says": "LOW_BAT, OPERATING_VOLTAGE; LOW_BAT_LIMIT 2.2"
+    }
+   ]
+  },
+  "HmIP-eTRV-C": {
+   "power": "battery",
+   "family": "HmIP-RF",
+   "slots": [
+    {
+     "count": 2,
+     "type": "AA"
+    }
+   ],
+   "confidence": "manufacturer",
+   "note": "from the product datasheet (article 151239A0)",
+   "sources": [
+    {
+     "id": "eq3-manual",
+     "url": "https://homematic-ip.com/sites/default/files/downloads/hmip-etrv-c-151239a0-produktdatenblatt.pdf",
+     "quote": "2x 1,5 V LR06/Mignon/AA"
+    },
+    {
+     "id": "battery-notes",
+     "says": "2x AA"
+    },
+    {
+     "id": "openhab",
+     "says": "2x AA"
+    },
+    {
+     "id": "iobroker-servicemeldungen",
+     "says": "2x AA"
+    }
+   ]
+  },
+  "HmIP-eTRV-C-2": {
+   "power": "battery",
+   "family": "HmIP-RF",
+   "slots": [
+    {
+     "count": 2,
+     "type": "AA"
+    }
+   ],
+   "life_years": 5.0,
+   "confidence": "manufacturer",
+   "sources": [
+    {
+     "id": "eq3-site",
+     "url": "https://homematic-ip.com/de/produkt/heizkoerperthermostat-kompakt-2",
+     "quote": "2x 1,5 V LR06/Mignon/AA"
+    },
+    {
+     "id": "battery-notes",
+     "says": "2x AA"
+    },
+    {
+     "id": "openhab",
+     "says": "2x AA"
+    },
+    {
+     "id": "iobroker-servicemeldungen",
+     "says": "2x AA"
+    }
+   ]
+  },
+  "HmIP-eTRV-CL": {
+   "power": "battery",
+   "family": "HmIP-RF",
+   "slots": [
+    {
+     "count": 4,
+     "type": "AA"
+    }
+   ],
+   "life_years": 7.0,
+   "confidence": "manufacturer",
+   "sources": [
+    {
+     "id": "eq3-site",
+     "url": "https://homematic-ip.com/de/produkt/heizkoerperthermostat-kompakt-plus",
+     "quote": "4x 1,5 V LR06/Mignon/AA"
+    },
+    {
+     "id": "battery-notes",
+     "says": "4x AA"
+    },
+    {
+     "id": "aiohomematic",
+     "says": "4x AA"
+    }
+   ]
+  },
+  "HmIP-eTRV-E": {
+   "power": "battery",
+   "family": "HmIP-RF",
+   "slots": [
+    {
+     "count": 2,
+     "type": "AA"
+    }
+   ],
+   "life_years": 2.0,
+   "confidence": "manufacturer",
+   "sources": [
+    {
+     "id": "eq3-site",
+     "url": "https://homematic-ip.com/de/produkt/heizkoerperthermostat-evo",
+     "quote": "2x 1,5 V LR6/Mignon/AA"
+    },
+    {
+     "id": "battery-notes",
+     "says": "2x AA"
+    },
+    {
+     "id": "iobroker-servicemeldungen",
+     "says": "2x AA"
+    }
+   ]
+  },
+  "HmIP-eTRV-E-A": {
+   "power": "battery",
+   "family": "HmIP-RF",
+   "slots": [
+    {
+     "count": 2,
+     "type": "AA"
+    }
+   ],
+   "life_years": 2,
+   "confidence": "manufacturer",
+   "sources": [
+    {
+     "id": "eq3-manual",
+     "url": "https://homematic-ip.com/sites/default/files/downloads/155105a0_156650a0_158419a0_hmip-etrv-e_um.pdf",
+     "quote": "2x 1,5 V LR6/Mignon/AA"
+    }
+   ]
+  },
+  "HmIP-eTRV-E-S": {
+   "power": "battery",
+   "family": "HmIP-RF",
+   "slots": [
+    {
+     "count": 2,
+     "type": "AA"
+    }
+   ],
+   "life_years": 2.0,
+   "confidence": "manufacturer",
+   "sources": [
+    {
+     "id": "eq3-site",
+     "url": "https://homematic-ip.com/de/produkt/heizkoerperthermostat-evo-silber",
+     "quote": "2x 1,5 V LR6/Mignon/AA"
+    },
+    {
+     "id": "battery-notes",
+     "says": "2x AA"
+    }
+   ]
+  },
+  "HmIP-eTRV-F": {
+   "power": "battery",
+   "family": "HmIP-RF",
+   "slots": [
+    {
+     "count": 2,
+     "type": "AA"
+    }
+   ],
+   "life_years": 3.0,
+   "confidence": "manufacturer",
+   "sources": [
+    {
+     "id": "eq3-site",
+     "url": "https://homematic-ip.com/de/produkt/heizkoerperthermostat-flex",
+     "quote": "2x 1,5 V LR06/Mignon/AA"
+    },
+    {
+     "id": "battery-notes",
+     "says": "2x AA"
+    }
+   ]
+  },
+  "HmIP-FAL230-C10": {
+   "power": "mains",
+   "family": "HmIP-RF",
+   "confidence": "manufacturer",
+   "sources": [
+    {
+     "id": "eq3-site",
+     "url": "https://homematic-ip.com/de/produkt/fussbodenheizungscontroller-10-kanaele-230-v",
+     "quote": "230 V/50 Hz"
+    }
+   ]
+  },
+  "HmIP-FAL230-C6": {
+   "power": "mains",
+   "family": "HmIP-RF",
+   "confidence": "manufacturer",
+   "sources": [
+    {
+     "id": "eq3-site",
+     "url": "https://homematic-ip.com/de/produkt/fussbodenheizungscontroller-6-kanaele-230-v",
+     "quote": "230 V/50 Hz"
+    }
+   ]
+  },
+  "HmIP-FAL24-C10": {
+   "power": "mains",
+   "family": "HmIP-RF",
+   "confidence": "manufacturer",
+   "sources": [
+    {
+     "id": "eq3-site",
+     "url": "https://homematic-ip.com/de/produkt/fussbodenheizungscontroller-10-kanaele-24-v",
+     "quote": "24 V/50 Hz"
+    }
+   ]
+  },
+  "HmIP-FAL24-C6": {
+   "power": "mains",
+   "family": "HmIP-RF",
+   "confidence": "manufacturer",
+   "sources": [
+    {
+     "id": "eq3-site",
+     "url": "https://homematic-ip.com/de/produkt/fussbodenheizungscontroller-6-kanaele-24-v",
+     "quote": "24 V/50 Hz"
+    }
+   ]
+  },
+  "HmIP-FALMOT-C12": {
+   "power": "bus",
+   "family": "HmIP-RF",
+   "confidence": "manufacturer",
+   "sources": [
+    {
+     "id": "eq3-site",
+     "url": "https://homematic-ip.com/de/produkt/fussbodenheizungscontroller-12-kanaele-motorisch",
+     "quote": "230 V/50 Hz oder 24 VDC/SELV"
+    }
+   ]
+  },
+  "HmIP-FALMOT-C8": {
+   "power": "mains",
+   "family": "HmIP-RF",
+   "confidence": "manufacturer",
+   "sources": [
+    {
+     "id": "eq3-site",
+     "url": "https://homematic-ip.com/de/produkt/fussbodenheizungscontroller-8-kanaele-motorisch",
+     "quote": "230 V/50 Hz"
+    }
+   ]
+  },
+  "HmIP-FBL": {
+   "power": "mains",
+   "family": "HmIP-RF",
+   "confidence": "manufacturer",
+   "sources": [
+    {
+     "id": "eq3-site",
+     "url": "https://homematic-ip.com/de/produkt/jalousieaktor-unterputz",
+     "quote": "230 V/50 Hz"
+    }
+   ]
+  },
+  "HmIP-FCI1": {
+   "power": "battery",
+   "family": "HmIP-RF",
+   "slots": [
+    {
+     "count": 1,
+     "type": "CR2032"
+    }
+   ],
+   "voltage": {
+    "dp": "0/OPERATING_VOLTAGE",
+    "low": 2.4
+   },
+   "low_bat_limit": 2.4,
+   "life_years": 2.0,
+   "confidence": "manufacturer",
+   "sources": [
+    {
+     "id": "eq3-site",
+     "url": "https://homematic-ip.com/de/produkt/kontakt-schnittstelle-unterputz-1-fach",
+     "quote": "1x 3 V CR2032"
+    },
+    {
+     "id": "corpus",
+     "says": "LOW_BAT, OPERATING_VOLTAGE; LOW_BAT_LIMIT 2.4"
+    },
+    {
+     "id": "battery-notes",
+     "says": "1x CR2032"
+    },
+    {
+     "id": "aiohomematic",
+     "says": "1x CR2032"
+    },
+    {
+     "id": "iobroker-servicemeldungen",
+     "says": "1x CR2032"
+    }
+   ]
+  },
+  "HmIP-FCI6": {
+   "power": "battery",
+   "family": "HmIP-RF",
+   "slots": [
+    {
+     "count": 2,
+     "type": "AAA"
+    }
+   ],
+   "life_years": 3.0,
+   "confidence": "manufacturer",
+   "note": "prior art disagrees with the manufacturer: aiohomematic says 1x AAA",
+   "sources": [
+    {
+     "id": "eq3-site",
+     "url": "https://homematic-ip.com/de/produkt/kontakt-schnittstelle-unterputz-6-fach",
+     "quote": "2x 1,5 V LR03/Micro/Batterie"
+    },
+    {
+     "id": "battery-notes",
+     "says": "2x AAA"
+    },
+    {
+     "id": "aiohomematic",
+     "says": "1x AAA"
+    },
+    {
+     "id": "iobroker-servicemeldungen",
+     "says": "2x AAA"
+    }
+   ]
+  },
+  "HmIP-FDC": {
+   "power": "mains",
+   "family": "HmIP-RF",
+   "confidence": "manufacturer",
+   "sources": [
+    {
+     "id": "eq3-site",
+     "url": "https://homematic-ip.com/de/produkt/universal-tueroeffner-controller",
+     "quote": "12-24 VDC"
+    }
+   ]
+  },
+  "HmIP-FDT": {
+   "power": "mains",
+   "family": "HmIP-RF",
+   "confidence": "manufacturer",
+   "sources": [
+    {
+     "id": "eq3-site",
+     "url": "https://homematic-ip.com/de/produkt/dimmaktor-unterputz-phasenabschnitt",
+     "quote": "230 V/50 Hz"
+    },
+    {
+     "id": "corpus",
+     "says": "OPERATING_VOLTAGE"
+    }
+   ]
+  },
+  "HmIP-FLC": {
+   "power": "mains",
+   "family": "HmIP-RF",
+   "confidence": "manufacturer",
+   "sources": [
+    {
+     "id": "eq3-site",
+     "url": "https://homematic-ip.com/de/produkt/universal-motorschloss-controller",
+     "quote": "12-24 VDC"
+    }
+   ]
+  },
+  "HmIP-FROLL": {
+   "power": "mains",
+   "family": "HmIP-RF",
+   "confidence": "manufacturer",
+   "sources": [
+    {
+     "id": "eq3-site",
+     "url": "https://homematic-ip.com/de/produkt/rollladenaktor-unterputz",
+     "quote": "230 V/50 Hz"
+    },
+    {
+     "id": "corpus",
+     "says": "OPERATING_VOLTAGE"
+    }
+   ]
+  },
+  "HmIP-FS6": {
+   "power": "mains",
+   "family": "HmIP-RF",
+   "confidence": "manufacturer",
+   "sources": [
+    {
+     "id": "eq3-site",
+     "url": "https://homematic-ip.com/de/produkt/schaltaktor-6-unterputz",
+     "quote": "230 V / 50 Hz"
+    }
+   ]
+  },
+  "HmIP-FSI16": {
+   "power": "mains",
+   "family": "HmIP-RF",
+   "confidence": "manufacturer",
+   "sources": [
+    {
+     "id": "eq3-manual",
+     "url": "https://homematic-ip.com/sites/default/files/downloads/hmip-fsi16-um-web.pdf",
+     "quote": "Versorgungsspannung: 230 V/50 Hz"
+    }
+   ]
+  },
+  "HmIP-FSI16-2": {
+   "power": "mains",
+   "family": "HmIP-RF",
+   "confidence": "manufacturer",
+   "sources": [
+    {
+     "id": "eq3-site",
+     "url": "https://homematic-ip.com/de/produkt/schaltaktor-mit-tastereingang-16-unterputz",
+     "quote": "230 V/50 Hz"
+    }
+   ]
+  },
+  "HmIP-FSI6": {
+   "power": "mains",
+   "family": "HmIP-RF",
+   "confidence": "manufacturer",
+   "sources": [
+    {
+     "id": "eq3-site",
+     "url": "https://homematic-ip.com/de/produkt/schaltaktor-mit-tastereingang-6-unterputz",
+     "quote": "230 V / 50 Hz"
+    }
+   ]
+  },
+  "HmIP-FSM": {
+   "power": "mains",
+   "family": "HmIP-RF",
+   "confidence": "manufacturer",
+   "sources": [
+    {
+     "id": "eq3-site",
+     "url": "https://homematic-ip.com/de/produkt/schalt-mess-aktor-unterputz",
+     "quote": "230 V/50 Hz"
+    },
+    {
+     "id": "corpus",
+     "says": "OPERATING_VOLTAGE"
+    }
+   ]
+  },
+  "HmIP-FSM16": {
+   "power": "mains",
+   "family": "HmIP-RF",
+   "confidence": "manufacturer",
+   "sources": [
+    {
+     "id": "eq3-site",
+     "url": "https://homematic-ip.com/de/produkt/schalt-mess-aktor-16-unterputz",
+     "quote": "230 V/50 Hz"
+    },
+    {
+     "id": "corpus",
+     "says": "OPERATING_VOLTAGE"
+    }
+   ]
+  },
+  "HmIP-FWI": {
+   "power": "mains",
+   "family": "HmIP-RF",
+   "confidence": "manufacturer",
+   "sources": [
+    {
+     "id": "eq3-site",
+     "url": "https://homematic-ip.com/de/produkt/wiegand-schnittstelle",
+     "quote": "5-12 VDC"
+    }
+   ]
+  },
+  "HmIP-HAP": {
+   "power": "mains",
+   "family": "HmIP-RF",
+   "confidence": "manufacturer",
+   "sources": [
+    {
+     "id": "eq3-site",
+     "url": "https://homematic-ip.com/de/produkt/access-point",
+     "quote": "5 VDC"
+    }
+   ]
+  },
+  "HmIP-HAP-A": {
+   "power": "mains",
+   "family": "HmIP-RF",
+   "confidence": "manufacturer",
+   "sources": [
+    {
+     "id": "eq3-site",
+     "url": "https://homematic-ip.com/de/produkt/access-point-anthrazit",
+     "quote": "5 VDC"
+    }
+   ]
+  },
+  "HmIP-HAP2": {
+   "power": "mains",
+   "family": "HmIP-RF",
+   "confidence": "manufacturer",
+   "sources": [
+    {
+     "id": "eq3-site",
+     "url": "https://homematic-ip.com/de/produkt/access-point-2",
+     "quote": "5 VDC"
+    }
+   ]
+  },
+  "HmIP-HAP2-A": {
+   "power": "mains",
+   "family": "HmIP-RF",
+   "confidence": "manufacturer",
+   "sources": [
+    {
+     "id": "eq3-site",
+     "url": "https://homematic-ip.com/de/produkt/access-point-2-anthrazit",
+     "quote": "5 VDC"
+    }
+   ]
+  },
+  "HMIP-HDM1": {
+   "power": "mains",
+   "family": "HmIP-RF",
+   "confidence": "assumed",
+   "sources": [
+    {
+     "id": "classification",
+     "says": "mains actuator by model and description: Homematic IP Hunter Douglas Module 1"
+    }
+   ]
+  },
+  "HMIP-HDM2": {
+   "power": "mains",
+   "family": "HmIP-RF",
+   "confidence": "assumed",
+   "sources": [
+    {
+     "id": "classification",
+     "says": "mains actuator by model and description: Homematic IP Hunter Douglas Module 2"
+    }
+   ]
+  },
+  "HmIP-KRC4": {
+   "power": "battery",
+   "family": "HmIP-RF",
+   "slots": [
+    {
+     "count": 1,
+     "type": "AAA"
+    }
+   ],
+   "life_years": 2,
+   "confidence": "manufacturer",
+   "sources": [
+    {
+     "id": "eq3-manual",
+     "url": "https://homematic-ip.com/sites/default/files/downloads/hmip-krc4_um_web.pdf",
+     "quote": "1x 1,5 V LR03/Micro/AAA"
+    },
+    {
+     "id": "battery-notes",
+     "says": "1x AAA"
+    },
+    {
+     "id": "openhab",
+     "says": "1x AAA"
+    },
+    {
+     "id": "iobroker-servicemeldungen",
+     "says": "1x AAA"
+    }
+   ]
+  },
+  "HmIP-KRC4-2": {
+   "power": "battery",
+   "family": "HmIP-RF",
+   "slots": [
+    {
+     "count": 1,
+     "type": "AAA"
+    }
+   ],
+   "life_years": 5.0,
+   "confidence": "manufacturer",
+   "sources": [
+    {
+     "id": "eq3-site",
+     "url": "https://homematic-ip.com/de/produkt/schluesselbundfernbedienung-4-tasten",
+     "quote": "1x 1,5 V LR03/Micro/AAA"
+    }
+   ]
+  },
+  "HmIP-KRCA": {
+   "power": "battery",
+   "family": "HmIP-RF",
+   "slots": [
+    {
+     "count": 1,
+     "type": "AAA"
+    }
+   ],
+   "voltage": {
+    "dp": "0/OPERATING_VOLTAGE",
+    "low": 1.1
+   },
+   "low_bat_limit": 1.1,
+   "life_years": 2,
+   "confidence": "manufacturer",
+   "sources": [
+    {
+     "id": "eq3-manual",
+     "url": "https://homematic-ip.com/sites/default/files/downloads/hmip-krca_um_web.pdf",
+     "quote": "1x 1,5 V LR03/Micro/AAA"
+    },
+    {
+     "id": "corpus",
+     "says": "LOW_BAT, OPERATING_VOLTAGE; LOW_BAT_LIMIT 1.1"
+    },
+    {
+     "id": "battery-notes",
+     "says": "1x AAA"
+    },
+    {
+     "id": "openhab",
+     "says": "1x AAA"
+    },
+    {
+     "id": "iobroker-servicemeldungen",
+     "says": "1x AAA"
+    }
+   ]
+  },
+  "HmIP-KRCA-2": {
+   "power": "battery",
+   "family": "HmIP-RF",
+   "slots": [
+    {
+     "count": 1,
+     "type": "AAA"
+    }
+   ],
+   "life_years": 5.0,
+   "confidence": "manufacturer",
+   "sources": [
+    {
+     "id": "eq3-site",
+     "url": "https://homematic-ip.com/de/produkt/schluesselbundfernbedienung-alarm",
+     "quote": "1x 1,5 V LR03/Micro/AAA"
+    }
+   ]
+  },
+  "HmIP-KRCK": {
+   "power": "battery",
+   "family": "HmIP-RF",
+   "slots": [
+    {
+     "count": 1,
+     "type": "AAA"
+    }
+   ],
+   "life_years": 2,
+   "confidence": "manufacturer",
+   "sources": [
+    {
+     "id": "eq3-manual",
+     "url": "https://homematic-ip.com/sites/default/files/downloads/hmip-krck_um_web.pdf",
+     "quote": "1x 1,5 V LR03/Micro/AAA"
+    },
+    {
+     "id": "battery-notes",
+     "says": "1x AAA"
+    },
+    {
+     "id": "iobroker-servicemeldungen",
+     "says": "1x AAA"
+    }
+   ]
+  },
+  "HmIP-KRCK-2": {
+   "power": "battery",
+   "family": "HmIP-RF",
+   "slots": [
+    {
+     "count": 1,
+     "type": "AAA"
+    }
+   ],
+   "life_years": 5.0,
+   "confidence": "manufacturer",
+   "sources": [
+    {
+     "id": "eq3-site",
+     "url": "https://homematic-ip.com/de/produkt/schluesselbundfernbedienung-zutritt",
+     "quote": "1x 1,5 V LR03/Micro/AAA"
+    }
+   ]
+  },
+  "HMIP-LSC": {
+   "power": "mains",
+   "family": "HmIP-RF",
+   "confidence": "assumed",
+   "sources": [
+    {
+     "id": "classification",
+     "says": "mains actuator by model and description: Homematic IP Light Strip Controller"
+    }
+   ]
+  },
+  "HMIP-M-TD15": {
+   "power": "mains",
+   "family": "HmIP-RF",
+   "confidence": "assumed",
+   "sources": [
+    {
+     "id": "classification",
+     "says": "mains actuator by model and description: Homematic IP Tubular Drive - 15 Nm"
+    }
+   ]
+  },
+  "HmIP-MIOB": {
+   "power": "mains",
+   "family": "HmIP-RF",
+   "confidence": "manufacturer",
+   "sources": [
+    {
+     "id": "eq3-site",
+     "url": "https://homematic-ip.com/de/produkt/multi-io-box",
+     "quote": "230 V/50 Hz"
+    }
+   ]
+  },
+  "HmIP-MOD-HO": {
+   "power": "host",
+   "family": "HmIP-RF",
+   "confidence": "manufacturer",
+   "sources": [
+    {
+     "id": "eq3-site",
+     "url": "https://homematic-ip.com/de/produkt/modul-fuer-hoermann-antriebe",
+     "quote": "wird durch Hörmann-Antrieb bereitgestellt"
+    }
+   ]
+  },
+  "HMIP-MOD-OC8": {
+   "power": "mains",
+   "family": "HmIP-RF",
+   "confidence": "assumed",
+   "sources": [
+    {
+     "id": "classification",
+     "says": "mains actuator by model and description: Homematic IP Switch Actuator with OC-Output"
+    }
+   ]
+  },
+  "HMIP-MOD-TM": {
+   "power": "mains",
+   "family": "HmIP-RF",
+   "confidence": "assumed",
+   "sources": [
+    {
+     "id": "classification",
+     "says": "mains actuator by model and description: Homematic IP Tormatic Module"
+    }
+   ]
+  },
+  "HMIP-MOD-WD-VK": {
+   "power": "mains",
+   "family": "HmIP-RF",
+   "confidence": "assumed",
+   "sources": [
+    {
+     "id": "classification",
+     "says": "mains actuator by model and description: Homematic IP Module for VEKA window drives"
+    }
+   ]
+  },
+  "HmIP-MP3P": {
+   "power": "battery",
+   "family": "HmIP-RF",
+   "slots": [
+    {
+     "count": 3,
+     "type": "C"
+    }
+   ],
+   "voltage": {
+    "dp": "0/OPERATING_VOLTAGE",
+    "low": 3.9
+   },
+   "low_bat_limit": 3.9,
+   "life_years": 2.0,
+   "confidence": "manufacturer",
+   "note": "prior art disagrees with the manufacturer: aiohomematic says 2x C",
+   "sources": [
+    {
+     "id": "eq3-site",
+     "url": "https://homematic-ip.com/de/produkt/kombisignalgeber",
+     "quote": "3 x 1,5 V LR14/Baby/C"
+    },
+    {
+     "id": "corpus",
+     "says": "LOW_BAT, OPERATING_VOLTAGE; LOW_BAT_LIMIT 3.9"
+    },
+    {
+     "id": "aiohomematic",
+     "says": "2x C"
+    },
+    {
+     "id": "iobroker-servicemeldungen",
+     "says": "3x C"
+    }
+   ]
+  },
+  "HmIP-P-DRG-DALI": {
+   "power": "mains",
+   "family": "HmIP-RF",
+   "confidence": "manufacturer",
+   "sources": [
+    {
+     "id": "eq3-site",
+     "url": "https://homematic-ip.com/de/produkt/dali-gateway",
+     "quote": "230 V/50 Hz"
+    }
+   ]
+  },
+  "HmIP-PCBS": {
+   "power": "mains",
+   "family": "HmIP-RF",
+   "confidence": "manufacturer",
+   "note": "prior art disagrees with the manufacturer: iobroker-servicemeldungen says fixed",
+   "sources": [
+    {
+     "id": "eq3-site",
+     "url": "https://homematic-ip.com/de/produkt/schaltplatine",
+     "quote": "5 bis 25 VDC"
+    },
+    {
+     "id": "corpus",
+     "says": "OPERATING_VOLTAGE"
+    },
+    {
+     "id": "iobroker-servicemeldungen",
+     "says": "fixed"
+    }
+   ]
+  },
+  "HMIP-PCBS2": {
+   "power": "mains",
+   "family": "HmIP-RF",
+   "confidence": "assumed",
+   "sources": [
+    {
+     "id": "classification",
+     "says": "mains actuator by model and description: Homematic IP Switch Circuit Board - 2 channels"
+    }
+   ]
+  },
+  "HmIP-PDT": {
+   "power": "mains",
+   "family": "HmIP-RF",
+   "confidence": "manufacturer",
+   "sources": [
+    {
+     "id": "eq3-site",
+     "url": "https://homematic-ip.com/de/produkt/dimmer-steckdose-phasenabschnitt",
+     "quote": "230 V/50 Hz"
+    }
+   ]
+  },
+  "HmIP-PDT-A": {
+   "power": "mains",
+   "family": "HmIP-RF",
+   "confidence": "manufacturer",
+   "sources": [
+    {
+     "id": "eq3-site",
+     "url": "https://homematic-ip.com/de/produkt/dimmer-steckdose-phasenabschnitt-anthrazit",
+     "quote": "230 V/50 Hz"
+    }
+   ]
+  },
+  "HmIP-PDT-CH": {
+   "power": "mains",
+   "family": "HmIP-RF",
+   "confidence": "manufacturer",
+   "sources": [
+    {
+     "id": "eq3-site",
+     "url": "https://homematic-ip.com/de/produkt/dimmer-steckdose-phasenabschnitt-ch",
+     "quote": "230 V/50 Hz"
+    }
+   ]
+  },
+  "HmIP-PDT-PE": {
+   "power": "mains",
+   "family": "HmIP-RF",
+   "confidence": "manufacturer",
+   "sources": [
+    {
+     "id": "eq3-site",
+     "url": "https://homematic-ip.com/de/produkt/dimmer-steckdose-phasenabschnitt-pe",
+     "quote": "230 V/50 Hz"
+    }
+   ]
+  },
+  "HmIP-PDT-UK": {
+   "power": "mains",
+   "family": "HmIP-RF",
+   "confidence": "manufacturer",
+   "sources": [
+    {
+     "id": "eq3-site",
+     "url": "https://homematic-ip.com/de/produkt/dimmer-steckdose-phasenabschnitt-uk",
+     "quote": "230 V/50 Hz"
+    }
+   ]
+  },
+  "HmIP-PMFS": {
+   "power": "mains",
+   "family": "HmIP-RF",
+   "confidence": "assumed",
+   "sources": [
+    {
+     "id": "classification",
+     "says": "mains actuator by model and description: Homematic IP Mains Failure Surveillance"
+    },
+    {
+     "id": "corpus",
+     "says": "OPERATING_VOLTAGE"
+    }
+   ]
+  },
+  "HMIP-PS": {
+   "power": "mains",
+   "family": "HmIP-RF",
+   "confidence": "manufacturer",
+   "sources": [
+    {
+     "id": "eq3-manual",
+     "url": "https://homematic-ip.com/sites/default/files/downloads/hmip-ps_um_web.pdf",
+     "quote": "Versorgungsspannung: 230 V/50 Hz"
+    },
+    {
+     "id": "corpus",
+     "says": "OPERATING_VOLTAGE"
+    }
+   ]
+  },
+  "HmIP-PS-2": {
+   "power": "mains",
+   "family": "HmIP-RF",
+   "confidence": "manufacturer",
+   "sources": [
+    {
+     "id": "eq3-site",
+     "url": "https://homematic-ip.com/de/produkt/schaltsteckdose",
+     "quote": "230 V/50 Hz"
+    }
+   ]
+  },
+  "HmIP-PS-2-A": {
+   "power": "mains",
+   "family": "HmIP-RF",
+   "confidence": "manufacturer",
+   "sources": [
+    {
+     "id": "eq3-site",
+     "url": "https://homematic-ip.com/de/produkt/schaltsteckdose-anthrazit",
+     "quote": "230 V/50 Hz"
+    }
+   ]
+  },
+  "HMIP-PS-2_9YM": {
+   "power": "mains",
+   "family": "HmIP-RF",
+   "confidence": "assumed",
+   "sources": [
+    {
+     "id": "classification",
+     "says": "mains actuator by model and description: ?"
+    }
+   ]
+  },
+  "HMIP-PS-A": {
+   "power": "mains",
+   "family": "HmIP-RF",
+   "confidence": "assumed",
+   "sources": [
+    {
+     "id": "classification",
+     "says": "mains actuator by model and description: ?"
+    }
+   ]
+  },
+  "HMIP-PSM": {
+   "power": "mains",
+   "family": "HmIP-RF",
+   "confidence": "manufacturer",
+   "sources": [
+    {
+     "id": "eq3-manual",
+     "url": "https://homematic-ip.com/sites/default/files/downloads/hmip-psm-um-web.pdf",
+     "quote": "Versorgungsspannung: 230 V/50 Hz"
+    },
+    {
+     "id": "corpus",
+     "says": "OPERATING_VOLTAGE"
+    }
+   ]
+  },
+  "HmIP-PSM-2": {
+   "power": "mains",
+   "family": "HmIP-RF",
+   "confidence": "manufacturer",
+   "sources": [
+    {
+     "id": "eq3-site",
+     "url": "https://homematic-ip.com/de/produkt/schalt-mess-steckdose",
+     "quote": "230 V/50 Hz"
+    }
+   ]
+  },
+  "HmIP-PSM-2-A": {
+   "power": "mains",
+   "family": "HmIP-RF",
+   "confidence": "manufacturer",
+   "sources": [
+    {
+     "id": "eq3-site",
+     "url": "https://homematic-ip.com/de/produkt/schalt-mess-steckdose-anthrazit",
+     "quote": "230 V/50 Hz"
+    }
+   ]
+  },
+  "HMIP-PSM-2_QHJ": {
+   "power": "mains",
+   "family": "HmIP-RF",
+   "confidence": "assumed",
+   "sources": [
+    {
+     "id": "classification",
+     "says": "mains actuator by model and description: ?"
+    }
+   ]
+  },
+  "HMIP-PSM-A": {
+   "power": "mains",
+   "family": "HmIP-RF",
+   "confidence": "assumed",
+   "sources": [
+    {
+     "id": "classification",
+     "says": "mains actuator by model and description: ?"
+    }
+   ]
+  },
+  "HmIP-PSM-CH": {
+   "power": "mains",
+   "family": "HmIP-RF",
+   "confidence": "manufacturer",
+   "sources": [
+    {
+     "id": "eq3-manual",
+     "url": "https://homematic-ip.com/sites/default/files/downloads/hmip-psm-ch_um_gefi_web.pdf",
+     "quote": "Versorgungsspannung: 230 V/50 Hz"
+    }
+   ]
+  },
+  "HmIP-PSM-CH-2": {
+   "power": "mains",
+   "family": "HmIP-RF",
+   "confidence": "manufacturer",
+   "sources": [
+    {
+     "id": "eq3-site",
+     "url": "https://homematic-ip.com/de/produkt/schalt-mess-steckdose-ch",
+     "quote": "230 V/50 Hz"
+    }
+   ]
+  },
+  "HmIP-PSM-IT": {
+   "power": "mains",
+   "family": "HmIP-RF",
+   "confidence": "manufacturer",
+   "sources": [
+    {
+     "id": "eq3-site",
+     "url": "https://homematic-ip.com/de/produkt/schalt-mess-steckdose-it",
+     "quote": "230 V/50 Hz"
+    }
+   ]
+  },
+  "HmIP-PSM-PE": {
+   "power": "mains",
+   "family": "HmIP-RF",
+   "confidence": "manufacturer",
+   "sources": [
+    {
+     "id": "eq3-site",
+     "url": "https://homematic-ip.com/de/produkt/schalt-mess-steckdose-pin-earth",
+     "quote": "230 V/50 Hz"
+    }
+   ]
+  },
+  "HMIP-PSM-PE-2": {
+   "power": "mains",
+   "family": "HmIP-RF",
+   "confidence": "assumed",
+   "sources": [
+    {
+     "id": "classification",
+     "says": "mains actuator by model and description: ?"
+    }
+   ]
+  },
+  "HmIP-PSM-UK": {
+   "power": "mains",
+   "family": "HmIP-RF",
+   "confidence": "manufacturer",
+   "sources": [
+    {
+     "id": "eq3-site",
+     "url": "https://homematic-ip.com/de/produkt/schalt-mess-steckdose-uk",
+     "quote": "230 V/50 Hz"
+    }
+   ]
+  },
+  "HmIP-PSMCO": {
+   "power": "mains",
+   "family": "HmIP-RF",
+   "confidence": "manufacturer",
+   "sources": [
+    {
+     "id": "eq3-site",
+     "url": "https://homematic-ip.com/de/produkt/schalt-mess-kabel-aussen",
+     "quote": "230 V/50 Hz"
+    }
+   ]
+  },
+  "HmIP-RC8": {
+   "power": "battery",
+   "family": "HmIP-RF",
+   "slots": [
+    {
+     "count": 2,
+     "type": "AAA"
+    }
+   ],
+   "life_years": 2.0,
+   "confidence": "manufacturer",
+   "sources": [
+    {
+     "id": "eq3-site",
+     "url": "https://homematic-ip.com/de/produkt/fernbedienung-8-tasten",
+     "quote": "2x 1,5 V LR03/Micro/AAA"
+    },
+    {
+     "id": "battery-notes",
+     "says": "2x AAA"
+    },
+    {
+     "id": "aiohomematic",
+     "says": "2x AAA"
+    },
+    {
+     "id": "openhab",
+     "says": "2x AAA"
+    },
+    {
+     "id": "iobroker-servicemeldungen",
+     "says": "2x AAA"
+    }
+   ]
+  },
+  "HmIP-RCB1": {
+   "power": "battery",
+   "family": "HmIP-RF",
+   "slots": [
+    {
+     "count": 1,
+     "type": "AAA"
+    }
+   ],
+   "confidence": "single-source",
+   "sources": [
+    {
+     "id": "battery-notes",
+     "says": "1x AAA"
+    },
+    {
+     "id": "aiohomematic",
+     "says": "2x AAA"
+    },
+    {
+     "id": "iobroker-servicemeldungen",
+     "says": "1x AAA"
+    }
+   ]
+  },
+  "HmIP-RGBW": {
+   "power": "mains",
+   "family": "HmIP-RF",
+   "confidence": "manufacturer",
+   "sources": [
+    {
+     "id": "eq3-site",
+     "url": "https://homematic-ip.com/de/produkt/led-controller-rgbw",
+     "quote": "12 - 24 VDC"
+    }
+   ]
+  },
+  "HmIP-SAM": {
+   "power": "battery",
+   "family": "HmIP-RF",
+   "slots": [
+    {
+     "count": 2,
+     "type": "AA"
+    }
+   ],
+   "confidence": "prior-art",
+   "note": "prior art disagrees: iobroker-servicemeldungen 2x AAA",
+   "sources": [
+    {
+     "id": "battery-notes",
+     "says": "2x AA"
+    },
+    {
+     "id": "aiohomematic",
+     "says": "2x AA"
+    },
+    {
+     "id": "iobroker-servicemeldungen",
+     "says": "2x AAA"
+    }
+   ]
+  },
+  "HmIP-SCI": {
+   "power": "battery",
+   "family": "HmIP-RF",
+   "slots": [
+    {
+     "count": 2,
+     "type": "AAA"
+    }
+   ],
+   "life_years": 4.0,
+   "confidence": "manufacturer",
+   "sources": [
+    {
+     "id": "eq3-site",
+     "url": "https://homematic-ip.com/de/produkt/kontakt-schnittstelle",
+     "quote": "2x 1,5 V LR03/Micro/AAA"
+    },
+    {
+     "id": "battery-notes",
+     "says": "2x AAA"
+    },
+    {
+     "id": "aiohomematic",
+     "says": "2x AAA"
+    },
+    {
+     "id": "iobroker-servicemeldungen",
+     "says": "2x AAA"
+    }
+   ]
+  },
+  "HmIP-SCTH230": {
+   "power": "mains",
+   "family": "HmIP-RF",
+   "confidence": "manufacturer",
+   "sources": [
+    {
+     "id": "eq3-site",
+     "url": "https://homematic-ip.com/de/produkt/co2-sensor-230-v",
+     "quote": "230 V/50 Hz"
+    }
+   ]
+  },
+  "HmIP-SLO": {
+   "power": "battery",
+   "family": "HmIP-RF",
+   "slots": [
+    {
+     "count": 2,
+     "type": "AA"
+    }
+   ],
+   "life_years": 3.0,
+   "outdoor": true,
+   "confidence": "manufacturer",
+   "note": "prior art disagrees with the manufacturer: iobroker-servicemeldungen says 2x AAA",
+   "sources": [
+    {
+     "id": "eq3-site",
+     "url": "https://homematic-ip.com/de/produkt/lichtsensor-aussen",
+     "quote": "2x 1,5 V LR6/Mignon/AA"
+    },
+    {
+     "id": "battery-notes",
+     "says": "2x AA"
+    },
+    {
+     "id": "aiohomematic",
+     "says": "2x AA"
+    },
+    {
+     "id": "iobroker-servicemeldungen",
+     "says": "2x AAA"
+    }
+   ]
+  },
+  "HmIP-SMI": {
+   "power": "battery",
+   "family": "HmIP-RF",
+   "slots": [
+    {
+     "count": 2,
+     "type": "AA"
+    }
+   ],
+   "voltage": {
+    "dp": "0/OPERATING_VOLTAGE",
+    "low": 2.2
+   },
+   "low_bat_limit": 2.2,
+   "life_years": 3.0,
+   "confidence": "manufacturer",
+   "sources": [
+    {
+     "id": "eq3-site",
+     "url": "https://homematic-ip.com/de/produkt/bewegungsmelder-mit-daemmerungssensor-innen",
+     "quote": "2x 1,5 V LR6/Mignon/AA"
+    },
+    {
+     "id": "corpus",
+     "says": "LOW_BAT, OPERATING_VOLTAGE; LOW_BAT_LIMIT 2.2"
+    },
+    {
+     "id": "battery-notes",
+     "says": "2x AA"
+    },
+    {
+     "id": "aiohomematic",
+     "says": "2x AA"
+    },
+    {
+     "id": "openhab",
+     "says": "2x AA"
+    },
+    {
+     "id": "iobroker-servicemeldungen",
+     "says": "2x AA"
+    }
+   ]
+  },
+  "HmIP-SMI55": {
+   "power": "battery",
+   "family": "HmIP-RF",
+   "slots": [
+    {
+     "count": 2,
+     "type": "AAA"
+    }
+   ],
+   "voltage": {
+    "dp": "0/OPERATING_VOLTAGE",
+    "low": 2.4
+   },
+   "low_bat_limit": 2.4,
+   "confidence": "manufacturer",
+   "sources": [
+    {
+     "id": "elv-manual",
+     "url": "https://media.elv.com/file/151769_um.pdf",
+     "quote": "2x 1,5 V LR03/Micro/AAA"
+    },
+    {
+     "id": "corpus",
+     "says": "LOW_BAT, OPERATING_VOLTAGE; LOW_BAT_LIMIT 2.4"
+    },
+    {
+     "id": "battery-notes",
+     "says": "2x AAA"
+    },
+    {
+     "id": "aiohomematic",
+     "says": "2x AAA"
+    },
+    {
+     "id": "openhab",
+     "says": "2x AAA"
+    },
+    {
+     "id": "iobroker-servicemeldungen",
+     "says": "2x AAA"
+    }
+   ]
+  },
+  "HmIP-SMI55-2": {
+   "power": "battery",
+   "family": "HmIP-RF",
+   "slots": [
+    {
+     "count": 2,
+     "type": "AAA"
+    }
+   ],
+   "life_years": 4.0,
+   "confidence": "manufacturer",
+   "sources": [
+    {
+     "id": "eq3-site",
+     "url": "https://homematic-ip.com/de/produkt/bewegungsmelder-fuer-55er-rahmen-innen",
+     "quote": "2x 1,5 V LR03/Micro/AAA"
+    },
+    {
+     "id": "battery-notes",
+     "says": "2x AAA"
+    }
+   ]
+  },
+  "HmIP-SMI55-A": {
+   "power": "battery",
+   "family": "HmIP-RF",
+   "slots": [
+    {
+     "count": 2,
+     "type": "AAA"
+    }
+   ],
+   "life_years": 4,
+   "confidence": "manufacturer",
+   "sources": [
+    {
+     "id": "eq3-manual",
+     "url": "https://homematic-ip.com/sites/default/files/downloads/hmip-smi55-a-um-web.pdf",
+     "quote": "2x 1,5 V LR03/Micro/AAA"
+    }
+   ]
+  },
+  "HmIP-SMO": {
+   "power": "battery",
+   "family": "HmIP-RF",
+   "slots": [
+    {
+     "count": 2,
+     "type": "AA"
+    }
+   ],
+   "outdoor": true,
+   "confidence": "prior-art",
+   "sources": [
+    {
+     "id": "battery-notes",
+     "says": "2x AA"
+    },
+    {
+     "id": "aiohomematic",
+     "says": "2x AA"
+    },
+    {
+     "id": "openhab",
+     "says": "2x AA"
+    },
+    {
+     "id": "iobroker-servicemeldungen",
+     "says": "2x AA"
+    }
+   ]
+  },
+  "HmIP-SMO-2": {
+   "power": "battery",
+   "family": "HmIP-RF",
+   "slots": [
+    {
+     "count": 2,
+     "type": "AA"
+    }
+   ],
+   "life_years": 6.0,
+   "outdoor": true,
+   "confidence": "manufacturer",
+   "sources": [
+    {
+     "id": "eq3-site",
+     "url": "https://homematic-ip.com/de/produkt/bewegungsmelder-mit-daemmerungssensor-aussen",
+     "quote": "2x 1,5 V LR6/Mignon/AA"
+    }
+   ]
+  },
+  "HmIP-SMO-A": {
+   "power": "battery",
+   "family": "HmIP-RF",
+   "slots": [
+    {
+     "count": 2,
+     "type": "AA"
+    }
+   ],
+   "outdoor": true,
+   "confidence": "prior-art",
+   "sources": [
+    {
+     "id": "battery-notes",
+     "says": "2x AA"
+    },
+    {
+     "id": "openhab",
+     "says": "2x AA"
+    },
+    {
+     "id": "iobroker-servicemeldungen",
+     "says": "2x AA"
+    }
+   ]
+  },
+  "HmIP-SMO-A-2": {
+   "power": "battery",
+   "family": "HmIP-RF",
+   "slots": [
+    {
+     "count": 2,
+     "type": "AA"
+    }
+   ],
+   "outdoor": true,
+   "confidence": "manufacturer",
+   "sources": [
+    {
+     "id": "eq3-manual",
+     "url": "https://homematic-ip.com/sites/default/files/downloads/hmip-smo-a-2-um-web.pdf",
+     "quote": "2x 1,5 V LR6/Mignon/AA"
+    },
+    {
+     "id": "battery-notes",
+     "says": "2x AA"
+    }
+   ]
+  },
+  "HmIP-SMO230": {
+   "power": "mains",
+   "family": "HmIP-RF",
+   "confidence": "manufacturer",
+   "sources": [
+    {
+     "id": "eq3-site",
+     "url": "https://homematic-ip.com/de/produkt/bewegungsmelder-mit-schaltaktor-aussen",
+     "quote": "230 V/50 Hz"
+    },
+    {
+     "id": "aiohomematic",
+     "says": "UNKNOWN"
+    }
+   ]
+  },
+  "HMIP-SMO230-A": {
+   "power": "mains",
+   "family": "HmIP-RF",
+   "confidence": "assumed",
+   "sources": [
+    {
+     "id": "classification",
+     "says": "mains actuator by model and description: Homematic IP Motion Detector, outdoor, 230V"
+    }
+   ]
+  },
+  "HmIP-SPDR": {
+   "power": "battery",
+   "family": "HmIP-RF",
+   "slots": [
+    {
+     "count": 2,
+     "type": "AA"
+    }
+   ],
+   "voltage": {
+    "dp": "0/OPERATING_VOLTAGE",
+    "low": 2.4
+   },
+   "low_bat_limit": 2.4,
+   "life_years": 2.0,
+   "confidence": "manufacturer",
+   "sources": [
+    {
+     "id": "eq3-site",
+     "url": "https://homematic-ip.com/de/produkt/durchgangssensor-mit-richtungserkennung",
+     "quote": "2x 1,5 V LR6/Mignon/AA"
+    },
+    {
+     "id": "corpus",
+     "says": "LOW_BAT, OPERATING_VOLTAGE; LOW_BAT_LIMIT 2.4"
+    },
+    {
+     "id": "aiohomematic",
+     "says": "2x AA"
+    },
+    {
+     "id": "openhab",
+     "says": "2x AA"
+    },
+    {
+     "id": "iobroker-servicemeldungen",
+     "says": "2x AA"
+    }
+   ]
+  },
+  "HmIP-SPI": {
+   "power": "battery",
+   "family": "HmIP-RF",
+   "slots": [
+    {
+     "count": 2,
+     "type": "AA"
+    }
+   ],
+   "voltage": {
+    "dp": "0/OPERATING_VOLTAGE",
+    "low": 2.4
+   },
+   "low_bat_limit": 2.4,
+   "life_years": 2.0,
+   "confidence": "manufacturer",
+   "sources": [
+    {
+     "id": "eq3-site",
+     "url": "https://homematic-ip.com/de/produkt/praesenzmelder-innen",
+     "quote": "2 x 1,5 V LR6/Mignon/AA"
+    },
+    {
+     "id": "corpus",
+     "says": "LOW_BAT, OPERATING_VOLTAGE; LOW_BAT_LIMIT 2.4"
+    },
+    {
+     "id": "battery-notes",
+     "says": "2x AA"
+    },
+    {
+     "id": "aiohomematic",
+     "says": "2x AA"
+    },
+    {
+     "id": "openhab",
+     "says": "2x AA"
+    },
+    {
+     "id": "iobroker-servicemeldungen",
+     "says": "2x AA"
+    }
+   ]
+  },
+  "HmIP-SRD": {
+   "power": "mains",
+   "family": "HmIP-RF",
+   "confidence": "manufacturer",
+   "sources": [
+    {
+     "id": "eq3-site",
+     "url": "https://homematic-ip.com/de/produkt/regensensor",
+     "quote": "10-19 VDC (max. 320 mA) oder 12 VAC/50 Hz (max. 400 mA)"
+    }
+   ]
+  },
+  "HmIP-SRH": {
+   "power": "battery",
+   "family": "HmIP-RF",
+   "slots": [
+    {
+     "count": 1,
+     "type": "AAA"
+    }
+   ],
+   "voltage": {
+    "dp": "0/OPERATING_VOLTAGE",
+    "low": 1.1
+   },
+   "low_bat_limit": 1.1,
+   "life_years": 2.0,
+   "confidence": "manufacturer",
+   "sources": [
+    {
+     "id": "eq3-site",
+     "url": "https://homematic-ip.com/de/produkt/fenstergriffsensor",
+     "quote": "1x 1,5 V LR03/Micro/AAA"
+    },
+    {
+     "id": "corpus",
+     "says": "LOW_BAT, OPERATING_VOLTAGE; LOW_BAT_LIMIT 1.1"
+    },
+    {
+     "id": "battery-notes",
+     "says": "1x AAA"
+    },
+    {
+     "id": "aiohomematic",
+     "says": "1x AAA"
+    },
+    {
+     "id": "openhab",
+     "says": "1x AAA"
+    },
+    {
+     "id": "iobroker-servicemeldungen",
+     "says": "1x AAA"
+    }
+   ]
+  },
+  "HmIP-STE2-PCB": {
+   "power": "battery-or-dc",
+   "family": "HmIP-RF",
+   "confidence": "prior-art",
+   "slots": [
+    {
+     "count": 2,
+     "type": "AA",
+     "chemistry": "alkaline"
+    }
+   ],
+   "note": "12 V DC/AC per the ELV manual, 2x AA per battery-notes and aiohomematic; battery-or-dc (2026-10-27). iobroker-servicemeldungen says fixed",
+   "sources": [
+    {
+     "id": "elv-manual",
+     "url": "https://media.elv.com/file/155614_um.pdf",
+     "quote": "Versorgungsspannung: 12 VDC (max. 50 mA) 12 VAC/50 Hz (max. 50 mA)"
+    },
+    {
+     "id": "battery-notes",
+     "says": "2x AA"
+    },
+    {
+     "id": "aiohomematic",
+     "says": "2x AA"
+    },
+    {
+     "id": "iobroker-servicemeldungen",
+     "says": "fixed"
+    }
+   ]
+  },
+  "HmIP-STH": {
+   "power": "battery",
+   "family": "HmIP-RF",
+   "slots": [
+    {
+     "count": 2,
+     "type": "AAA"
+    }
+   ],
+   "life_years": 2.0,
+   "confidence": "manufacturer",
+   "sources": [
+    {
+     "id": "eq3-site",
+     "url": "https://homematic-ip.com/de/produkt/temperatur-und-luftfeuchtigkeitssensor-innen",
+     "quote": "2x 1,5 V LR03/Micro/AAA"
+    },
+    {
+     "id": "battery-notes",
+     "says": "2x AAA"
+    },
+    {
+     "id": "aiohomematic",
+     "says": "2x AAA"
+    },
+    {
+     "id": "openhab",
+     "says": "2x AAA"
+    },
+    {
+     "id": "iobroker-servicemeldungen",
+     "says": "2x AAA"
+    }
+   ]
+  },
+  "HmIP-STH-A": {
+   "power": "battery",
+   "family": "HmIP-RF",
+   "slots": [
+    {
+     "count": 2,
+     "type": "AAA"
+    }
+   ],
+   "life_years": 2.0,
+   "confidence": "manufacturer",
+   "sources": [
+    {
+     "id": "eq3-site",
+     "url": "https://homematic-ip.com/de/produkt/temperatur-und-luftfeuchtigkeitssensor-innen-anthrazit",
+     "quote": "2x 1,5 V LR03/Micro/AAA"
+    }
+   ]
+  },
+  "HmIP-STHD": {
+   "power": "battery",
+   "family": "HmIP-RF",
+   "slots": [
+    {
+     "count": 2,
+     "type": "AAA"
+    }
+   ],
+   "life_years": 2.0,
+   "confidence": "manufacturer",
+   "sources": [
+    {
+     "id": "eq3-site",
+     "url": "https://homematic-ip.com/de/produkt/temperatur-und-luftfeuchtigkeitssensor-mit-display-innen",
+     "quote": "2x 1,5 V LR03/Micro/AAA"
+    },
+    {
+     "id": "battery-notes",
+     "says": "2x AAA"
+    },
+    {
+     "id": "aiohomematic",
+     "says": "2x AAA"
+    },
+    {
+     "id": "openhab",
+     "says": "2x AAA"
+    },
+    {
+     "id": "iobroker-servicemeldungen",
+     "says": "2x AAA"
+    }
+   ]
+  },
+  "HmIP-STHD-A": {
+   "power": "battery",
+   "family": "HmIP-RF",
+   "slots": [
+    {
+     "count": 2,
+     "type": "AAA"
+    }
+   ],
+   "life_years": 2.0,
+   "confidence": "manufacturer",
+   "sources": [
+    {
+     "id": "eq3-site",
+     "url": "https://homematic-ip.com/de/produkt/temperatur-und-luftfeuchtigkeitssensor-mit-display-innen-anthrazit",
+     "quote": "2x 1,5 V LR03/Micro/AAA"
+    }
+   ]
+  },
+  "HmIP-STHO": {
+   "power": "battery",
+   "family": "HmIP-RF",
+   "slots": [
+    {
+     "count": 2,
+     "type": "AA"
+    }
+   ],
+   "life_years": 5.0,
+   "outdoor": true,
+   "confidence": "manufacturer",
+   "sources": [
+    {
+     "id": "eq3-site",
+     "url": "https://homematic-ip.com/de/produkt/temperatur-und-luftfeuchtigkeitssensor-aussen",
+     "quote": "2x 1,5 V LR6/Mignon/AA"
+    },
+    {
+     "id": "battery-notes",
+     "says": "2x AA"
+    },
+    {
+     "id": "aiohomematic",
+     "says": "2x AA"
+    },
+    {
+     "id": "openhab",
+     "says": "2x AA"
+    },
+    {
+     "id": "iobroker-servicemeldungen",
+     "says": "2x AA"
+    }
+   ]
+  },
+  "HmIP-STHO-A": {
+   "power": "battery",
+   "family": "HmIP-RF",
+   "slots": [
+    {
+     "count": 2,
+     "type": "AA"
+    }
+   ],
+   "life_years": 5,
+   "outdoor": true,
+   "confidence": "manufacturer",
+   "sources": [
+    {
+     "id": "eq3-manual",
+     "url": "https://homematic-ip.com/sites/default/files/downloads/hmip-stho-a_um_web.pdf",
+     "quote": "2x 1,5 V LR6/Mignon/AA"
+    },
+    {
+     "id": "battery-notes",
+     "says": "2x AA"
+    },
+    {
+     "id": "openhab",
+     "says": "2x AA"
+    },
+    {
+     "id": "iobroker-servicemeldungen",
+     "says": "2x AA"
+    }
+   ]
+  },
+  "HmIP-STV": {
+   "power": "battery",
+   "family": "HmIP-RF",
+   "slots": [
+    {
+     "count": 2,
+     "type": "AAA"
+    }
+   ],
+   "life_years": 2.0,
+   "confidence": "manufacturer",
+   "sources": [
+    {
+     "id": "eq3-site",
+     "url": "https://homematic-ip.com/de/produkt/neigungs-und-erschuetterungssensor",
+     "quote": "2x 1,5 V LR03/Micro/AAA"
+    },
+    {
+     "id": "battery-notes",
+     "says": "2x AAA"
+    },
+    {
+     "id": "aiohomematic",
+     "says": "2x AAA"
+    }
+   ]
+  },
+  "HmIP-SWD": {
+   "power": "battery",
+   "family": "HmIP-RF",
+   "slots": [
+    {
+     "count": 2,
+     "type": "AAA"
+    }
+   ],
+   "voltage": {
+    "dp": "0/OPERATING_VOLTAGE",
+    "low": 2.2
+   },
+   "low_bat_limit": 2.2,
+   "life_years": 5,
+   "confidence": "manufacturer",
+   "note": "prior art disagrees with the manufacturer: iobroker-servicemeldungen says 2x AA",
+   "sources": [
+    {
+     "id": "eq3-manual",
+     "url": "https://homematic-ip.com/sites/default/files/downloads/hmip-swd_um_web.pdf",
+     "quote": "2x 1,5 V LR03/Micro/AAA"
+    },
+    {
+     "id": "corpus",
+     "says": "LOW_BAT, OPERATING_VOLTAGE; LOW_BAT_LIMIT 2.2"
+    },
+    {
+     "id": "battery-notes",
+     "says": "2x AAA"
+    },
+    {
+     "id": "aiohomematic",
+     "says": "2x AAA"
+    },
+    {
+     "id": "openhab",
+     "says": "2x AAA"
+    },
+    {
+     "id": "iobroker-servicemeldungen",
+     "says": "2x AA"
+    }
+   ]
+  },
+  "HmIP-SWD-2": {
+   "power": "battery",
+   "family": "HmIP-RF",
+   "slots": [
+    {
+     "count": 2,
+     "type": "AAA"
+    }
+   ],
+   "life_years": 5.0,
+   "confidence": "manufacturer",
+   "sources": [
+    {
+     "id": "eq3-site",
+     "url": "https://homematic-ip.com/de/produkt/wassersensor",
+     "quote": "2x 1,5 V LR03/Micro/AAA"
+    }
+   ]
+  },
+  "HmIP-SWDM": {
+   "power": "battery",
+   "family": "HmIP-RF",
+   "slots": [
+    {
+     "count": 2,
+     "type": "AAA"
+    }
+   ],
+   "voltage": {
+    "dp": "0/OPERATING_VOLTAGE",
+    "low": 2.2
+   },
+   "low_bat_limit": 2.2,
+   "confidence": "prior-art",
+   "sources": [
+    {
+     "id": "battery-notes",
+     "says": "2x AAA"
+    },
+    {
+     "id": "aiohomematic",
+     "says": "2x AAA"
+    },
+    {
+     "id": "openhab",
+     "says": "2x AAA"
+    },
+    {
+     "id": "iobroker-servicemeldungen",
+     "says": "2x AAA"
+    },
+    {
+     "id": "corpus",
+     "says": "LOW_BAT, OPERATING_VOLTAGE; LOW_BAT_LIMIT 2.2"
+    }
+   ]
+  },
+  "HmIP-SWDM-2": {
+   "power": "battery",
+   "family": "HmIP-RF",
+   "slots": [
+    {
+     "count": 2,
+     "type": "AAA"
+    }
+   ],
+   "life_years": 4.0,
+   "confidence": "manufacturer",
+   "sources": [
+    {
+     "id": "eq3-site",
+     "url": "https://homematic-ip.com/de/produkt/fenster-und-tuerkontakt-mit-magnet",
+     "quote": "2x 1,5 V LR03/Micro/AAA"
+    },
+    {
+     "id": "battery-notes",
+     "says": "2x AAA"
+    }
+   ]
+  },
+  "HmIP-SWDM-B2": {
+   "power": "battery",
+   "family": "HmIP-RF",
+   "slots": [
+    {
+     "count": 2,
+     "type": "AAA"
+    }
+   ],
+   "confidence": "single-source",
+   "sources": [
+    {
+     "id": "battery-notes",
+     "says": "2x AAA"
+    },
+    {
+     "id": "iobroker-servicemeldungen",
+     "says": "2x AAA"
+    }
+   ]
+  },
+  "HMIP-SWDO": {
+   "power": "battery",
+   "family": "HmIP-RF",
+   "slots": [
+    {
+     "count": 1,
+     "type": "AAA"
+    }
+   ],
+   "voltage": {
+    "dp": "0/OPERATING_VOLTAGE",
+    "low": 1.1
+   },
+   "low_bat_limit": 1.1,
+   "life_years": 2,
+   "confidence": "manufacturer",
+   "sources": [
+    {
+     "id": "elv-manual",
+     "url": "https://media.elv.com/file/140733_um.pdf",
+     "quote": "1x 1,5 V LR03/Micro/AAA"
+    },
+    {
+     "id": "corpus",
+     "says": "LOW_BAT, OPERATING_VOLTAGE; LOW_BAT_LIMIT 1.1"
+    },
+    {
+     "id": "battery-notes",
+     "says": "1x AAA"
+    },
+    {
+     "id": "aiohomematic",
+     "says": "1x AAA"
+    },
+    {
+     "id": "openhab",
+     "says": "1x AAA"
+    },
+    {
+     "id": "iobroker-servicemeldungen",
+     "says": "1x AAA"
+    }
+   ]
+  },
+  "HmIP-SWDO-2": {
+   "power": "battery",
+   "family": "HmIP-RF",
+   "slots": [
+    {
+     "count": 1,
+     "type": "AAA"
+    }
+   ],
+   "life_years": 2.0,
+   "confidence": "manufacturer",
+   "sources": [
+    {
+     "id": "eq3-site",
+     "url": "https://homematic-ip.com/de/produkt/fenster-und-tuerkontakt-optisch",
+     "quote": "1x 1,5 V LR03/Micro/AAA"
+    },
+    {
+     "id": "battery-notes",
+     "says": "1x AAA"
+    }
+   ]
+  },
+  "HmIP-SWDO-A": {
+   "power": "battery",
+   "family": "HmIP-RF",
+   "slots": [
+    {
+     "count": 1,
+     "type": "AAA"
+    }
+   ],
+   "life_years": 2,
+   "confidence": "manufacturer",
+   "sources": [
+    {
+     "id": "eq3-manual",
+     "url": "https://homematic-ip.com/sites/default/files/downloads/157857a0_160027a0_hmip-swdo-2_um.pdf",
+     "quote": "1x 1,5 V LR03/Micro/AAA"
+    }
+   ]
+  },
+  "HmIP-SWDO-I": {
+   "power": "battery",
+   "family": "HmIP-RF",
+   "slots": [
+    {
+     "count": 2,
+     "type": "AAA"
+    }
+   ],
+   "voltage": {
+    "dp": "0/OPERATING_VOLTAGE",
+    "low": 2.2
+   },
+   "low_bat_limit": 2.2,
+   "life_years": 4.0,
+   "confidence": "manufacturer",
+   "sources": [
+    {
+     "id": "eq3-site",
+     "url": "https://homematic-ip.com/de/produkt/fenster-und-tuerkontakt-verdeckter-einbau",
+     "quote": "2x 1,5 V LR03/Micro/AAA"
+    },
+    {
+     "id": "corpus",
+     "says": "LOW_BAT, OPERATING_VOLTAGE; LOW_BAT_LIMIT 2.2"
+    },
+    {
+     "id": "battery-notes",
+     "says": "2x AAA"
+    },
+    {
+     "id": "aiohomematic",
+     "says": "2x AAA"
+    },
+    {
+     "id": "openhab",
+     "says": "2x AAA"
+    },
+    {
+     "id": "iobroker-servicemeldungen",
+     "says": "2x AAA"
+    }
+   ]
+  },
+  "HmIP-SWDO-PL": {
+   "power": "battery",
+   "family": "HmIP-RF",
+   "slots": [
+    {
+     "count": 2,
+     "type": "AAA"
+    }
+   ],
+   "life_years": 4,
+   "confidence": "manufacturer",
+   "sources": [
+    {
+     "id": "elv-manual",
+     "url": "https://media.elv.com/file/153734_um.pdf",
+     "quote": "2x 1,5 V LR03/Micro/AAA"
+    },
+    {
+     "id": "battery-notes",
+     "says": "2x AAA"
+    },
+    {
+     "id": "aiohomematic",
+     "says": "2x AAA"
+    }
+   ]
+  },
+  "HmIP-SWDO-PL-2": {
+   "power": "battery",
+   "family": "HmIP-RF",
+   "slots": [
+    {
+     "count": 2,
+     "type": "AAA"
+    }
+   ],
+   "life_years": 7.0,
+   "confidence": "manufacturer",
+   "sources": [
+    {
+     "id": "eq3-site",
+     "url": "https://homematic-ip.com/de/produkt/fenster-und-tuerkontakt-optisch-plus",
+     "quote": "2x 1,5 V LR03/Micro/AAA"
+    },
+    {
+     "id": "battery-notes",
+     "says": "2x AAA"
+    }
+   ]
+  },
+  "HmIP-SWO-B": {
+   "power": "battery",
+   "family": "HmIP-RF",
+   "slots": [
+    {
+     "count": 3,
+     "type": "AA"
+    }
+   ],
+   "life_years": 2.0,
+   "outdoor": true,
+   "confidence": "manufacturer",
+   "sources": [
+    {
+     "id": "eq3-site",
+     "url": "https://homematic-ip.com/de/produkt/wettersensor-basic",
+     "quote": "3x 1,5 V LR6/Mignon/AA"
+    },
+    {
+     "id": "battery-notes",
+     "says": "3x AA"
+    },
+    {
+     "id": "openhab",
+     "says": "3x AA"
+    },
+    {
+     "id": "iobroker-servicemeldungen",
+     "says": "3x AA"
+    }
+   ]
+  },
+  "HmIP-SWO-PL": {
+   "power": "battery",
+   "family": "HmIP-RF",
+   "slots": [
+    {
+     "count": 3,
+     "type": "AA"
+    }
+   ],
+   "life_years": 2.0,
+   "outdoor": true,
+   "confidence": "manufacturer",
+   "sources": [
+    {
+     "id": "eq3-site",
+     "url": "https://homematic-ip.com/de/produkt/wettersensor-plus",
+     "quote": "3x 1,5 V LR6/Mignon/AA"
+    },
+    {
+     "id": "openhab",
+     "says": "3x AA"
+    },
+    {
+     "id": "iobroker-servicemeldungen",
+     "says": "3x AA"
+    }
+   ]
+  },
+  "HmIP-SWO-PR": {
+   "power": "battery",
+   "family": "HmIP-RF",
+   "slots": [
+    {
+     "count": 3,
+     "type": "AA"
+    }
+   ],
+   "voltage": {
+    "dp": "0/OPERATING_VOLTAGE",
+    "low": 3.2
+   },
+   "low_bat_limit": 3.2,
+   "life_years": 2.0,
+   "outdoor": true,
+   "confidence": "manufacturer",
+   "sources": [
+    {
+     "id": "eq3-site",
+     "url": "https://homematic-ip.com/de/produkt/wettersensor-pro",
+     "quote": "3x 1,5 V LR6/Mignon/AA"
+    },
+    {
+     "id": "corpus",
+     "says": "LOW_BAT, OPERATING_VOLTAGE; LOW_BAT_LIMIT 3.2"
+    },
+    {
+     "id": "battery-notes",
+     "says": "3x AA"
+    },
+    {
+     "id": "openhab",
+     "says": "3x AA"
+    },
+    {
+     "id": "iobroker-servicemeldungen",
+     "says": "3x AA"
+    }
+   ]
+  },
+  "HmIP-SWSD": {
+   "power": "battery",
+   "family": "HmIP-RF",
+   "slots": [
+    {
+     "count": 2,
+     "type": "fixed",
+     "replaceable": false
+    }
+   ],
+   "voltage": null,
+   "life_years": 10.0,
+   "confidence": "manufacturer",
+   "sources": [
+    {
+     "id": "eq3-site",
+     "url": "https://homematic-ip.com/de/produkt/rauchwarnmelder-mit-q-label",
+     "quote": "2x 3 V Lithium Batterien (fest verbaut)"
+    },
+    {
+     "id": "corpus",
+     "says": "LOW_BAT"
+    },
+    {
+     "id": "battery-notes",
+     "says": "FDK CR17450E-N (3V)"
+    },
+    {
+     "id": "aiohomematic",
+     "says": "UNKNOWN"
+    },
+    {
+     "id": "iobroker-servicemeldungen",
+     "says": "fixed"
+    }
+   ]
+  },
+  "HmIP-SWSD-2": {
+   "power": "battery",
+   "family": "HmIP-RF",
+   "slots": [
+    {
+     "count": 2,
+     "type": "fixed",
+     "replaceable": false
+    }
+   ],
+   "life_years": 10.0,
+   "confidence": "manufacturer",
+   "sources": [
+    {
+     "id": "eq3-site",
+     "url": "https://homematic-ip.com/de/produkt/rauchwarnmelder",
+     "quote": "2x 3 V Lithium Batterien (fest verbaut)"
+    },
+    {
+     "id": "battery-notes",
+     "says": "Irreplaceable"
+    }
+   ]
+  },
+  "HmIP-SWSD-2-NL": {
+   "power": "battery",
+   "family": "HmIP-RF",
+   "slots": [
+    {
+     "count": 2,
+     "type": "fixed",
+     "replaceable": false
+    }
+   ],
+   "life_years": 10,
+   "confidence": "manufacturer",
+   "sources": [
+    {
+     "id": "eq3-manual",
+     "url": "https://homematic-ip.com/sites/default/files/downloads/161884a0_hmip-swsd-2-nl_um_gefn.pdf",
+     "quote": "2x fest verbaute 3 V-Lithium-Batterien"
+    }
+   ]
+  },
+  "HmIP-UDI": {
+   "power": "mains",
+   "family": "HmIP-RF",
+   "confidence": "manufacturer",
+   "sources": [
+    {
+     "id": "eq3-site",
+     "url": "https://homematic-ip.com/de/produkt/universal-dimmereinsatz",
+     "quote": "230 V / 50 Hz"
+    }
+   ]
+  },
+  "HmIP-UDI-PB2": {
+   "power": "mains",
+   "family": "HmIP-RF",
+   "confidence": "manufacturer",
+   "sources": [
+    {
+     "id": "eq3-site",
+     "url": "https://homematic-ip.com/de/produkt/universal-dimmeraufsatz-taster",
+     "quote": "12 V DC"
+    }
+   ]
+  },
+  "HmIP-UDI-PB2-A": {
+   "power": "mains",
+   "family": "HmIP-RF",
+   "confidence": "manufacturer",
+   "sources": [
+    {
+     "id": "eq3-site",
+     "url": "https://homematic-ip.com/de/produkt/universal-dimmeraufsatz-taster-anthrazit",
+     "quote": "12 V DC"
+    }
+   ]
+  },
+  "HmIP-UDI-SMI55": {
+   "power": "mains",
+   "family": "HmIP-RF",
+   "confidence": "manufacturer",
+   "note": "prior art disagrees with the manufacturer: aiohomematic says 2x AAA",
+   "sources": [
+    {
+     "id": "eq3-site",
+     "url": "https://homematic-ip.com/de/produkt/universal-dimmeraufsatz-bewegungsmelder",
+     "quote": "12 V DC"
+    },
+    {
+     "id": "aiohomematic",
+     "says": "2x AAA"
+    }
+   ]
+  },
+  "HmIP-UDI-SMI55-A": {
+   "power": "mains",
+   "family": "HmIP-RF",
+   "confidence": "manufacturer",
+   "sources": [
+    {
+     "id": "eq3-site",
+     "url": "https://homematic-ip.com/de/produkt/universal-dimmeraufsatz-bewegungsmelder-anthrazit",
+     "quote": "12 V DC"
+    }
+   ]
+  },
+  "HMIP-USBSM": {
+   "power": "mains",
+   "family": "HmIP-RF",
+   "confidence": "assumed",
+   "sources": [
+    {
+     "id": "classification",
+     "says": "mains actuator by model and description: Homematic IP Switch Actuator and Meter for USB"
+    }
+   ]
+  },
+  "HmIP-WGC": {
+   "power": "battery-or-dc",
+   "family": "HmIP-RF",
+   "slots": [
+    {
+     "count": 2,
+     "type": "AA"
+    }
+   ],
+   "voltage": {
+    "dp": "0/OPERATING_VOLTAGE",
+    "low": 2.6
+   },
+   "low_bat_limit": 2.6,
+   "life_years": 2.0,
+   "confidence": "manufacturer",
+   "sources": [
+    {
+     "id": "eq3-site",
+     "url": "https://homematic-ip.com/de/produkt/garagentortaster",
+     "quote": "2x 1,5 V LR6/Mignon/AA oder 5-24 VDC"
+    },
+    {
+     "id": "corpus",
+     "says": "LOW_BAT, OPERATING_VOLTAGE; LOW_BAT_LIMIT 2.6"
+    },
+    {
+     "id": "battery-notes",
+     "says": "2x AA"
+    },
+    {
+     "id": "aiohomematic",
+     "says": "2x AA"
+    },
+    {
+     "id": "openhab",
+     "says": "2x AA"
+    },
+    {
+     "id": "iobroker-servicemeldungen",
+     "says": "2x AA"
+    }
+   ]
+  },
+  "HmIP-WGD": {
+   "power": "mains",
+   "family": "HmIP-RF",
+   "confidence": "manufacturer",
+   "sources": [
+    {
+     "id": "eq3-site",
+     "url": "https://homematic-ip.com/de/produkt/glasdisplay",
+     "quote": "230 V / 50 Hz"
+    }
+   ]
+  },
+  "HmIP-WGD-PL": {
+   "power": "mains",
+   "family": "HmIP-RF",
+   "confidence": "manufacturer",
+   "sources": [
+    {
+     "id": "eq3-site",
+     "url": "https://homematic-ip.com/de/produkt/glasdisplay-plus",
+     "quote": "230 V / 50 Hz"
+    }
+   ]
+  },
+  "HmIP-WGS": {
+   "power": "mains",
+   "family": "HmIP-RF",
+   "confidence": "manufacturer",
+   "sources": [
+    {
+     "id": "eq3-site",
+     "url": "https://homematic-ip.com/de/produkt/glastaster",
+     "quote": "230 V/50 Hz"
+    }
+   ]
+  },
+  "HmIP-WGS-A": {
+   "power": "mains",
+   "family": "HmIP-RF",
+   "confidence": "manufacturer",
+   "sources": [
+    {
+     "id": "eq3-site",
+     "url": "https://homematic-ip.com/de/produkt/glastaster-schwarz",
+     "quote": "230 V/50 Hz"
+    }
+   ]
+  },
+  "HmIP-WGT": {
+   "power": "mains",
+   "family": "HmIP-RF",
+   "confidence": "manufacturer",
+   "sources": [
+    {
+     "id": "eq3-site",
+     "url": "https://homematic-ip.com/de/produkt/glas-wandthermostat",
+     "quote": "230 V/50 Hz"
+    }
+   ]
+  },
+  "HmIP-WGT-A": {
+   "power": "mains",
+   "family": "HmIP-RF",
+   "confidence": "manufacturer",
+   "sources": [
+    {
+     "id": "eq3-site",
+     "url": "https://homematic-ip.com/de/produkt/glas-wandthermostat-schwarz",
+     "quote": "230 V/50 Hz"
+    }
+   ]
+  },
+  "HmIP-WGTC": {
+   "power": "mains",
+   "family": "HmIP-RF",
+   "confidence": "manufacturer",
+   "sources": [
+    {
+     "id": "eq3-site",
+     "url": "https://homematic-ip.com/de/produkt/glas-wandthermostat-mit-co2-sensor",
+     "quote": "230 V/50 Hz"
+    }
+   ]
+  },
+  "HmIP-WGTC-A": {
+   "power": "mains",
+   "family": "HmIP-RF",
+   "confidence": "manufacturer",
+   "sources": [
+    {
+     "id": "eq3-site",
+     "url": "https://homematic-ip.com/de/produkt/glas-wandthermostat-mit-co2-sensor-schwarz",
+     "quote": "230 V/50 Hz"
+    }
+   ]
+  },
+  "HmIP-WHS2": {
+   "power": "mains",
+   "family": "HmIP-RF",
+   "confidence": "manufacturer",
+   "sources": [
+    {
+     "id": "eq3-site",
+     "url": "https://homematic-ip.com/de/produkt/schaltaktor-fuer-heizungsanlagen-2-fach",
+     "quote": "230 V/50 Hz"
+    }
+   ]
+  },
+  "HmIP-WKP": {
+   "power": "battery",
+   "family": "HmIP-RF",
+   "slots": [
+    {
+     "count": 2,
+     "type": "AAA"
+    }
+   ],
+   "life_years": 2.0,
+   "confidence": "manufacturer",
+   "sources": [
+    {
+     "id": "eq3-site",
+     "url": "https://homematic-ip.com/de/produkt/keypad",
+     "quote": "2x 1,5 V LR03/Micro/AAA"
+    },
+    {
+     "id": "battery-notes",
+     "says": "2x AAA"
+    },
+    {
+     "id": "aiohomematic",
+     "says": "2x AAA"
+    }
+   ]
+  },
+  "HMIP-WRC2": {
+   "power": "battery",
+   "family": "HmIP-RF",
+   "slots": [
+    {
+     "count": 2,
+     "type": "AAA"
+    }
+   ],
+   "voltage": {
+    "dp": "0/OPERATING_VOLTAGE",
+    "low": 2.2
+   },
+   "low_bat_limit": 2.2,
+   "life_years": 4,
+   "confidence": "manufacturer",
+   "sources": [
+    {
+     "id": "eq3-manual",
+     "url": "https://homematic-ip.com/sites/default/files/downloads/hmip-wrc2_um_web.pdf",
+     "quote": "2x 1,5 V LR03/Micro/AAA"
+    },
+    {
+     "id": "corpus",
+     "says": "LOW_BAT, OPERATING_VOLTAGE; LOW_BAT_LIMIT 2.2"
+    },
+    {
+     "id": "battery-notes",
+     "says": "2x AAA"
+    },
+    {
+     "id": "openhab",
+     "says": "2x AAA"
+    },
+    {
+     "id": "iobroker-servicemeldungen",
+     "says": "2x AAA"
+    }
+   ]
+  },
+  "HmIP-WRC2-2": {
+   "power": "battery",
+   "family": "HmIP-RF",
+   "slots": [
+    {
+     "count": 2,
+     "type": "AAA"
+    }
+   ],
+   "life_years": 4.0,
+   "confidence": "manufacturer",
+   "sources": [
+    {
+     "id": "eq3-site",
+     "url": "https://homematic-ip.com/de/produkt/wandtaster-2-fach",
+     "quote": "2x 1,5 V LR03/Micro/AAA"
+    }
+   ]
+  },
+  "HmIP-WRC2-A": {
+   "power": "battery",
+   "family": "HmIP-RF",
+   "slots": [
+    {
+     "count": 2,
+     "type": "AAA"
+    }
+   ],
+   "life_years": 4,
+   "confidence": "manufacturer",
+   "sources": [
+    {
+     "id": "eq3-manual",
+     "url": "https://homematic-ip.com/sites/default/files/downloads/hmip-wrc2-a-um-gef-eq-3.pdf",
+     "quote": "2x 1,5 V LR03/Micro/AAA"
+    }
+   ]
+  },
+  "HmIP-WRC2-A-2": {
+   "power": "battery",
+   "family": "HmIP-RF",
+   "slots": [
+    {
+     "count": 2,
+     "type": "AAA"
+    }
+   ],
+   "life_years": 4,
+   "confidence": "manufacturer",
+   "sources": [
+    {
+     "id": "eq3-manual",
+     "url": "https://homematic-ip.com/sites/default/files/downloads/161830a0_161869a0_hmip-wrc2-a-2_um_g.pdf",
+     "quote": "2x 1,5 V LR03/Micro/AAA"
+    }
+   ]
+  },
+  "HmIP-WRC6": {
+   "power": "battery",
+   "family": "HmIP-RF",
+   "slots": [
+    {
+     "count": 2,
+     "type": "AAA"
+    }
+   ],
+   "voltage": {
+    "dp": "0/OPERATING_VOLTAGE",
+    "low": 2.2
+   },
+   "low_bat_limit": 2.2,
+   "life_years": 4.0,
+   "confidence": "manufacturer",
+   "sources": [
+    {
+     "id": "eq3-site",
+     "url": "https://homematic-ip.com/de/produkt/wandtaster-6-fach",
+     "quote": "2x 1,5 V LR03/Micro/AAA"
+    },
+    {
+     "id": "corpus",
+     "says": "LOW_BAT, OPERATING_VOLTAGE; LOW_BAT_LIMIT 2.2"
+    },
+    {
+     "id": "battery-notes",
+     "says": "2x AAA"
+    },
+    {
+     "id": "openhab",
+     "says": "2x AAA"
+    },
+    {
+     "id": "iobroker-servicemeldungen",
+     "says": "2x AAA"
+    }
+   ]
+  },
+  "HmIP-WRC6-230": {
+   "power": "mains",
+   "family": "HmIP-RF",
+   "confidence": "manufacturer",
+   "sources": [
+    {
+     "id": "eq3-site",
+     "url": "https://homematic-ip.com/de/produkt/wandtaster-6-fach-230-v",
+     "quote": "230 V/50 Hz"
+    },
+    {
+     "id": "aiohomematic",
+     "says": "UNKNOWN"
+    }
+   ]
+  },
+  "HmIP-WRC6-230-A": {
+   "power": "mains",
+   "family": "HmIP-RF",
+   "confidence": "manufacturer",
+   "sources": [
+    {
+     "id": "eq3-site",
+     "url": "https://homematic-ip.com/de/produkt/wandtaster-6-fach-230-v-anthrazit",
+     "quote": "230 V/50 Hz"
+    }
+   ]
+  },
+  "HmIP-WRC6-A": {
+   "power": "battery",
+   "family": "HmIP-RF",
+   "slots": [
+    {
+     "count": 2,
+     "type": "AAA"
+    }
+   ],
+   "life_years": 4,
+   "confidence": "manufacturer",
+   "sources": [
+    {
+     "id": "eq3-manual",
+     "url": "https://homematic-ip.com/sites/default/files/downloads/hmip-wrc6-a-um-gef-eq-3.pdf",
+     "quote": "2x 1,5 V LR03/Micro/AAA"
+    }
+   ]
+  },
+  "HmIP-WRCC2": {
+   "power": "battery",
+   "family": "HmIP-RF",
+   "slots": [
+    {
+     "count": 2,
+     "type": "LR44"
+    }
+   ],
+   "life_years": 3.0,
+   "confidence": "manufacturer",
+   "sources": [
+    {
+     "id": "eq3-site",
+     "url": "https://homematic-ip.com/de/produkt/wandtaster-flach",
+     "quote": "2x 1,5 V LR44 Batterien"
+    },
+    {
+     "id": "battery-notes",
+     "says": "2x LR44"
+    }
+   ]
+  },
+  "HmIP-WRCD": {
+   "power": "battery",
+   "family": "HmIP-RF",
+   "slots": [
+    {
+     "count": 2,
+     "type": "AAA"
+    }
+   ],
+   "confidence": "single-source",
+   "sources": [
+    {
+     "id": "battery-notes",
+     "says": "2x AAA"
+    },
+    {
+     "id": "iobroker-servicemeldungen",
+     "says": "2x AAA"
+    }
+   ]
+  },
+  "HmIP-WRCR": {
+   "power": "battery",
+   "family": "HmIP-RF",
+   "slots": [
+    {
+     "count": 2,
+     "type": "AAA"
+    }
+   ],
+   "life_years": 3.0,
+   "confidence": "manufacturer",
+   "sources": [
+    {
+     "id": "eq3-site",
+     "url": "https://homematic-ip.com/de/produkt/drehtaster",
+     "quote": "2x 1,5 V LR03/Micro/AAA"
+    },
+    {
+     "id": "battery-notes",
+     "says": "2x AAA"
+    },
+    {
+     "id": "iobroker-servicemeldungen",
+     "says": "2x AAA"
+    }
+   ]
+  },
+  "HmIP-WSM": {
+   "power": "battery",
+   "family": "HmIP-RF",
+   "slots": [
+    {
+     "count": 2,
+     "type": "AA"
+    }
+   ],
+   "life_years": 1.0,
+   "confidence": "manufacturer",
+   "sources": [
+    {
+     "id": "eq3-site",
+     "url": "https://homematic-ip.com/de/produkt/bewaesserungsaktor",
+     "quote": "2x 1,5 V LR6/Mignon/AA"
+    },
+    {
+     "id": "aiohomematic",
+     "says": "2x AA"
+    }
+   ]
+  },
+  "HmIP-WSS": {
+   "power": "rechargeable",
+   "family": "HmIP-RF",
+   "slots": [
+    {
+     "count": 3,
+     "type": "AAA",
+     "chemistry": "nimh",
+     "note": "backup cells; runs on the supplied mains adapter"
+    }
+   ],
+   "confidence": "manufacturer",
+   "note": "mains adapter with rechargeable backup cells",
+   "sources": [
+    {
+     "id": "eq3-manual",
+     "url": "https://homematic-ip.com/sites/default/files/downloads/160980a0_hmip-wss_um_g.pdf",
+     "quote": "3× 1,2 V HR03/Micro/AAA, 1× Netzteil"
+    }
+   ]
+  },
+  "HMIP-WSS-GB": {
+   "power": "mains",
+   "family": "HmIP-RF",
+   "confidence": "assumed",
+   "sources": [
+    {
+     "id": "classification",
+     "says": "mains actuator by model and description: ?"
+    }
+   ]
+  },
+  "HMIP-WTH": {
+   "power": "battery",
+   "family": "HmIP-RF",
+   "slots": [
+    {
+     "count": 2,
+     "type": "AAA"
+    }
+   ],
+   "voltage": {
+    "dp": "0/OPERATING_VOLTAGE",
+    "low": 2.2
+   },
+   "low_bat_limit": 2.2,
+   "confidence": "prior-art",
+   "sources": [
+    {
+     "id": "battery-notes",
+     "says": "2x AAA"
+    },
+    {
+     "id": "aiohomematic",
+     "says": "2x AAA"
+    },
+    {
+     "id": "openhab",
+     "says": "2x AAA"
+    },
+    {
+     "id": "iobroker-servicemeldungen",
+     "says": "2x AAA"
+    },
+    {
+     "id": "corpus",
+     "says": "LOW_BAT, OPERATING_VOLTAGE; LOW_BAT_LIMIT 2.2"
+    }
+   ]
+  },
+  "HmIP-WTH-1": {
+   "power": "battery",
+   "family": "HmIP-RF",
+   "slots": [
+    {
+     "count": 2,
+     "type": "AAA"
+    }
+   ],
+   "life_years": 2.0,
+   "confidence": "manufacturer",
+   "sources": [
+    {
+     "id": "eq3-site",
+     "url": "https://homematic-ip.com/de/produkt/wandthermostat-mit-luftfeuchtigkeitssensor",
+     "quote": "2x 1,5 V LR03/Micro/AAA"
+    },
+    {
+     "id": "battery-notes",
+     "says": "2x AAA"
+    }
+   ]
+  },
+  "HmIP-WTH-2": {
+   "power": "battery",
+   "family": "HmIP-RF",
+   "slots": [
+    {
+     "count": 2,
+     "type": "AAA"
+    }
+   ],
+   "voltage": {
+    "dp": "0/OPERATING_VOLTAGE",
+    "low": 2.2
+   },
+   "low_bat_limit": 2.2,
+   "life_years": 2.0,
+   "confidence": "manufacturer",
+   "sources": [
+    {
+     "id": "eq3-site",
+     "url": "https://homematic-ip.com/de/produkt/wandthermostat-mit-luftfeuchtigkeitssensor-2",
+     "quote": "2x 1,5 V LR03/Micro/AAA"
+    },
+    {
+     "id": "corpus",
+     "says": "LOW_BAT, OPERATING_VOLTAGE; LOW_BAT_LIMIT 2.2"
+    },
+    {
+     "id": "battery-notes",
+     "says": "2x AAA"
+    },
+    {
+     "id": "iobroker-servicemeldungen",
+     "says": "2x AAA"
+    }
+   ]
+  },
+  "HmIP-WTH-3": {
+   "power": "battery",
+   "family": "HmIP-RF",
+   "slots": [
+    {
+     "count": 2,
+     "type": "AAA"
+    }
+   ],
+   "life_years": 2.0,
+   "confidence": "manufacturer",
+   "sources": [
+    {
+     "id": "eq3-site",
+     "url": "https://homematic-ip.com/de/produkt/wandthermostat-mit-luftfeuchtigkeitssensor-3",
+     "quote": "2x 1,5 V LR03/Micro/AAA"
+    }
+   ]
+  },
+  "HmIP-WTH-A": {
+   "power": "battery",
+   "family": "HmIP-RF",
+   "slots": [
+    {
+     "count": 2,
+     "type": "AAA"
+    }
+   ],
+   "life_years": 2,
+   "confidence": "manufacturer",
+   "sources": [
+    {
+     "id": "eq3-manual",
+     "url": "https://homematic-ip.com/sites/default/files/downloads/156669a0_159820a0_hmip-wth-1-um.pdf",
+     "quote": "2x 1,5 V LR03/Micro/AAA"
+    },
+    {
+     "id": "battery-notes",
+     "says": "2x AAA"
+    }
+   ]
+  },
+  "HmIP-WTH-B": {
+   "power": "battery",
+   "family": "HmIP-RF",
+   "slots": [
+    {
+     "count": 2,
+     "type": "AA"
+    }
+   ],
+   "life_years": 5.0,
+   "confidence": "manufacturer",
+   "sources": [
+    {
+     "id": "eq3-site",
+     "url": "https://homematic-ip.com/de/produkt/wandthermostat-basic",
+     "quote": "2x 1,5 V LR6/Mignon/AA"
+    },
+    {
+     "id": "battery-notes",
+     "says": "2x AA"
+    }
+   ]
+  },
+  "HmIP-WTH-B-2": {
+   "power": "battery",
+   "family": "HmIP-RF",
+   "slots": [
+    {
+     "count": 2,
+     "type": "AA"
+    }
+   ],
+   "life_years": 5.0,
+   "confidence": "manufacturer",
+   "sources": [
+    {
+     "id": "eq3-site",
+     "url": "https://homematic-ip.com/de/produkt/wandthermostat-basic",
+     "quote": "2x 1,5 V LR6/Mignon/AA"
+    },
+    {
+     "id": "battery-notes",
+     "says": "2x AA"
+    },
+    {
+     "id": "aiohomematic",
+     "says": "2x AA"
+    }
+   ]
+  },
+  "HmIP-WTH-B-A": {
+   "power": "battery",
+   "family": "HmIP-RF",
+   "slots": [
+    {
+     "count": 2,
+     "type": "AA"
+    }
+   ],
+   "life_years": 5.0,
+   "confidence": "manufacturer",
+   "sources": [
+    {
+     "id": "eq3-site",
+     "url": "https://homematic-ip.com/de/produkt/wandthermostat-basic-anthrazit",
+     "quote": "2x 1,5 V LR6/Mignon/AA"
+    }
+   ]
+  },
+  "HmIP-WUA": {
+   "power": "mains",
+   "family": "HmIP-RF",
+   "confidence": "manufacturer",
+   "sources": [
+    {
+     "id": "eq3-site",
+     "url": "https://homematic-ip.com/de/produkt/universal-schaltaktor",
+     "quote": "230 V/50 Hz"
+    }
+   ]
+  },
+  "HmIPW-BRC2": {
+   "power": "bus",
+   "family": "HmIP-Wired",
+   "confidence": "manufacturer",
+   "sources": [
+    {
+     "id": "eq3-site",
+     "url": "https://homematic-ip.com/de/produkt/wired-wandtaster-fuer-markenschalter-2-fach",
+     "quote": "24 VDC, +5 % -20 %, SELV"
+    }
+   ]
+  },
+  "HmIPW-DRBL4": {
+   "power": "bus",
+   "family": "HmIP-Wired",
+   "confidence": "manufacturer",
+   "sources": [
+    {
+     "id": "eq3-site",
+     "url": "https://homematic-ip.com/de/produkt/wired-jalousieaktor-4-fach",
+     "quote": "24 VDC, ±5 %, SELV"
+    }
+   ]
+  },
+  "HmIPW-DRD3": {
+   "power": "bus",
+   "family": "HmIP-Wired",
+   "confidence": "manufacturer",
+   "sources": [
+    {
+     "id": "eq3-site",
+     "url": "https://homematic-ip.com/de/produkt/wired-dimmaktor-3-fach",
+     "quote": "24 VDC, ±5 %, SELV"
+    }
+   ]
+  },
+  "HmIPW-DRI16": {
+   "power": "bus",
+   "family": "HmIP-Wired",
+   "confidence": "manufacturer",
+   "sources": [
+    {
+     "id": "eq3-site",
+     "url": "https://homematic-ip.com/de/produkt/wired-eingangsmodul-16-fach",
+     "quote": "24 VDC, ±5 %, SELV"
+    }
+   ]
+  },
+  "HmIPW-DRI32": {
+   "power": "bus",
+   "family": "HmIP-Wired",
+   "confidence": "manufacturer",
+   "sources": [
+    {
+     "id": "eq3-site",
+     "url": "https://homematic-ip.com/de/produkt/wired-eingangsmodul-32-fach",
+     "quote": "24 VDC, ±5 %, SELV"
+    }
+   ]
+  },
+  "HmIPW-DRPS4": {
+   "power": "mains",
+   "family": "HmIP-Wired",
+   "confidence": "manufacturer",
+   "sources": [
+    {
+     "id": "eq3-site",
+     "url": "https://homematic-ip.com/de/produkt/wired-netzteil",
+     "quote": "100-240 VAC, 1-phasig"
+    }
+   ]
+  },
+  "HmIPW-DRS4": {
+   "power": "bus",
+   "family": "HmIP-Wired",
+   "confidence": "manufacturer",
+   "sources": [
+    {
+     "id": "eq3-site",
+     "url": "https://homematic-ip.com/de/produkt/wired-schaltaktor-4-fach",
+     "quote": "24 VDC, ±5 %, SELV"
+    }
+   ]
+  },
+  "HmIPW-DRS8": {
+   "power": "bus",
+   "family": "HmIP-Wired",
+   "confidence": "manufacturer",
+   "sources": [
+    {
+     "id": "eq3-site",
+     "url": "https://homematic-ip.com/de/produkt/wired-schaltaktor-8-fach",
+     "quote": "24 VDC, ±5 %, SELV"
+    },
+    {
+     "id": "corpus",
+     "says": "OPERATING_VOLTAGE"
+    }
+   ]
+  },
+  "HmIPW-FAL230-C10": {
+   "power": "bus",
+   "family": "HmIP-Wired",
+   "confidence": "manufacturer",
+   "sources": [
+    {
+     "id": "eq3-site",
+     "url": "https://homematic-ip.com/de/produkt/wired-fussbodenheizungscontroller-10-kanaele-230-v",
+     "quote": "24 VDC, ±5 %, SELV"
+    }
+   ]
+  },
+  "HmIPW-FAL230-C6": {
+   "power": "bus",
+   "family": "HmIP-Wired",
+   "confidence": "manufacturer",
+   "sources": [
+    {
+     "id": "eq3-site",
+     "url": "https://homematic-ip.com/de/produkt/wired-fussbodenheizungscontroller-6-kanaele-230-v",
+     "quote": "24 VDC, ±5 %, SELV"
+    }
+   ]
+  },
+  "HmIPW-FAL24-C10": {
+   "power": "bus",
+   "family": "HmIP-Wired",
+   "confidence": "manufacturer",
+   "sources": [
+    {
+     "id": "eq3-site",
+     "url": "https://homematic-ip.com/de/produkt/wired-fussbodenheizungscontroller-10-kanaele-24-v",
+     "quote": "24 VDC, ±5 %, SELV"
+    }
+   ]
+  },
+  "HmIPW-FAL24-C6": {
+   "power": "bus",
+   "family": "HmIP-Wired",
+   "confidence": "manufacturer",
+   "sources": [
+    {
+     "id": "eq3-site",
+     "url": "https://homematic-ip.com/de/produkt/wired-fussbodenheizungscontroller-6-kanaele-24-v",
+     "quote": "Bus: 24 VDC, ±5 %, SELV/ext. DC-IN (optional): 24 VDC, ±5 %, SELV"
+    }
+   ]
+  },
+  "HmIPW-Falmot-C12": {
+   "power": "bus",
+   "family": "HmIP-Wired",
+   "confidence": "manufacturer",
+   "sources": [
+    {
+     "id": "eq3-site",
+     "url": "https://homematic-ip.com/de/produkt/wired-fussbodenheizungscontroller-12-kanaele-motorisch",
+     "quote": "24 VDC/SELV"
+    }
+   ]
+  },
+  "HmIPW-FIO6": {
+   "power": "bus",
+   "family": "HmIP-Wired",
+   "confidence": "manufacturer",
+   "sources": [
+    {
+     "id": "eq3-site",
+     "url": "https://homematic-ip.com/de/produkt/wired-io-modul-unterputz-6-fach",
+     "quote": "24 VDC, ±5 %, SELV"
+    }
+   ]
+  },
+  "HmIPW-SCTHD": {
+   "power": "bus",
+   "family": "HmIP-Wired",
+   "confidence": "manufacturer",
+   "sources": [
+    {
+     "id": "eq3-site",
+     "url": "https://homematic-ip.com/de/produkt/wired-co2-sensor-mit-display",
+     "quote": "24 VDC, +5 % -20 %, SELV"
+    }
+   ]
+  },
+  "HmIPW-SMI55": {
+   "power": "bus",
+   "family": "HmIP-Wired",
+   "confidence": "manufacturer",
+   "sources": [
+    {
+     "id": "eq3-site",
+     "url": "https://homematic-ip.com/de/produkt/wired-bewegungsmelder-fuer-55er-rahmen-innen",
+     "quote": "24 VDC, +5 % -20 %, SELV"
+    }
+   ]
+  },
+  "HMIPW-SMI55-A": {
+   "power": "bus",
+   "family": "HmIP-Wired",
+   "confidence": "assumed",
+   "sources": [
+    {
+     "id": "classification",
+     "says": "wired bus device (24 V bus supply)"
+    }
+   ]
+  },
+  "HmIPW-SMO230": {
+   "power": "bus",
+   "family": "HmIP-Wired",
+   "confidence": "manufacturer",
+   "sources": [
+    {
+     "id": "eq3-site",
+     "url": "https://homematic-ip.com/de/produkt/wired-bewegungsmelder-mit-schaltaktor-aussen",
+     "quote": "24 VDC, +5 % -20 %, SELV"
+    }
+   ]
+  },
+  "HmIPW-SMO230-A": {
+   "power": "bus",
+   "family": "HmIP-Wired",
+   "confidence": "manufacturer",
+   "sources": [
+    {
+     "id": "eq3-site",
+     "url": "https://homematic-ip.com/de/produkt/wired-bewegungsmelder-mit-schaltaktor-aussen-anthrazit",
+     "quote": "24 VDC, +5 % -20 %, SELV"
+    }
+   ]
+  },
+  "HmIPW-SPI": {
+   "power": "bus",
+   "family": "HmIP-Wired",
+   "confidence": "manufacturer",
+   "sources": [
+    {
+     "id": "eq3-site",
+     "url": "https://homematic-ip.com/de/produkt/wired-praesenzmelder-innen",
+     "quote": "24 VDC, +5 % -20 %, SELV"
+    }
+   ]
+  },
+  "HmIPW-STH": {
+   "power": "bus",
+   "family": "HmIP-Wired",
+   "confidence": "manufacturer",
+   "sources": [
+    {
+     "id": "eq3-site",
+     "url": "https://homematic-ip.com/de/produkt/wired-temperatur-und-luftfeuchtigkeitssensor-innen",
+     "quote": "24 VDC, +5 % -20 %, SELV"
+    }
+   ]
+  },
+  "HmIPW-STH-A": {
+   "power": "bus",
+   "family": "HmIP-Wired",
+   "confidence": "manufacturer",
+   "sources": [
+    {
+     "id": "eq3-site",
+     "url": "https://homematic-ip.com/de/produkt/wired-temperatur-und-luftfeuchtigkeitssensor-innen-anthrazit",
+     "quote": "24 VDC, +5 % -20 %, SELV"
+    }
+   ]
+  },
+  "HmIPW-STHD": {
+   "power": "bus",
+   "family": "HmIP-Wired",
+   "confidence": "manufacturer",
+   "sources": [
+    {
+     "id": "eq3-site",
+     "url": "https://homematic-ip.com/de/produkt/wired-temperatur-und-luftfeuchtigkeitssensor-mit-display-innen",
+     "quote": "24 VDC, +5 % -20 %, SELV"
+    }
+   ]
+  },
+  "HmIPW-STHD-A": {
+   "power": "bus",
+   "family": "HmIP-Wired",
+   "confidence": "manufacturer",
+   "sources": [
+    {
+     "id": "eq3-site",
+     "url": "https://homematic-ip.com/de/produkt/wired-temperatur-und-luftfeuchtigkeitssensor-mit-display-innen-anthrazit",
+     "quote": "24 VDC, +5 % -20 %, SELV"
+    }
+   ]
+  },
+  "HmIPW-WGD": {
+   "power": "bus",
+   "family": "HmIP-Wired",
+   "confidence": "manufacturer",
+   "sources": [
+    {
+     "id": "eq3-site",
+     "url": "https://homematic-ip.com/de/produkt/wired-glasdisplay",
+     "quote": "24 VDC, +5 % -20 %, SELV"
+    }
+   ]
+  },
+  "HmIPW-WGD-PL": {
+   "power": "bus",
+   "family": "HmIP-Wired",
+   "confidence": "manufacturer",
+   "sources": [
+    {
+     "id": "eq3-site",
+     "url": "https://homematic-ip.com/de/produkt/wired-glasdisplay-plus",
+     "quote": "24 VDC, +5 % -20 %, SELV"
+    }
+   ]
+  },
+  "HMIPW-WGS": {
+   "power": "bus",
+   "family": "HmIP-Wired",
+   "confidence": "assumed",
+   "sources": [
+    {
+     "id": "classification",
+     "says": "wired bus device (24 V bus supply)"
+    }
+   ]
+  },
+  "HMIPW-WGS-A": {
+   "power": "bus",
+   "family": "HmIP-Wired",
+   "confidence": "assumed",
+   "sources": [
+    {
+     "id": "classification",
+     "says": "wired bus device (24 V bus supply)"
+    }
+   ]
+  },
+  "HMIPW-WGT": {
+   "power": "bus",
+   "family": "HmIP-Wired",
+   "confidence": "assumed",
+   "sources": [
+    {
+     "id": "classification",
+     "says": "wired bus device (24 V bus supply)"
+    }
+   ]
+  },
+  "HMIPW-WGT-A": {
+   "power": "bus",
+   "family": "HmIP-Wired",
+   "confidence": "assumed",
+   "sources": [
+    {
+     "id": "classification",
+     "says": "wired bus device (24 V bus supply)"
+    }
+   ]
+  },
+  "HMIPW-WGTC": {
+   "power": "bus",
+   "family": "HmIP-Wired",
+   "confidence": "assumed",
+   "sources": [
+    {
+     "id": "classification",
+     "says": "wired bus device (24 V bus supply)"
+    }
+   ]
+  },
+  "HMIPW-WGTC-A": {
+   "power": "bus",
+   "family": "HmIP-Wired",
+   "confidence": "assumed",
+   "sources": [
+    {
+     "id": "classification",
+     "says": "wired bus device (24 V bus supply)"
+    }
+   ]
+  },
+  "HmIPW-WRC2": {
+   "power": "bus",
+   "family": "HmIP-Wired",
+   "confidence": "manufacturer",
+   "sources": [
+    {
+     "id": "eq3-site",
+     "url": "https://homematic-ip.com/de/produkt/wired-wandtaster-2-fach",
+     "quote": "24 VDC, +5 % -20 %, SELV"
+    }
+   ]
+  },
+  "HMIPW-WRC2-A": {
+   "power": "bus",
+   "family": "HmIP-Wired",
+   "confidence": "assumed",
+   "sources": [
+    {
+     "id": "classification",
+     "says": "wired bus device (24 V bus supply)"
+    }
+   ]
+  },
+  "HmIPW-WRC6": {
+   "power": "bus",
+   "family": "HmIP-Wired",
+   "confidence": "manufacturer",
+   "sources": [
+    {
+     "id": "eq3-site",
+     "url": "https://homematic-ip.com/de/produkt/wired-wandtaster-6-fach",
+     "quote": "24 VDC, +5 % -20 %, SELV"
+    }
+   ]
+  },
+  "HmIPW-WRC6-A": {
+   "power": "bus",
+   "family": "HmIP-Wired",
+   "confidence": "manufacturer",
+   "sources": [
+    {
+     "id": "eq3-site",
+     "url": "https://homematic-ip.com/de/produkt/wired-wandtaster-6-fach-anthrazit",
+     "quote": "24 VDC, +5 % -20 %, SELV"
+    }
+   ]
+  },
+  "HmIPW-WTH": {
+   "power": "bus",
+   "family": "HmIP-Wired",
+   "confidence": "manufacturer",
+   "sources": [
+    {
+     "id": "eq3-site",
+     "url": "https://homematic-ip.com/de/produkt/wired-wandthermostat-mit-luftfeuchtigkeitssensor",
+     "quote": "24 VDC, +5 % -20 %, SELV"
+    }
+   ]
+  },
+  "HmIPW-WTH-A": {
+   "power": "bus",
+   "family": "HmIP-Wired",
+   "confidence": "manufacturer",
+   "sources": [
+    {
+     "id": "eq3-site",
+     "url": "https://homematic-ip.com/de/produkt/wired-wandthermostat-mit-luftfeuchtigkeitssensor-anthrazit",
+     "quote": "24 VDC, +5 % -20 %, SELV"
+    }
+   ]
+  },
+  "HMW-IO-12-FM": {
+   "power": "bus",
+   "family": "BidCos-Wired",
+   "confidence": "assumed",
+   "sources": [
+    {
+     "id": "classification",
+     "says": "wired bus device (24 V bus supply)"
+    }
+   ]
+  },
+  "HMW-IO-12-Sw14-DR": {
+   "power": "bus",
+   "family": "BidCos-Wired",
+   "confidence": "assumed",
+   "sources": [
+    {
+     "id": "classification",
+     "says": "wired bus device (24 V bus supply)"
+    },
+    {
+     "id": "corpus",
+     "says": ""
+    }
+   ]
+  },
+  "HMW-IO-12-Sw7-DR": {
+   "power": "bus",
+   "family": "BidCos-Wired",
+   "confidence": "assumed",
+   "sources": [
+    {
+     "id": "classification",
+     "says": "wired bus device (24 V bus supply)"
+    },
+    {
+     "id": "corpus",
+     "says": ""
+    }
+   ]
+  },
+  "HMW-IO-4-FM": {
+   "power": "bus",
+   "family": "BidCos-Wired",
+   "confidence": "assumed",
+   "sources": [
+    {
+     "id": "classification",
+     "says": "wired bus device (24 V bus supply)"
+    }
+   ]
+  },
+  "HMW-IO-SR-FM": {
+   "power": "bus",
+   "family": "BidCos-Wired",
+   "confidence": "assumed",
+   "sources": [
+    {
+     "id": "classification",
+     "says": "wired bus device (24 V bus supply)"
+    }
+   ]
+  },
+  "HMW-LC-Bl1-DR": {
+   "power": "bus",
+   "family": "BidCos-Wired",
+   "confidence": "assumed",
+   "sources": [
+    {
+     "id": "classification",
+     "says": "wired bus device (24 V bus supply)"
+    },
+    {
+     "id": "corpus",
+     "says": ""
+    }
+   ]
+  },
+  "HMW-LC-BL1-DR-2": {
+   "power": "bus",
+   "family": "BidCos-Wired",
+   "confidence": "assumed",
+   "sources": [
+    {
+     "id": "classification",
+     "says": "wired bus device (24 V bus supply)"
+    }
+   ]
+  },
+  "HMW-LC-Dim1L-DR": {
+   "power": "bus",
+   "family": "BidCos-Wired",
+   "confidence": "assumed",
+   "sources": [
+    {
+     "id": "classification",
+     "says": "wired bus device (24 V bus supply)"
+    },
+    {
+     "id": "corpus",
+     "says": ""
+    }
+   ]
+  },
+  "HMW-LC-Sw2-DR": {
+   "power": "bus",
+   "family": "BidCos-Wired",
+   "confidence": "assumed",
+   "sources": [
+    {
+     "id": "classification",
+     "says": "wired bus device (24 V bus supply)"
+    },
+    {
+     "id": "corpus",
+     "says": ""
+    }
+   ]
+  },
+  "HMW-SEC-TR-FM": {
+   "power": "bus",
+   "family": "BidCos-Wired",
+   "confidence": "assumed",
+   "sources": [
+    {
+     "id": "classification",
+     "says": "wired bus device (24 V bus supply)"
+    }
+   ]
+  },
+  "HMW-SEN-SC-12-DR": {
+   "power": "bus",
+   "family": "BidCos-Wired",
+   "confidence": "assumed",
+   "sources": [
+    {
+     "id": "classification",
+     "says": "wired bus device (24 V bus supply)"
+    }
+   ]
+  },
+  "HMW-SEN-SC-12-FM": {
+   "power": "bus",
+   "family": "BidCos-Wired",
+   "confidence": "assumed",
+   "sources": [
+    {
+     "id": "classification",
+     "says": "wired bus device (24 V bus supply)"
+    }
+   ]
+  },
+  "HMW-WSE-SM": {
+   "power": "bus",
+   "family": "BidCos-Wired",
+   "confidence": "assumed",
+   "sources": [
+    {
+     "id": "classification",
+     "says": "wired bus device (24 V bus supply)"
+    }
+   ]
+  },
+  "HMW-WSTH-SM": {
+   "power": "bus",
+   "family": "BidCos-Wired",
+   "confidence": "assumed",
+   "sources": [
+    {
+     "id": "classification",
+     "says": "wired bus device (24 V bus supply)"
+    }
+   ]
+  },
+  "ZEL-STG-RM-DWT-10": {
+   "power": "battery",
+   "family": "BidCos-RF",
+   "slots": [
+    {
+     "count": 3,
+     "type": "AAA"
+    }
+   ],
+   "confidence": "single-source",
+   "sources": [
+    {
+     "id": "openhab",
+     "says": "3x AAA"
+    }
+   ]
+  },
+  "ZEL-STG-RM-FDK": {
+   "power": "battery",
+   "family": "BidCos-RF",
+   "slots": [
+    {
+     "count": 2,
+     "type": "LR44"
+    }
+   ],
+   "confidence": "single-source",
+   "sources": [
+    {
+     "id": "openhab",
+     "says": "2x LR44"
+    }
+   ]
+  },
+  "ZEL-STG-RM-FFK": {
+   "power": "battery",
+   "family": "BidCos-RF",
+   "slots": [
+    {
+     "count": 2,
+     "type": "LR44"
+    }
+   ],
+   "confidence": "single-source",
+   "sources": [
+    {
+     "id": "openhab",
+     "says": "2x LR44"
+    }
+   ]
+  },
+  "ZEL-STG-RM-FSA": {
+   "power": "battery",
+   "family": "BidCos-RF",
+   "slots": [
+    {
+     "count": 2,
+     "type": "LR44"
+    }
+   ],
+   "confidence": "single-source",
+   "sources": [
+    {
+     "id": "openhab",
+     "says": "2x LR44"
+    }
+   ]
+  },
+  "ZEL-STG-RM-HS-4": {
+   "power": "battery",
+   "family": "BidCos-RF",
+   "slots": [
+    {
+     "count": 1,
+     "type": "CR2016"
+    }
+   ],
+   "confidence": "single-source",
+   "sources": [
+    {
+     "id": "openhab",
+     "says": "1x CR2016"
+    }
+   ]
+  },
+  "ZEL-STG-RM-WT-2": {
+   "power": "battery",
+   "family": "BidCos-RF",
+   "slots": [
+    {
+     "count": 1,
+     "type": "CR2032"
+    }
+   ],
+   "confidence": "single-source",
+   "sources": [
+    {
+     "id": "openhab",
+     "says": "1x CR2032"
+    }
+   ]
+  }
+ }
+}

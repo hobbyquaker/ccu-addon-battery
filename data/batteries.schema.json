@@ -1,0 +1,121 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/hobbyquaker/ccu-addon-battery/blob/main/data/batteries.schema.json",
+  "title": "Homematic device batteries",
+  "description": "Which battery a Homematic (BidCos-RF, HmIP-RF, HmIP-Wired) device model takes. CC0-1.0.",
+  "type": "object",
+  "required": ["version", "license", "sources", "types", "chemistries", "models"],
+  "additionalProperties": false,
+  "properties": {
+    "$schema": {"type": "string"},
+    "version": {"type": "integer", "minimum": 1},
+    "license": {"const": "CC0-1.0"},
+    "updated": {"type": "string", "pattern": "^\\d{4}-\\d{2}-\\d{2}$"},
+    "sources": {
+      "description": "Every source a row may cite, with its licence.",
+      "type": "object",
+      "additionalProperties": {
+        "type": "object",
+        "required": ["name", "url", "license", "kind"],
+        "additionalProperties": false,
+        "properties": {
+          "name": {"type": "string"},
+          "url": {"type": "string"},
+          "license": {"type": "string"},
+          "kind": {"enum": ["manufacturer", "prior-art", "corpus", "lab"]},
+          "read": {"type": "string"},
+          "note": {"type": "string"}
+        }
+      }
+    },
+    "types": {
+      "description": "Battery types a slot may name.",
+      "type": "object",
+      "additionalProperties": {
+        "type": "object",
+        "required": ["nominal_v", "chemistry"],
+        "additionalProperties": false,
+        "properties": {
+          "iec": {"type": "string"},
+          "names": {"type": "array", "items": {"type": "string"}},
+          "nominal_v": {"type": "number", "exclusiveMinimum": 0},
+          "chemistry": {"type": "string"},
+          "replaceable": {"type": "boolean"}
+        }
+      }
+    },
+    "chemistries": {
+      "description": "Per-cell levels the detection rules use (docs/detection.md). fresh/low/step are per cell in volts.",
+      "type": "object",
+      "additionalProperties": {
+        "type": "object",
+        "required": ["fresh", "low", "step"],
+        "additionalProperties": false,
+        "properties": {
+          "fresh": {"type": "number"},
+          "low": {"type": "number"},
+          "step": {"type": "number"},
+          "note": {"type": "string"}
+        }
+      }
+    },
+    "models": {
+      "type": "object",
+      "propertyNames": {"pattern": "^[A-Za-z0-9][A-Za-z0-9_.!-]*$"},
+      "additionalProperties": {"$ref": "#/$defs/model"}
+    }
+  },
+  "$defs": {
+    "slot": {
+      "type": "object",
+      "required": ["count", "type"],
+      "additionalProperties": false,
+      "properties": {
+        "count": {"type": "integer", "minimum": 1, "maximum": 12},
+        "type": {"type": "string"},
+        "chemistry": {"type": "string"},
+        "replaceable": {"type": "boolean"},
+        "note": {"type": "string"}
+      }
+    },
+    "cite": {
+      "type": "object",
+      "required": ["id"],
+      "additionalProperties": false,
+      "properties": {
+        "id": {"type": "string"},
+        "url": {"type": "string"},
+        "quote": {"type": "string"},
+        "says": {"type": "string"}
+      }
+    },
+    "model": {
+      "type": "object",
+      "required": ["power", "sources", "confidence"],
+      "additionalProperties": false,
+      "properties": {
+        "power": {"enum": ["battery", "mains", "bus", "rechargeable", "host", "battery-or-dc"]},
+        "family": {"enum": ["HmIP-RF", "HmIP-Wired", "BidCos-RF", "BidCos-Wired"]},
+        "slots": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/slot"}},
+        "voltage": {
+          "type": ["object", "null"],
+          "required": ["dp"],
+          "additionalProperties": false,
+          "properties": {
+            "dp": {"enum": ["0/OPERATING_VOLTAGE", "4/BATTERY_STATE", "2/BATTERY_STATE"]},
+            "low": {"type": "number"},
+            "fresh": {"type": "number"}
+          }
+        },
+        "outdoor": {"type": "boolean"},
+        "low_bat_limit": {"type": "number"},
+        "limit_note": {"type": "string", "description": "why low_bat_limit does not fit the cell count; turns check.py's error into a warning"},
+        "life_years": {"type": "number"},
+        "aliases": {"type": "array", "items": {"type": "string"}},
+        "sources": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/cite"}},
+        "confidence": {"enum": ["manufacturer", "prior-art", "single-source", "assumed"]},
+        "note": {"type": "string"}
+      }
+    }
+  }
+}
