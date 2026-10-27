@@ -195,15 +195,39 @@ func TestLiveDetection(t *testing.T) {
 		t.Fatalf("merged: %+v", got)
 	}
 	// suggestions
-	sg, err := s2.Suggest(ctx, "vendor", "var", 0)
+	sg, err := s2.Suggest(ctx, "vendor", "var", 0, "")
 	if err != nil || len(sg) != 1 || sg[0].Value != "Varta" || sg[0].Count != 1 {
 		t.Fatalf("suggest: %+v %v", sg, err)
 	}
-	if sg, _ := s2.Suggest(ctx, "type", "aa", 0); len(sg) < 2 || sg[0].Value != "AAA" {
+	if sg, _ := s2.Suggest(ctx, "type", "aa", 0, ""); len(sg) < 2 || sg[0].Value != "AAA" {
 		t.Fatalf("type suggestions: %+v", sg)
 	}
-	if _, err := s2.Suggest(ctx, "colour", "", 0); err == nil {
+	if _, err := s2.Suggest(ctx, "colour", "", 0, ""); err == nil {
 		t.Fatal("unknown field")
+	}
+	// a second change with another vendor's product line: the vendor narrows the products
+	c.ms = t0 + 61*day
+	if _, err := s2.Create(ctx, Input{Device: wrc2.Address, At: Time(t0 + 60*day), Batteries: []Battery{{Count: 2, Type: "AAA", Vendor: "Duracell", Product: "Plus", PriceCents: ptr(90)}}}, "alice", false); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := s2.Update(ctx, p[0].ID, Patch{Batteries: &[]Battery{{Count: 2, Type: "AAA", Vendor: "Varta", Product: "Power on Demand", PriceCents: ptr(120)}}}); err != nil {
+		t.Fatal(err)
+	}
+	if sg, _ := s2.Suggest(ctx, "product", "", 0, "varta"); len(sg) != 1 || sg[0].Value != "Power on Demand" {
+		t.Fatalf("products of varta: %+v", sg)
+	}
+	if sg, _ := s2.Suggest(ctx, "product", "", 0, ""); len(sg) != 2 {
+		t.Fatalf("all products: %+v", sg)
+	}
+	// the last price: the newest accepted change with that battery
+	if c, at, found, err := s2.LastPrice(ctx, "VARTA", "power on demand", "aaa"); err != nil || !found || c != 120 || at != t0+3*day {
+		t.Fatalf("last price: %d %d %v %v", c, at, found, err)
+	}
+	if c, _, found, _ := s2.LastPrice(ctx, "", "", "AAA"); !found || c != 90 {
+		t.Fatalf("last price of any AAA: %d %v", c, found)
+	}
+	if _, _, found, _ := s2.LastPrice(ctx, "nobody", "", ""); found {
+		t.Fatal("unknown vendor has no price")
 	}
 }
 

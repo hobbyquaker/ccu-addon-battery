@@ -17,7 +17,9 @@ import (
 	"time"
 
 	"github.com/hobbyquaker/ccu-addon-battery/internal/changes"
+	"github.com/hobbyquaker/ccu-addon-battery/internal/devimg"
 	"github.com/hobbyquaker/ccu-addon-battery/internal/recorder"
+	"github.com/hobbyquaker/ccu-addon-battery/internal/stats"
 	"github.com/hobbyquaker/ccu-addon-battery/internal/store"
 	"github.com/hobbyquaker/ccu-addon-kit/go/addonkit"
 )
@@ -31,6 +33,8 @@ type Options struct {
 	Store    *store.Store
 	Recorder *recorder.Recorder
 	Changes  *changes.Service
+	// Images maps a model to the platform's device picture; nil: none.
+	Images *devimg.Catalog
 	// Session checks the sessions; nil serves without a check (development only).
 	Session *addonkit.Checker
 	Version string
@@ -134,8 +138,35 @@ func (o Options) inbox(r *http.Request) int {
 	return len(l)
 }
 
+// device is a recorder view with the platform's picture and the device's battery lives.
+type device struct {
+	recorder.View
+	Image string            `json:"image,omitempty"`
+	Life  *stats.DeviceLife `json:"life,omitempty"`
+}
+
+func (o Options) image(model string) string {
+	if o.Images == nil {
+		return ""
+	}
+	return o.Images.Image(model)
+}
+
 func (o Options) devices(w http.ResponseWriter, r *http.Request) {
-	writeJSON(w, 200, map[string]any{"devices": o.Recorder.Devices(lang(r))})
+	views := o.Recorder.Devices(lang(r))
+	var lives map[string]stats.DeviceLife
+	if st, err := o.computeStats(r); err == nil {
+		lives = st.Devices
+	}
+	out := make([]device, 0, len(views))
+	for _, v := range views {
+		d := device{View: v, Image: o.image(v.Model)}
+		if l, ok := lives[v.Interface+"."+v.Address]; ok {
+			d.Life = &l
+		}
+		out = append(out, d)
+	}
+	writeJSON(w, 200, map[string]any{"devices": out})
 }
 
 func (o Options) storage(w http.ResponseWriter, r *http.Request) {

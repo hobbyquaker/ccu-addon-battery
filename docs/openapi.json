@@ -208,6 +208,14 @@
      },
      "profile": {
       "$ref": "#/components/schemas/Profile"
+     },
+     "image": {
+      "type": "string",
+      "description": "the platform's picture of the model (/config/img/devices/250/...), absent without one"
+     },
+     "life": {
+      "$ref": "#/components/schemas/DeviceLife",
+      "description": "the device's battery lives; absent without an accepted change"
      }
     }
    },
@@ -240,7 +248,7 @@
      "price_cents": {
       "type": "integer",
       "minimum": 0,
-      "description": "per battery, in cents of the user's currency"
+      "description": "the price of ONE battery of this slot, in cents of the user's currency; the slot's cost is count x price_cents"
      },
      "lot": {
       "type": "string"
@@ -668,6 +676,285 @@
      },
      "count": {
       "type": "integer"
+     }
+    }
+   },
+   "Summary": {
+    "type": "object",
+    "description": "completed lives: count, shortest, longest, mean and median in days",
+    "properties": {
+     "count": {
+      "type": "integer"
+     },
+     "min_days": {
+      "type": "number"
+     },
+     "max_days": {
+      "type": "number"
+     },
+     "avg_days": {
+      "type": "number"
+     },
+     "median_days": {
+      "type": "number"
+     }
+    }
+   },
+   "DeviceLife": {
+    "allOf": [
+     {
+      "$ref": "#/components/schemas/Summary"
+     },
+     {
+      "type": "object",
+      "properties": {
+       "running_since": {
+        "type": "integer",
+        "description": "the last accepted change (ms)"
+       },
+       "running_days": {
+        "type": "number",
+        "description": "how long the current batteries are in"
+       },
+       "hint": {
+        "type": "string",
+        "enum": [
+         "short"
+        ],
+        "description": "short: a low battery while the running life is well below the device's (or its model's) average"
+       }
+      }
+     }
+    ]
+   },
+   "Life": {
+    "type": "object",
+    "description": "the time between two accepted changes of a device, or since the last one (to absent)",
+    "properties": {
+     "interface": {
+      "type": "string"
+     },
+     "address": {
+      "type": "string"
+     },
+     "model": {
+      "type": "string"
+     },
+     "change_id": {
+      "type": "integer"
+     },
+     "from": {
+      "type": "integer"
+     },
+     "to": {
+      "type": "integer"
+     },
+     "days": {
+      "type": "number"
+     },
+     "batteries": {
+      "type": "array",
+      "items": {
+       "$ref": "#/components/schemas/Battery"
+      }
+     }
+    }
+   },
+   "ModelLife": {
+    "allOf": [
+     {
+      "$ref": "#/components/schemas/Summary"
+     },
+     {
+      "type": "object",
+      "properties": {
+       "model": {
+        "type": "string"
+       },
+       "key": {
+        "type": "string",
+        "description": "vendor|product|type, lower case"
+       },
+       "vendor": {
+        "type": "string"
+       },
+       "product": {
+        "type": "string"
+       },
+       "type": {
+        "type": "string"
+       },
+       "cost_per_year_cents": {
+        "type": "integer",
+        "description": "mean cost per year of the lives with a price"
+       },
+       "priced_lives": {
+        "type": "integer"
+       }
+      }
+     }
+    ]
+   },
+   "BatteryRow": {
+    "type": "object",
+    "description": "one vendor + product line + size ever recorded",
+    "properties": {
+     "key": {
+      "type": "string"
+     },
+     "vendor": {
+      "type": "string"
+     },
+     "product": {
+      "type": "string"
+     },
+     "type": {
+      "type": "string"
+     },
+     "total": {
+      "type": "integer",
+      "description": "single batteries that went in"
+     },
+     "changes": {
+      "type": "integer"
+     },
+     "devices": {
+      "type": "integer"
+     },
+     "models": {
+      "type": "array",
+      "items": {
+       "type": "string"
+      }
+     },
+     "life": {
+      "$ref": "#/components/schemas/Summary"
+     },
+     "avg_price_cents": {
+      "type": "integer",
+      "description": "mean price per battery where recorded"
+     },
+     "priced_total": {
+      "type": "integer"
+     },
+     "cost_per_year_cents": {
+      "type": "integer"
+     },
+     "priced_lives": {
+      "type": "integer"
+     },
+     "last_price_cents": {
+      "type": "integer"
+     },
+     "last_at": {
+      "type": "integer"
+     },
+     "per_model": {
+      "type": "array",
+      "items": {
+       "$ref": "#/components/schemas/ModelLife"
+      }
+     }
+    }
+   },
+   "ModelRow": {
+    "type": "object",
+    "properties": {
+     "model": {
+      "type": "string"
+     },
+     "devices": {
+      "type": "integer"
+     },
+     "life": {
+      "$ref": "#/components/schemas/Summary"
+     },
+     "batteries": {
+      "type": "array",
+      "description": "the batteries used in this model, longest mean life first",
+      "items": {
+       "$ref": "#/components/schemas/ModelLife"
+      }
+     }
+    }
+   },
+   "Stats": {
+    "type": "object",
+    "properties": {
+     "now": {
+      "type": "integer"
+     },
+     "devices": {
+      "type": "object",
+      "additionalProperties": {
+       "$ref": "#/components/schemas/DeviceLife"
+      },
+      "description": "by interface.address"
+     },
+     "lives": {
+      "type": "array",
+      "items": {
+       "$ref": "#/components/schemas/Life"
+      }
+     },
+     "batteries": {
+      "type": "array",
+      "items": {
+       "$ref": "#/components/schemas/BatteryRow"
+      }
+     },
+     "models": {
+      "type": "array",
+      "items": {
+       "$ref": "#/components/schemas/ModelRow"
+      }
+     },
+     "types": {
+      "type": "array",
+      "items": {
+       "type": "object",
+       "properties": {
+        "type": {
+         "type": "string"
+        },
+        "life": {
+         "$ref": "#/components/schemas/Summary"
+        }
+       }
+      }
+     },
+     "year": {
+      "type": "object",
+      "description": "the last 365 days",
+      "properties": {
+       "from": {
+        "type": "integer"
+       },
+       "changes": {
+        "type": "integer"
+       },
+       "batteries": {
+        "type": "integer"
+       },
+       "by_type": {
+        "type": "object",
+        "additionalProperties": {
+         "type": "integer"
+        }
+       },
+       "cost_cents": {
+        "type": "integer"
+       },
+       "priced_batteries": {
+        "type": "integer"
+       },
+       "batteries_ever": {
+        "type": "integer"
+       },
+       "first_change": {
+        "type": "integer"
+       }
+      }
      }
     }
    }
@@ -2199,6 +2486,14 @@
       "schema": {
        "type": "integer"
       }
+     },
+     {
+      "name": "vendor",
+      "in": "query",
+      "description": "for field=product: only the product lines recorded with this vendor",
+      "schema": {
+       "type": "string"
+      }
      }
     ],
     "responses": {
@@ -2478,6 +2773,118 @@
        "application/json": {
         "schema": {
          "type": "object"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/prices/last": {
+   "get": {
+    "summary": "the price per battery recorded most recently for a vendor, product line and size (the editor's prefill)",
+    "parameters": [
+     {
+      "name": "vendor",
+      "in": "query",
+      "schema": {
+       "type": "string"
+      }
+     },
+     {
+      "name": "product",
+      "in": "query",
+      "schema": {
+       "type": "string"
+      }
+     },
+     {
+      "name": "type",
+      "in": "query",
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "OK",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "object",
+         "properties": {
+          "found": {
+           "type": "boolean"
+          },
+          "price_cents": {
+           "type": "integer",
+           "description": "per battery"
+          },
+          "at": {
+           "type": "integer"
+          }
+         }
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/stats": {
+   "get": {
+    "summary": "lives and statistics over the accepted changes: per device, per battery (vendor + product line + size, with the breakdown per model), per model, per size, and the last 365 days",
+    "parameters": [
+     {
+      "name": "lang",
+      "in": "query",
+      "description": "de or en, for the names",
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "OK",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "object",
+         "properties": {
+          "stats": {
+           "$ref": "#/components/schemas/Stats"
+          },
+          "names": {
+           "type": "object",
+           "description": "by interface.address: name, model, image",
+           "additionalProperties": {
+            "type": "object",
+            "properties": {
+             "name": {
+              "type": "string"
+             },
+             "model": {
+              "type": "string"
+             },
+             "image": {
+              "type": "string"
+             }
+            }
+           }
+          }
+         }
+        }
+       }
+      }
+     },
+     "503": {
+      "description": "the database is not available",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Error"
         }
        }
       }

@@ -20,6 +20,7 @@ import (
 	"github.com/hobbyquaker/ccu-addon-battery/docs"
 	"github.com/hobbyquaker/ccu-addon-battery/internal/batteries"
 	"github.com/hobbyquaker/ccu-addon-battery/internal/changes"
+	"github.com/hobbyquaker/ccu-addon-battery/internal/stats"
 	"github.com/hobbyquaker/ccu-addon-battery/internal/store"
 	"github.com/hobbyquaker/ccu-addon-kit/go/addonkit"
 )
@@ -42,6 +43,8 @@ func (o Options) routesChanges(api *http.ServeMux) {
 	handle(api, "POST /api/v1/samples:bulk", o.idempotent(o.bulkSamples))
 	handle(api, "POST /api/v1/detect", o.detect)
 	handle(api, "GET /api/v1/suggestions", o.suggestions)
+	handle(api, "GET /api/v1/prices/last", o.lastPrice)
+	handle(api, "GET /api/v1/stats", o.stats)
 	handle(api, "GET /api/v1/export.json", o.exportJSON)
 	handle(api, "GET /api/v1/export.csv", o.exportCSV)
 	handle(api, "GET /api/v1/models", o.models)
@@ -386,12 +389,62 @@ func (o Options) detect(w http.ResponseWriter, r *http.Request) {
 
 func (o Options) suggestions(w http.ResponseWriter, r *http.Request) {
 	limit, _ := strconv.Atoi(r.URL.Query().Get("limit"))
-	s, err := o.Changes.Suggest(r.Context(), r.URL.Query().Get("field"), r.URL.Query().Get("q"), limit)
+	s, err := o.Changes.Suggest(r.Context(), r.URL.Query().Get("field"), r.URL.Query().Get("q"), limit, r.URL.Query().Get("vendor"))
 	if err != nil {
 		writeErr(w, err)
 		return
 	}
 	writeJSON(w, 200, map[string]any{"suggestions": s})
+}
+
+// lastPrice answers the price per battery recorded most recently for vendor, product and type
+// (the change editor's prefill).
+func (o Options) lastPrice(w http.ResponseWriter, r *http.Request) {
+	q := r.URL.Query()
+	cents, at, found, err := o.Changes.LastPrice(r.Context(), q.Get("vendor"), q.Get("product"), q.Get("type"))
+	if err != nil {
+		writeErr(w, err)
+		return
+	}
+	if !found {
+		writeJSON(w, 200, map[string]any{"found": false})
+		return
+	}
+	writeJSON(w, 200, map[string]any{"found": true, "price_cents": cents, "at": at})
+}
+
+// stats answers the lives and the statistics over the accepted changes (internal/stats), with
+// the devices' names in lang.
+func (o Options) stats(w http.ResponseWriter, r *http.Request) {
+	st, err := o.computeStats(r)
+	if err != nil {
+		writeErr(w, err)
+		return
+	}
+	names := map[string]map[string]string{}
+	for _, d := range o.Recorder.Devices(lang(r)) {
+		names[d.Interface+"."+d.Address] = map[string]string{"name": d.Name, "model": d.Model, "image": o.image(d.Model)}
+	}
+	writeJSON(w, 200, map[string]any{"stats": st, "names": names})
+}
+
+func (o Options) computeStats(r *http.Request) (*stats.Stats, error) {
+	db, err := o.Store.DB()
+	if err != nil {
+		return nil, err
+	}
+	cs, devs, err := stats.Load(r.Context(), db)
+	if err != nil {
+		return nil, err
+	}
+	low := map[string]bool{}
+	for _, d := range o.Recorder.Devices("en") {
+		if d.LowBat != nil && *d.LowBat {
+			low[d.Interface+"."+d.Address] = true
+		}
+	}
+	st := stats.Compute(cs, devs, stats.Options{LowBat: func(i, a string) bool { return low[i+"."+a] }})
+	return &st, nil
 }
 
 func (o Options) exportJSON(w http.ResponseWriter, r *http.Request) {

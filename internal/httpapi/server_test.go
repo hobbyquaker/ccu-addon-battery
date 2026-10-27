@@ -13,7 +13,9 @@ import (
 
 	"github.com/hobbyquaker/ccu-addon-battery/docs"
 	"github.com/hobbyquaker/ccu-addon-battery/internal/changes"
+	"github.com/hobbyquaker/ccu-addon-battery/internal/devimg"
 	"github.com/hobbyquaker/ccu-addon-battery/internal/recorder"
+	"github.com/hobbyquaker/ccu-addon-battery/internal/stats"
 	"github.com/hobbyquaker/ccu-addon-battery/internal/store"
 	"github.com/hobbyquaker/ccu-addon-kit/go/addonkit"
 	"github.com/hobbyquaker/ccu-addon-kit/go/litesource"
@@ -53,7 +55,9 @@ func server(t *testing.T) (http.Handler, *store.Store, *fakelite.Server, string)
 	chg := changes.New(changes.Options{Store: st, Log: t.Logf})
 	rec := recorder.New(recorder.Options{Source: litesource.New(s.URL, nil), Store: st, Observer: chg, Log: t.Logf})
 	checker := addonkit.NewChecker(addonkit.SessionOptions{Base: s.URL, Platform: func() addonkit.Kind { return addonkit.OpenccuLite }})
-	h := New(Options{BasePath: "/addons/battery", WWW: www, Store: st, Recorder: rec, Changes: chg, Session: checker, Version: "test", Started: time.Now()})
+	devdb := filepath.Join(addon, "DEVDB.tcl")
+	os.WriteFile(devdb, []byte(`array set DEV_PATHS {HmIP-WRC2 {{50 /config/img/devices/50/112_hmip-wrc2_thumb.png} {250 /config/img/devices/250/112_hmip-wrc2.png}}}`), 0o644)
+	h := New(Options{BasePath: "/addons/battery", WWW: www, Store: st, Recorder: rec, Changes: chg, Images: &devimg.Catalog{Path: devdb}, Session: checker, Version: "test", Started: time.Now()})
 	return h, st, s, addon
 }
 
@@ -319,5 +323,62 @@ func TestChangesAPI(t *testing.T) {
 	}
 	if w := call(h, "GET", "/addons/battery/api/v1/openapi.json", user, ""); w.Code != 200 || !strings.Contains(w.Body.String(), `"openapi"`) {
 		t.Fatalf("openapi: %d", w.Code)
+	}
+}
+
+// The statistics and the price prefill over a few recorded changes.
+func TestStatsAPI(t *testing.T) {
+	h, st, _, _ := server(t)
+	st.UpsertDevice(store.Device{Interface: "HmIP-RF", Address: "WRC2", Model: "HmIP-WRC2", VoltageDP: "0/OPERATING_VOLTAGE", LowBatDP: "0/LOW_BAT", FirstSeen: 1, LastSeen: 1})
+	st.UpsertDevice(store.Device{Interface: "BidCos-RF", Address: "SC", Model: "HM-Sec-SC-2", LowBatDP: "0/LOWBAT", FirstSeen: 1, LastSeen: 1})
+	st.Flush()
+	csrf := []string{addonkit.HeaderRequest, "1"}
+	w := call(h, "GET", "/addons/battery/api/v1/stats", user, "")
+	var empty struct {
+		Stats stats.Stats `json:"stats"`
+	}
+	if w.Code != 200 || json.Unmarshal(w.Body.Bytes(), &empty) != nil || len(empty.Stats.Lives) != 0 || len(empty.Stats.Batteries) != 0 {
+		t.Fatalf("empty stats: %d %s", w.Code, w.Body)
+	}
+	csv := "address,at,count,type,chemistry,rechargeable,vendor,product,price_cents,note,external_id\nSC,2025-05-01,1,LR44,,,Varta,Power on Demand,90,,r1\nSC,2025-09-01,1,LR44,,,Varta,Power on Demand,95,,r2\n"
+	if w := call(h, "POST", "/addons/battery/api/v1/changes:bulk", user, csv, append([]string{"Content-Type", "text/csv"}, csrf...)...); w.Code != 200 || !strings.Contains(w.Body.String(), `"created":2`) {
+		t.Fatalf("bulk: %d %s", w.Code, w.Body)
+	}
+	w = call(h, "GET", "/addons/battery/api/v1/stats?lang=de", user, "")
+	var got struct {
+		Stats stats.Stats                  `json:"stats"`
+		Names map[string]map[string]string `json:"names"`
+	}
+	if w.Code != 200 || json.Unmarshal(w.Body.Bytes(), &got) != nil {
+		t.Fatalf("stats: %d %s", w.Code, w.Body)
+	}
+	sc := got.Stats.Devices["BidCos-RF.SC"]
+	if sc.Count != 1 || sc.AvgDays != 123 || sc.RunningSince == 0 {
+		t.Fatalf("SC life: %+v", sc)
+	}
+	if len(got.Stats.Lives) != 2 || len(got.Stats.Batteries) != 1 || got.Stats.Batteries[0].Key != "varta|power on demand|lr44" || got.Stats.Batteries[0].Total != 2 || got.Stats.Batteries[0].LastPriceCents != 95 {
+		t.Fatalf("batteries: %+v", got.Stats.Batteries)
+	}
+	if len(got.Stats.Models) != 1 || got.Stats.Models[0].Model != "HM-Sec-SC-2" || len(got.Stats.Models[0].Batteries) != 1 {
+		t.Fatalf("models: %+v", got.Stats.Models)
+	}
+	// the last price, matched without regard to case; none for an unknown vendor
+	if w := call(h, "GET", "/addons/battery/api/v1/prices/last?vendor=VARTA&type=lr44", user, ""); w.Code != 200 || !strings.Contains(w.Body.String(), `"price_cents":95`) {
+		t.Fatalf("last price: %d %s", w.Code, w.Body)
+	}
+	if w := call(h, "GET", "/addons/battery/api/v1/prices/last?vendor=nobody", user, ""); w.Code != 200 || !strings.Contains(w.Body.String(), `"found":false`) {
+		t.Fatalf("no price: %d %s", w.Code, w.Body)
+	}
+	// products narrowed by the vendor
+	if w := call(h, "GET", "/addons/battery/api/v1/suggestions?field=product&vendor=varta", user, ""); w.Code != 200 || !strings.Contains(w.Body.String(), "Power on Demand") {
+		t.Fatalf("products: %d %s", w.Code, w.Body)
+	}
+	if w := call(h, "GET", "/addons/battery/api/v1/suggestions?field=product&vendor=duracell", user, ""); w.Code != 200 || !strings.Contains(w.Body.String(), `"suggestions":[]`) {
+		t.Fatalf("products of another vendor: %d %s", w.Code, w.Body)
+	}
+	// the picture lookup behind the devices view
+	o := Options{Images: &devimg.Catalog{Path: filepath.Join(filepath.Dir(st.Path()), "..", "DEVDB.tcl")}}
+	if o.image("hmip-wrc2") != "/config/img/devices/250/112_hmip-wrc2.png" || o.image("HM-Sec-SC-2") != "" || (Options{}).image("HmIP-WRC2") != "" {
+		t.Fatal("image lookup")
 	}
 }

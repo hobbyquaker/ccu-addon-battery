@@ -535,8 +535,9 @@ type Suggestion struct {
 
 // Suggest answers the values recorded for a battery field (vendor, product, type, chemistry),
 // most used first, matching q case-insensitively anywhere; spellings that differ only in case
-// count as one, shown in their most used form. Types add the table's own.
-func (s *Service) Suggest(ctx context.Context, field, q string, limit int) ([]Suggestion, error) {
+// count as one, shown in their most used form. Types add the table's own. A vendor narrows the
+// products to the ones recorded with it (case-insensitively).
+func (s *Service) Suggest(ctx context.Context, field, q string, limit int, vendor string) ([]Suggestion, error) {
 	if !inList([]string{"vendor", "product", "type", "chemistry"}, field) {
 		return nil, bad("invalid", "field is vendor, product, type or chemistry")
 	}
@@ -547,8 +548,14 @@ func (s *Service) Suggest(ctx context.Context, field, q string, limit int) ([]Su
 	if limit <= 0 || limit > 100 {
 		limit = 20
 	}
+	where := ""
+	var args []any
+	if vendor = strings.TrimSpace(vendor); vendor != "" && field == "product" {
+		where = " AND lower(json_extract(j.value, '$.vendor')) = lower(?)"
+		args = append(args, vendor)
+	}
 	rows, err := db.QueryContext(ctx, `SELECT json_extract(j.value, '$.`+field+`') AS v, COUNT(*) FROM changes, json_each(changes.batteries) AS j
-WHERE v IS NOT NULL AND v != '' GROUP BY v`)
+WHERE v IS NOT NULL AND v != ''`+where+` GROUP BY v`, args...)
 	if err != nil {
 		return nil, err
 	}
@@ -612,4 +619,33 @@ WHERE v IS NOT NULL AND v != '' GROUP BY v`)
 		out = out[:limit]
 	}
 	return out, nil
+}
+
+// LastPrice is the price per battery recorded most recently for a vendor, product line and size
+// (each matched case-insensitively; an empty one matches anything), with the change's time;
+// found false when no accepted change carries one.
+func (s *Service) LastPrice(ctx context.Context, vendor, product, typ string) (cents int, at int64, found bool, err error) {
+	db, err := s.o.Store.DB()
+	if err != nil {
+		return 0, 0, false, err
+	}
+	q := `SELECT json_extract(j.value, '$.price_cents'), changes.at FROM changes, json_each(changes.batteries) AS j
+WHERE changes.status = ? AND json_extract(j.value, '$.price_cents') IS NOT NULL`
+	args := []any{StatusAccepted}
+	for k, v := range map[string]string{"vendor": vendor, "product": product, "type": typ} {
+		if v = strings.TrimSpace(v); v != "" {
+			q += ` AND lower(coalesce(json_extract(j.value, '$.` + k + `'), '')) = lower(?)`
+			args = append(args, v)
+		}
+	}
+	q += ` ORDER BY changes.at DESC, changes.id DESC LIMIT 1`
+	row := db.QueryRowContext(ctx, q, args...)
+	var c sql.NullInt64
+	if err := row.Scan(&c, &at); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return 0, 0, false, nil
+		}
+		return 0, 0, false, err
+	}
+	return int(c.Int64), at, true, nil
 }

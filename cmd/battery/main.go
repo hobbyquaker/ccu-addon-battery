@@ -18,6 +18,7 @@ import (
 
 	"github.com/hobbyquaker/ccu-addon-battery/internal/changes"
 	"github.com/hobbyquaker/ccu-addon-battery/internal/detect"
+	"github.com/hobbyquaker/ccu-addon-battery/internal/devimg"
 	"github.com/hobbyquaker/ccu-addon-battery/internal/httpapi"
 	"github.com/hobbyquaker/ccu-addon-battery/internal/recorder"
 	"github.com/hobbyquaker/ccu-addon-battery/internal/store"
@@ -110,7 +111,7 @@ func run(addonDir, id string, port int, base, basePath, www, tokenFile string, f
 			log.Printf("battery: refused %s %s: %s", r.Method, r.URL.Path, reason)
 		}})
 	}
-	h := httpapi.New(httpapi.Options{BasePath: basePath, WWW: www, Store: st, Recorder: rec, Changes: chg, Session: checker, Version: version, Started: time.Now()})
+	h := httpapi.New(httpapi.Options{BasePath: basePath, WWW: www, Store: st, Recorder: rec, Changes: chg, Images: &devimg.Catalog{}, Session: checker, Version: version, Started: time.Now()})
 	l, err := addonkit.Listen(port, "")
 	if err != nil {
 		return err

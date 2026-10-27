@@ -34,7 +34,7 @@ fields are refused, so a typo does not pass silently), 404, 422 with a code (`in
 
 | Route | Does |
 | --- | --- |
-| `GET devices` | every tracked device: interface, address, the name and rooms from the system, the model, the current voltage and flags, and `profile` - power source, slots, the levels the detector uses, and where they came from (`table`, `override`, `guess`, `none`) |
+| `GET devices` | every tracked device: interface, address, the name and rooms from the system, the model, the current voltage and flags, `profile` - power source, slots, the levels the detector uses, and where they came from (`table`, `override`, `guess`, `none`) -, `image` (the platform's picture of the model, `/config/img/devices/250/…`, as the WebUI's `DEVDB.tcl` names it; absent without one) and `life` (the device's battery lives: `count`, `min_days`, `max_days`, `avg_days`, `median_days` of the completed ones, `running_since`/`running_days` of the current one, `hint: short` for a low battery well before the device's usual life; absent without an accepted change) |
 | `GET models` | the models of this installation with their table rows; `?unknown=true` lists the ones the table lacks |
 | `GET models/{model}` | one model's row, override and profile; the lookup ignores case and knows the aliases |
 | `PUT`/`DELETE models/{model}/override` | fix the table for a model locally: `{"slots": [{"count": 2, "type": "AA"}], "power": "battery"}` |
@@ -46,7 +46,9 @@ A device override wins over a model override, which wins over the table.
 
 A change is one battery change of one device: `at`, the `batteries` that went in (`count`,
 `type`, `chemistry`, `rechargeable`, `vendor`, `product`, `price_cents`, `lot`, per slot), a
-`note`, and how it came: `kind` `detected` (the detector), `confirmed` (detected, and a manual or
+`note`, and how it came. **`price_cents` is the price of one battery** of the slot (in cents of
+the user's currency), so a slot's cost is `count × price_cents`; `vendor` is the maker ("Varta")
+and `product` its product line ("Power on Demand"). How it came: `kind` `detected` (the detector), `confirmed` (detected, and a manual or
 imported entry said the same), `manual` or `import`. Its `status`:
 
 | Status | Meaning |
@@ -90,8 +92,8 @@ with `interface` and `model`; it is created as retired.
 address,at,count,type,chemistry,rechargeable,vendor,product,price_cents,note,external_id
 ```
 
-(`interface` and `model` may be added). One row per slot: rows with the same `address` and `at`
-are one change. `rechargeable` takes `true`, `1`, `yes` or `x`. The answer has one line per change
+(`interface` and `model` may be added). One row per slot, `price_cents` per single battery: rows
+with the same `address` and `at` are one change. `rechargeable` takes `true`, `1`, `yes` or `x`. The answer has one line per change
 (the CSV line it starts on, or the array index + 1): `created`, `merged`, `duplicate`, or `error`
 with a code and a reason, plus the counts.
 
@@ -121,7 +123,9 @@ call `detect`, then go through the inbox. Both end in the same tables.
 
 | Route | Does |
 | --- | --- |
-| `GET suggestions?field=vendor\|product\|type\|chemistry&q=` | the values recorded for a battery field, most used first, matched case-insensitively; spellings that differ only in case count as one (types and chemistries add the table's) |
+| `GET suggestions?field=vendor\|product\|type\|chemistry&q=&vendor=` | the values recorded for a battery field, most used first, matched case-insensitively; spellings that differ only in case count as one (types and chemistries add the table's); `vendor` narrows the product lines to the ones recorded with that vendor |
+| `GET prices/last?vendor=&product=&type=` | the price per battery recorded most recently for that vendor, product line and size (each optional, matched without regard to case): `{found, price_cents, at}` - the editor's prefill |
+| `GET stats?lang=` | the lives and the statistics over the accepted changes: `devices` (per `interface.address`, the `life` of `GET devices`), `lives` (each: device, model, `from`, `to` - absent while it runs -, `days`, the batteries that went in), `batteries` (one row per vendor + product line + size: `total` single batteries, `changes`, `devices`, `models`, `life` summary, `avg_price_cents` per battery, `cost_per_year_cents` as the mean over the lives with a price, `last_price_cents`, and `per_model` - the same per device model, since a battery's life depends on the device), `models` (per model: the devices, the life summary, the batteries used in it with their per-model life and cost per year, longest first), `types` (per size), `year` (the last 365 days: changes, batteries, by type, cost where prices exist); `names` maps the devices to name, model and picture. A life is the time between two accepted changes of a device; the running one counts in no average |
 | `GET export.json` | everything: devices with their overrides, slots, model overrides, changes, events, samples |
 | `GET settings` | the detection and merge windows in force |
 | `GET health` | the addon's state; `inbox` counts the pending detections |
