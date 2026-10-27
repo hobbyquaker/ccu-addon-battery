@@ -629,3 +629,25 @@ func counts(ctx context.Context, db *sql.DB) (map[string]int64, error) {
 	}
 	return out, nil
 }
+
+// MetaGet reads a key of the meta table ("" when absent).
+func (s *Store) MetaGet(ctx context.Context, key string) (string, error) {
+	db, err := s.reader()
+	if err != nil {
+		return "", err
+	}
+	var v string
+	err = db.QueryRowContext(ctx, `SELECT value FROM meta WHERE key = ?`, key).Scan(&v)
+	if errors.Is(err, sql.ErrNoRows) {
+		return "", nil
+	}
+	return v, err
+}
+
+// MetaSet writes a key of the meta table.
+func (s *Store) MetaSet(ctx context.Context, key, value string) error {
+	return s.Write(ctx, func(tx *sql.Tx) error {
+		_, err := tx.Exec(`INSERT INTO meta (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value`, key, value)
+		return err
+	})
+}

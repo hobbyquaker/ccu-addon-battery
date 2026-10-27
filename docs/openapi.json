@@ -957,6 +957,221 @@
       }
      }
     }
+   },
+   "Trend": {
+    "type": "object",
+    "description": "the voltage regression over the last 60 days",
+    "properties": {
+     "mv_per_day": {
+      "type": "number"
+     },
+     "points": {
+      "type": "integer"
+     },
+     "span_days": {
+      "type": "number"
+     },
+     "reach_low_at": {
+      "type": "integer",
+      "description": "when the line meets the device's low level (ms); absent when it does not fall"
+     }
+    }
+   },
+   "Forecast": {
+    "type": "object",
+    "properties": {
+     "expected_days": {
+      "type": "number",
+      "description": "the life the forecast counts with"
+     },
+     "basis": {
+      "type": "string",
+      "enum": [
+       "own",
+       "model",
+       "table",
+       "trend",
+       "none"
+      ],
+      "description": "own: the device's own lives (median), model: the model's lives in this installation, table: the battery table's typical life, trend: the voltage trend pulled the date forward"
+     },
+     "lives": {
+      "type": "integer"
+     },
+     "due_at": {
+      "type": "integer",
+      "description": "the forecast date (ms): the last change + the expected life - 14 days, or the trend's date if earlier"
+     },
+     "days_left": {
+      "type": "number"
+     },
+     "state": {
+      "type": "string",
+      "enum": [
+       "low",
+       "due",
+       "soon",
+       "ok",
+       "unknown"
+      ]
+     },
+     "trend": {
+      "$ref": "#/components/schemas/Trend"
+     }
+    }
+   },
+   "DeviceForecast": {
+    "type": "object",
+    "properties": {
+     "interface": {
+      "type": "string"
+     },
+     "address": {
+      "type": "string"
+     },
+     "name": {
+      "type": "string"
+     },
+     "rooms": {
+      "type": "array",
+      "items": {
+       "type": "string"
+      }
+     },
+     "model": {
+      "type": "string"
+     },
+     "image": {
+      "type": "string"
+     },
+     "slots": {
+      "type": "array",
+      "items": {
+       "$ref": "#/components/schemas/Slot"
+      }
+     },
+     "low_bat": {
+      "type": "boolean"
+     },
+     "voltage": {
+      "type": [
+       "number",
+       "null"
+      ]
+     },
+     "forecast": {
+      "$ref": "#/components/schemas/Forecast"
+     }
+    }
+   },
+   "ShoppingItem": {
+    "type": "object",
+    "properties": {
+     "type": {
+      "type": "string"
+     },
+     "needed": {
+      "type": "integer"
+     },
+     "stock": {
+      "type": "integer"
+     },
+     "buy": {
+      "type": "integer"
+     },
+     "devices": {
+      "type": "array",
+      "items": {
+       "type": "string"
+      }
+     }
+    }
+   },
+   "ShoppingSettings": {
+    "type": "object",
+    "properties": {
+     "days": {
+      "type": "integer",
+      "description": "the horizon in days (90)"
+     },
+     "stock": {
+      "type": "object",
+      "additionalProperties": {
+       "type": "integer"
+      },
+      "description": "what is at home, per battery type"
+     }
+    }
+   },
+   "NotifySettings": {
+    "type": "object",
+    "properties": {
+     "channel": {
+      "type": "string",
+      "enum": [
+       "",
+       "webhook",
+       "ntfy"
+      ]
+     },
+     "url": {
+      "type": "string"
+     },
+     "topic": {
+      "type": "string",
+      "description": "ntfy"
+     },
+     "token": {
+      "type": "string",
+      "description": "ntfy: sent as a bearer token"
+     },
+     "headers": {
+      "type": "object",
+      "additionalProperties": {
+       "type": "string"
+      },
+      "description": "webhook: extra request headers"
+     },
+     "events": {
+      "type": "array",
+      "items": {
+       "type": "string",
+       "enum": [
+        "low",
+        "due",
+        "soon",
+        "inbox"
+       ]
+      }
+     },
+     "language": {
+      "type": "string",
+      "enum": [
+       "de",
+       "en"
+      ]
+     }
+    }
+   },
+   "Settings": {
+    "type": "object",
+    "properties": {
+     "detection": {
+      "type": "object",
+      "additionalProperties": {
+       "type": "number"
+      }
+     },
+     "shopping": {
+      "$ref": "#/components/schemas/ShoppingSettings"
+     },
+     "notify": {
+      "$ref": "#/components/schemas/NotifySettings"
+     },
+     "writable": {
+      "type": "boolean"
+     }
+    }
    }
   },
   "securitySchemes": {
@@ -2571,7 +2786,60 @@
       "content": {
        "application/json": {
         "schema": {
-         "type": "object"
+         "$ref": "#/components/schemas/Settings"
+        }
+       }
+      }
+     }
+    }
+   },
+   "put": {
+    "summary": "save the shopping and/or notification settings (the storage location and the detection windows are not changed here)",
+    "parameters": [
+     {
+      "name": "X-CCU-Addon-Request",
+      "in": "header",
+      "required": true,
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "type": "object",
+        "properties": {
+         "shopping": {
+          "$ref": "#/components/schemas/ShoppingSettings"
+         },
+         "notify": {
+          "$ref": "#/components/schemas/NotifySettings"
+         }
+        }
+       }
+      }
+     }
+    },
+    "responses": {
+     "200": {
+      "description": "OK",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Settings"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "invalid input (error code in the body)",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Error"
         }
        }
       }
@@ -2881,6 +3149,149 @@
      },
      "503": {
       "description": "the database is not available",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Error"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/forecast": {
+   "get": {
+    "summary": "every battery device with when its batteries are due, the urgent ones first",
+    "parameters": [
+     {
+      "name": "days",
+      "in": "query",
+      "description": "the horizon for state soon (the shopping setting by default)",
+      "schema": {
+       "type": "integer"
+      }
+     },
+     {
+      "name": "lang",
+      "in": "query",
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "OK",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "object",
+         "properties": {
+          "days": {
+           "type": "number"
+          },
+          "devices": {
+           "type": "array",
+           "items": {
+            "$ref": "#/components/schemas/DeviceForecast"
+           }
+          }
+         }
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/shopping": {
+   "get": {
+    "summary": "the shopping list: what the devices low now or due within the horizon need, per battery type, minus the stock",
+    "parameters": [
+     {
+      "name": "days",
+      "in": "query",
+      "schema": {
+       "type": "integer"
+      }
+     },
+     {
+      "name": "lang",
+      "in": "query",
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "OK",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "object",
+         "properties": {
+          "days": {
+           "type": "number"
+          },
+          "stock": {
+           "type": "object",
+           "additionalProperties": {
+            "type": "integer"
+           }
+          },
+          "items": {
+           "type": "array",
+           "items": {
+            "$ref": "#/components/schemas/ShoppingItem"
+           }
+          },
+          "devices": {
+           "type": "array",
+           "items": {
+            "$ref": "#/components/schemas/DeviceForecast"
+           }
+          }
+         }
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/notify/test": {
+   "post": {
+    "summary": "send a test notice over the saved channel",
+    "parameters": [
+     {
+      "name": "X-CCU-Addon-Request",
+      "in": "header",
+      "required": true,
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "OK",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "object",
+         "properties": {
+          "ok": {
+           "type": "boolean"
+          }
+         }
+        }
+       }
+      }
+     },
+     "502": {
+      "description": "the channel did not take it (send-failed)",
       "content": {
        "application/json": {
         "schema": {

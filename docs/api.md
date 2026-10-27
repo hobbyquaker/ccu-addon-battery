@@ -119,6 +119,16 @@ So a script with years of recorded values has two ways in: push the changes it k
 (`changes:bulk`, with `external_id` = its own row id), or push the series (`samples:bulk`) and
 call `detect`, then go through the inbox. Both end in the same tables.
 
+## Notifications
+
+Every quarter of an hour the addon looks at the forecast and the inbox and sends, over the
+channel of `PUT settings`, what the chosen `events` ask for: a device reporting a low battery, a
+change that is due or due within the horizon, a detection waiting in the inbox. Each notice goes
+out once; the same one again only after seven days. The webhook body is
+`{"kind", "key", "title", "text", "link", "device", "name", "model", "at"}`; ntfy gets the text as the
+body with `Title`, `Tags: battery`, `Priority: high` for low and due, and `Click`. The system
+itself offers an addon no channel yet; once it does, it becomes a third `channel` here.
+
 ## Other routes
 
 | Route | Does |
@@ -127,7 +137,10 @@ call `detect`, then go through the inbox. Both end in the same tables.
 | `GET prices/last?vendor=&product=&type=` | the price per battery recorded most recently for that vendor, product line and size (each optional, matched without regard to case): `{found, price_cents, at}` - the editor's prefill |
 | `GET stats?lang=` | the lives and the statistics over the accepted changes: `devices` (per `interface.address`, the `life` of `GET devices`), `lives` (each: device, model, `from`, `to` - absent while it runs -, `days`, the batteries that went in), `batteries` (one row per vendor + product line + size: `total` single batteries, `changes`, `devices`, `models`, `life` summary, `avg_price_cents` per battery, `cost_per_year_cents` as the mean over the lives with a price, `last_price_cents`, and `per_model` - the same per device model, since a battery's life depends on the device), `models` (per model: the devices, the life summary, the batteries used in it with their per-model life and cost per year, longest first), `types` (per size), `year` (the last 365 days: changes, batteries, by type, cost where prices exist); `names` maps the devices to name, model and picture. A life is the time between two accepted changes of a device; the running one counts in no average |
 | `GET export.json` | everything: devices with their overrides, slots, model overrides, changes, events, samples |
-| `GET settings` | the detection and merge windows in force |
+| `GET settings`, `PUT settings` | the detection and merge windows in force (read only), the shopping settings (`days`, the horizon; `stock` per battery type) and the notification channel (`channel` `webhook` - a POST with the notice as JSON - or `ntfy` - a POST to `<url>/<topic>`, `token` as a bearer -, `events` out of `low`, `due`, `soon`, `inbox`, `language`); PUT takes `shopping` and/or `notify` whole |
+| `GET forecast?days=` | every battery device with its forecast: `expected_days` and its `basis` (`own` - the median of the device's own lives, with fewer than two `model` - the model's lives in this installation -, else `table` - the battery table's typical life), `due_at` = the last change + the expected life - 14 days, pulled forward to the voltage `trend`'s date (a regression over the last 60 days reaching the device's low level) where that is earlier, `days_left`, `state` (`low`, `due`, `soon` within the horizon, `ok`, `unknown`); the urgent ones first |
+| `GET shopping?days=` | the shopping list: the devices low now or due within the horizon, and per battery type what they need, the stock, and what to buy |
+| `POST notify/test` | sends a test notice over the saved channel; 502 `send-failed` when it does not take it |
 | `GET health` | the addon's state; `inbox` counts the pending detections |
 | `GET storage`, `POST storage/check`, `POST storage/move` | the database's location ([storage.md](storage.md)) |
 | `GET openapi.json` | the specification |

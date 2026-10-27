@@ -8,13 +8,16 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
 	"github.com/hobbyquaker/ccu-addon-battery/docs"
 	"github.com/hobbyquaker/ccu-addon-battery/internal/changes"
 	"github.com/hobbyquaker/ccu-addon-battery/internal/devimg"
+	"github.com/hobbyquaker/ccu-addon-battery/internal/notify"
 	"github.com/hobbyquaker/ccu-addon-battery/internal/recorder"
+	"github.com/hobbyquaker/ccu-addon-battery/internal/settings"
 	"github.com/hobbyquaker/ccu-addon-battery/internal/stats"
 	"github.com/hobbyquaker/ccu-addon-battery/internal/store"
 	"github.com/hobbyquaker/ccu-addon-kit/go/addonkit"
@@ -57,7 +60,9 @@ func server(t *testing.T) (http.Handler, *store.Store, *fakelite.Server, string)
 	checker := addonkit.NewChecker(addonkit.SessionOptions{Base: s.URL, Platform: func() addonkit.Kind { return addonkit.OpenccuLite }})
 	devdb := filepath.Join(addon, "DEVDB.tcl")
 	os.WriteFile(devdb, []byte(`array set DEV_PATHS {HmIP-WRC2 {{50 /config/img/devices/50/112_hmip-wrc2_thumb.png} {250 /config/img/devices/250/112_hmip-wrc2.png}}}`), 0o644)
-	h := New(Options{BasePath: "/addons/battery", WWW: www, Store: st, Recorder: rec, Changes: chg, Images: &devimg.Catalog{Path: devdb}, Session: checker, Version: "test", Started: time.Now()})
+	sf := settings.Fallback(filepath.Join(addon, "etc", "battery.json"))
+	notifier := notify.New(func() settings.Notify { return sf.Get().Notify }, st)
+	h := New(Options{BasePath: "/addons/battery", WWW: www, Store: st, Recorder: rec, Changes: chg, Images: &devimg.Catalog{Path: devdb}, Settings: sf, Notifier: notifier, Session: checker, Version: "test", Started: time.Now()})
 	return h, st, s, addon
 }
 
@@ -380,5 +385,60 @@ func TestStatsAPI(t *testing.T) {
 	o := Options{Images: &devimg.Catalog{Path: filepath.Join(filepath.Dir(st.Path()), "..", "DEVDB.tcl")}}
 	if o.image("hmip-wrc2") != "/config/img/devices/250/112_hmip-wrc2.png" || o.image("HM-Sec-SC-2") != "" || (Options{}).image("HmIP-WRC2") != "" {
 		t.Fatal("image lookup")
+	}
+}
+
+// The forecast, the shopping list, the settings and a test notice against a local sink.
+func TestForecastAndSettingsAPI(t *testing.T) {
+	h, _, _, addon := server(t)
+	csrf := []string{addonkit.HeaderRequest, "1"}
+	// no devices known to the recorder: empty lists, not errors
+	if w := call(h, "GET", "/addons/battery/api/v1/forecast?days=30", user, ""); w.Code != 200 || !strings.Contains(w.Body.String(), `"devices":[]`) {
+		t.Fatalf("forecast: %d %s", w.Code, w.Body)
+	}
+	if w := call(h, "GET", "/addons/battery/api/v1/shopping", user, ""); w.Code != 200 || !strings.Contains(w.Body.String(), `"items":[]`) || !strings.Contains(w.Body.String(), `"days":90`) {
+		t.Fatalf("shopping: %d %s", w.Code, w.Body)
+	}
+	if w := call(h, "GET", "/addons/battery/api/v1/settings", user, ""); w.Code != 200 || !strings.Contains(w.Body.String(), `"writable":true`) || !strings.Contains(w.Body.String(), `"channel":""`) {
+		t.Fatalf("settings: %d %s", w.Code, w.Body)
+	}
+	// a local sink takes the notices
+	var mu sync.Mutex
+	var got []string
+	sink := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		b := make([]byte, 4096)
+		n, _ := r.Body.Read(b)
+		mu.Lock()
+		got = append(got, r.URL.Path+" "+string(b[:n]))
+		mu.Unlock()
+	}))
+	defer sink.Close()
+	if w := call(h, "POST", "/addons/battery/api/v1/notify/test", user, "", csrf...); w.Code != 502 {
+		t.Fatalf("test without a channel: %d %s", w.Code, w.Body)
+	}
+	body := `{"shopping":{"days":60,"stock":{"AA":4}},"notify":{"channel":"webhook","url":"` + sink.URL + `/hook","events":["low","inbox"],"language":"en"}}`
+	if w := call(h, "PUT", "/addons/battery/api/v1/settings", user, body); w.Code != 403 {
+		t.Fatalf("no CSRF: %d", w.Code)
+	}
+	w := call(h, "PUT", "/addons/battery/api/v1/settings", user, body, csrf...)
+	if w.Code != 200 || !strings.Contains(w.Body.String(), `"days":60`) || !strings.Contains(w.Body.String(), `"channel":"webhook"`) {
+		t.Fatalf("put settings: %d %s", w.Code, w.Body)
+	}
+	if b, err := os.ReadFile(filepath.Join(addon, "etc", "battery.json")); err != nil || !strings.Contains(string(b), `"shopping"`) || !strings.Contains(string(b), `"notify"`) {
+		t.Fatalf("settings file: %s %v", b, err)
+	}
+	if w := call(h, "PUT", "/addons/battery/api/v1/settings", user, `{"notify":{"channel":"ntfy","url":"https://ntfy.sh"}}`, csrf...); w.Code != 422 {
+		t.Fatalf("ntfy without a topic: %d %s", w.Code, w.Body)
+	}
+	if w := call(h, "PUT", "/addons/battery/api/v1/settings", user, `{"colour":"red"}`, csrf...); w.Code != 400 {
+		t.Fatalf("unknown field: %d", w.Code)
+	}
+	if w := call(h, "POST", "/addons/battery/api/v1/notify/test", user, "", csrf...); w.Code != 200 {
+		t.Fatalf("test notice: %d %s", w.Code, w.Body)
+	}
+	mu.Lock()
+	defer mu.Unlock()
+	if len(got) != 1 || !strings.HasPrefix(got[0], "/hook ") || !strings.Contains(got[0], `"kind":"test"`) || !strings.Contains(got[0], "The Battery addon") {
+		t.Fatalf("sink: %v", got)
 	}
 }

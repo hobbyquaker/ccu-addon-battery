@@ -55,6 +55,10 @@ func (o Options) routesChanges(api *http.ServeMux) {
 	handle(api, "PUT /api/v1/devices/{iface}/{address}/override", o.putDeviceOverride)
 	handle(api, "DELETE /api/v1/devices/{iface}/{address}/override", o.deleteDeviceOverride)
 	handle(api, "GET /api/v1/settings", o.settings)
+	handle(api, "PUT /api/v1/settings", o.putSettings)
+	handle(api, "GET /api/v1/forecast", o.forecastList)
+	handle(api, "GET /api/v1/shopping", o.shopping)
+	handle(api, "POST /api/v1/notify/test", o.notifyTest)
 	handle(api, "GET /api/v1/openapi.json", o.openapi)
 }
 
@@ -586,6 +590,7 @@ func (o Options) deleteDeviceOverride(w http.ResponseWriter, r *http.Request) {
 
 func (o Options) settings(w http.ResponseWriter, r *http.Request) {
 	p, merge := o.Changes.Params()
+	s := o.currentSettings()
 	writeJSON(w, 200, map[string]any{
 		"detection": map[string]any{
 			"window_hours":       p.Window.Hours(),
@@ -594,6 +599,9 @@ func (o Options) settings(w http.ResponseWriter, r *http.Request) {
 			"silence_hours":      p.Silence.Hours(),
 			"merge_window_hours": merge.Hours(),
 		},
+		"shopping": s.Shopping,
+		"notify":   s.Notify,
+		"writable": o.Settings != nil,
 	})
 }
 

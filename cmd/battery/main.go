@@ -20,7 +20,9 @@ import (
 	"github.com/hobbyquaker/ccu-addon-battery/internal/detect"
 	"github.com/hobbyquaker/ccu-addon-battery/internal/devimg"
 	"github.com/hobbyquaker/ccu-addon-battery/internal/httpapi"
+	"github.com/hobbyquaker/ccu-addon-battery/internal/notify"
 	"github.com/hobbyquaker/ccu-addon-battery/internal/recorder"
+	"github.com/hobbyquaker/ccu-addon-battery/internal/settings"
 	"github.com/hobbyquaker/ccu-addon-battery/internal/store"
 	"github.com/hobbyquaker/ccu-addon-kit/go/addonkit"
 	"github.com/hobbyquaker/ccu-addon-kit/go/litesource"
@@ -105,13 +107,23 @@ func run(addonDir, id string, port int, base, basePath, www, tokenFile string, f
 		}
 	}()
 
+	sf, err := settings.Open(filepath.Join(addonDir, "etc", "battery.json"))
+	if err != nil {
+		log.Printf("battery: %v (defaults until the settings are saved again)", err)
+		sf = settings.Fallback(filepath.Join(addonDir, "etc", "battery.json"))
+	}
+	notifier := notify.New(func() settings.Notify { return sf.Get().Notify }, st)
+	notifier.Log = log.Printf
+
 	var checker *addonkit.Checker
 	if !noSession {
 		checker = addonkit.NewChecker(addonkit.SessionOptions{Base: base, Need: addonkit.LevelUser, OnRefused: func(r *http.Request, reason string) {
 			log.Printf("battery: refused %s %s: %s", r.Method, r.URL.Path, reason)
 		}})
 	}
-	h := httpapi.New(httpapi.Options{BasePath: basePath, WWW: www, Store: st, Recorder: rec, Changes: chg, Images: &devimg.Catalog{}, Session: checker, Version: version, Started: time.Now()})
+	opts := httpapi.Options{BasePath: basePath, WWW: www, Store: st, Recorder: rec, Changes: chg, Images: &devimg.Catalog{}, Settings: sf, Notifier: notifier, Session: checker, Version: version, Started: time.Now()}
+	h := httpapi.New(opts)
+	go notifier.Run(ctx, 15*time.Minute, opts.Events)
 	l, err := addonkit.Listen(port, "")
 	if err != nil {
 		return err

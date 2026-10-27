@@ -18,7 +18,9 @@ import (
 
 	"github.com/hobbyquaker/ccu-addon-battery/internal/changes"
 	"github.com/hobbyquaker/ccu-addon-battery/internal/devimg"
+	"github.com/hobbyquaker/ccu-addon-battery/internal/notify"
 	"github.com/hobbyquaker/ccu-addon-battery/internal/recorder"
+	"github.com/hobbyquaker/ccu-addon-battery/internal/settings"
 	"github.com/hobbyquaker/ccu-addon-battery/internal/stats"
 	"github.com/hobbyquaker/ccu-addon-battery/internal/store"
 	"github.com/hobbyquaker/ccu-addon-kit/go/addonkit"
@@ -35,6 +37,10 @@ type Options struct {
 	Changes  *changes.Service
 	// Images maps a model to the platform's device picture; nil: none.
 	Images *devimg.Catalog
+	// Settings is the user's settings file (shopping, notifications); nil: the defaults, read only.
+	Settings *settings.File
+	// Notifier sends the notices; nil: no notifications.
+	Notifier *notify.Notifier
 	// Session checks the sessions; nil serves without a check (development only).
 	Session *addonkit.Checker
 	Version string

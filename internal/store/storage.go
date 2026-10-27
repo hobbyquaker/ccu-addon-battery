@@ -221,15 +221,21 @@ func LoadLocation(path string) (Location, error) {
 // SaveLocation writes the setting atomically (a temporary file, fsync, rename), keeping the
 // file's other keys.
 func SaveLocation(path string, l Location) error {
+	return SaveSetting(path, "storage", l)
+}
+
+// SaveSetting writes one top-level key of the settings file (etc/battery.json) atomically - a
+// temporary file, fsync, rename - keeping the file's other keys as they are.
+func SaveSetting(path, key string, v any) error {
 	doc := map[string]json.RawMessage{}
 	if b, err := os.ReadFile(path); err == nil {
 		_ = json.Unmarshal(b, &doc)
 	}
-	lb, err := json.Marshal(l)
+	lb, err := json.Marshal(v)
 	if err != nil {
 		return err
 	}
-	doc["storage"] = lb
+	doc[key] = lb
 	out, err := json.MarshalIndent(doc, "", "  ")
 	if err != nil {
 		return err
