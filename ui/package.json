@@ -17,10 +17,10 @@
     "test": "vitest run"
   },
   "dependencies": {
+    "ccu-addon-kit": "github:hobbyquaker/ccu-addon-kit#68cbb26",
     "occulite-ui": "^0.1.0",
     "svelte": "^5.57.0",
-    "uplot": "^1.6.32",
-    "ccu-addon-kit": "github:hobbyquaker/ccu-addon-kit#c92a1c4"
+    "uplot": "^1.6.32"
   },
   "devDependencies": {
     "@sveltejs/vite-plugin-svelte": "^6.2.4",
