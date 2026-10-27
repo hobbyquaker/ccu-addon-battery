@@ -1,0 +1,204 @@
+/* The app's own rules on top of occulite-ui's tokens: the page frame, the status pills, the
+   storage form. Colours are the kit's custom properties only, so dark mode comes with them. */
+
+html,
+body,
+#app {
+    height: 100%;
+    margin: 0;
+}
+
+.bat-app {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    min-height: 0;
+}
+
+.bat-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 6px 12px 0;
+    flex-wrap: wrap;
+}
+
+.bat-header h1 {
+    font-size: 1.05rem;
+    font-weight: 600;
+    margin: 0 4px 0 0;
+}
+
+.bat-header .bat-spacer {
+    flex: 1;
+}
+
+.bat-page {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    padding: 8px 12px 12px;
+}
+
+.bat-table {
+    flex: 1;
+    min-height: 240px;
+}
+
+/* a pill keeps its box across states: fixed width, the text cut with a tooltip */
+.bat-pill {
+    display: inline-block;
+    box-sizing: border-box;
+    width: 7.5em;
+    padding: 0 8px;
+    border-radius: 999px;
+    font-size: 0.85em;
+    line-height: 1.6;
+    text-align: center;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    border: 1px solid var(--hmm-border, #8884);
+    color: var(--hmm-fg, inherit);
+    background: var(--hmm-surface-2, transparent);
+}
+
+.bat-pill.ok {
+    border-color: var(--hmm-success, #2a8a3e);
+    color: var(--hmm-success, #2a8a3e);
+}
+
+.bat-pill.low,
+.bat-pill.unreach {
+    border-color: var(--hmm-danger, #c0392b);
+    color: var(--hmm-danger, #c0392b);
+}
+
+.bat-pill.external {
+    border-color: var(--hmm-info, #2c6fb3);
+    color: var(--hmm-info, #2c6fb3);
+}
+
+.bat-pill.degraded,
+.bat-pill.unavailable {
+    border-color: var(--hmm-warning, #b7791f);
+    color: var(--hmm-warning, #b7791f);
+}
+
+.bat-banner {
+    margin: 0 12px;
+    padding: 8px 12px;
+    border-radius: 6px;
+    border: 1px solid var(--hmm-warning, #b7791f);
+    background: var(--hmm-surface-2, transparent);
+}
+
+.bat-banner.info {
+    border-color: var(--hmm-border, #8884);
+}
+
+.bat-card {
+    max-width: 44rem;
+    padding: 12px 14px;
+    margin-bottom: 12px;
+    border: 1px solid var(--hmm-border, #8884);
+    border-radius: 8px;
+    background: var(--hmm-surface, transparent);
+}
+
+.bat-card h2 {
+    font-size: 0.95rem;
+    margin: 0 0 8px;
+}
+
+.bat-kv {
+    display: grid;
+    grid-template-columns: max-content 1fr;
+    gap: 4px 16px;
+    margin: 0;
+}
+
+.bat-kv dt {
+    opacity: 0.75;
+}
+
+.bat-kv dd {
+    margin: 0;
+    overflow-wrap: anywhere;
+}
+
+.bat-form {
+    display: grid;
+    grid-template-columns: max-content 1fr;
+    gap: 8px 12px;
+    align-items: center;
+    margin: 8px 0;
+}
+
+.bat-form label {
+    opacity: 0.85;
+}
+
+.bat-form select,
+.bat-form input[type='text'] {
+    font: inherit;
+    padding: 4px 6px;
+    min-width: 12rem;
+    color: inherit;
+    background: var(--hmm-input-bg, transparent);
+    border: 1px solid var(--hmm-border, #8884);
+    border-radius: 4px;
+}
+
+.bat-actions {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-top: 8px;
+}
+
+.bat-actions button,
+.bat-dialog-buttons button {
+    font: inherit;
+    padding: 4px 12px;
+    border-radius: 4px;
+    border: 1px solid var(--hmm-border, #8884);
+    background: var(--hmm-surface-2, transparent);
+    color: inherit;
+    cursor: pointer;
+}
+
+.bat-actions button.primary,
+.bat-dialog-buttons button.primary {
+    border-color: var(--hmm-accent, #2c6fb3);
+    background: var(--hmm-accent, #2c6fb3);
+    color: var(--hmm-on-accent, #fff);
+}
+
+.bat-actions button[disabled],
+.bat-dialog-buttons button[disabled] {
+    opacity: 0.5;
+    cursor: default;
+}
+
+.bat-dialog-buttons {
+    display: flex;
+    gap: 8px;
+    justify-content: flex-end;
+}
+
+.bat-muted {
+    opacity: 0.7;
+}
+
+.bat-mono {
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 0.92em;
+}
+
+.bat-empty {
+    padding: 24px 0;
+    text-align: center;
+    opacity: 0.7;
+}

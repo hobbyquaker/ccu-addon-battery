@@ -1,0 +1,31 @@
+{
+  "name": "ccu-addon-battery-ui",
+  "private": true,
+  "version": "0.0.0",
+  "description": "The web app of ccu-addon-battery: Svelte 5 on occulite-ui, served by the addon's Go backend",
+  "license": "MIT",
+  "type": "module",
+  "engines": {
+    "node": ">=22.12"
+  },
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "check": "svelte-check --tsconfig ./tsconfig.json --fail-on-warnings",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "occulite-ui": "^0.1.0",
+    "svelte": "^5.57.0"
+  },
+  "devDependencies": {
+    "@sveltejs/vite-plugin-svelte": "^6.2.4",
+    "@testing-library/svelte": "^5.4.2",
+    "@tsconfig/svelte": "^5.0.4",
+    "jsdom": "^30.0.1",
+    "svelte-check": "^4.7.6",
+    "typescript": "^5.9.3",
+    "vite": "^7.3.6",
+    "vitest": "^5.0.0"
+  }
+}

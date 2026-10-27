@@ -1,0 +1,127 @@
+// battery is the ccu-addon-battery daemon: it records the battery datapoints of every device from
+// openccu-lite's APIs into its SQLite store and serves its web app and API on the loopback,
+// behind lighttpd's proxy of /addons/battery/.
+package main
+
+import (
+	"context"
+	"flag"
+	"fmt"
+	"log"
+	"net/http"
+	"os"
+	"os/signal"
+	"path/filepath"
+	"syscall"
+	"time"
+
+	"github.com/hobbyquaker/ccu-addon-battery/internal/httpapi"
+	"github.com/hobbyquaker/ccu-addon-battery/internal/recorder"
+	"github.com/hobbyquaker/ccu-addon-battery/internal/store"
+	"github.com/hobbyquaker/ccu-addon-kit/go/addonkit"
+	"github.com/hobbyquaker/ccu-addon-kit/go/litesource"
+)
+
+// version is set by the build (-ldflags "-X main.version=…").
+var version = "dev"
+
+func main() {
+	log.SetFlags(0) // the journal adds the time
+	addonDir := flag.String("addon-dir", "/usr/local/addons/battery", "the addon's directory (etc/, var/, www/)")
+	id := flag.String("id", "battery", "the addon id (token file, base path)")
+	port := flag.Int("port", 8291, "the loopback port lighttpd proxies to")
+	base := flag.String("system", "http://127.0.0.1", "openccu-lite's URL")
+	basePath := flag.String("base-path", "", "the path the app is served at (/addons/<id> by default)")
+	www := flag.String("www", "", "the built web app (<addon-dir>/www by default)")
+	tokenFile := flag.String("token-file", "", "a token file for the system's API (the addon's own token by default)")
+	flush := flag.Duration("flush", 10*time.Minute, "how often the RAM batch is written to the database")
+	noSession := flag.Bool("no-session-check", false, "serve without the session check (development on a system that is not openccu-lite)")
+	showVersion := flag.Bool("version", false, "print the version and exit")
+	flag.Parse()
+	if *showVersion {
+		fmt.Println(version)
+		return
+	}
+	if *basePath == "" {
+		*basePath = "/addons/" + *id
+	}
+	if *www == "" {
+		*www = filepath.Join(*addonDir, "www")
+	}
+	if err := run(*addonDir, *id, *port, *base, *basePath, *www, *tokenFile, *flush, *noSession); err != nil {
+		log.Fatalf("battery: %v", err)
+	}
+}
+
+func run(addonDir, id string, port int, base, basePath, www, tokenFile string, flush time.Duration, noSession bool) error {
+	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
+	defer stop()
+
+	st, err := store.Open(store.Config{AddonDir: addonDir, Log: log.Printf})
+	if err != nil {
+		return err
+	}
+	defer st.Close()
+	go st.Run(ctx, flush)
+
+	var token addonkit.TokenSource
+	if tokenFile != "" {
+		token = &addonkit.FileToken{Path: tokenFile}
+	} else {
+		token = addonkit.AddonToken(id)
+	}
+	src := litesource.New(base, token)
+	src.Log = log.Printf
+
+	// wait for the system: before the token exists or occulited answers there is nothing to do
+	for {
+		if _, err := src.Probe(ctx); err == nil {
+			break
+		} else if err == litesource.ErrNotOpenccuLite {
+			return fmt.Errorf("%s is not openccu-lite", base)
+		} else {
+			log.Printf("battery: waiting for the system: %v", err)
+		}
+		select {
+		case <-ctx.Done():
+			return nil
+		case <-time.After(5 * time.Second):
+		}
+	}
+
+	rec := recorder.New(recorder.Options{Source: src, Store: st, Log: log.Printf})
+	go func() {
+		if err := rec.Run(ctx); err != nil && ctx.Err() == nil {
+			log.Printf("battery: recorder ended: %v", err)
+		}
+	}()
+
+	var checker *addonkit.Checker
+	if !noSession {
+		checker = addonkit.NewChecker(addonkit.SessionOptions{Base: base, Need: addonkit.LevelUser, OnRefused: func(r *http.Request, reason string) {
+			log.Printf("battery: refused %s %s: %s", r.Method, r.URL.Path, reason)
+		}})
+	}
+	h := httpapi.New(httpapi.Options{BasePath: basePath, WWW: www, Store: st, Recorder: rec, Session: checker, Version: version, Started: time.Now()})
+	l, err := addonkit.Listen(port, "")
+	if err != nil {
+		return err
+	}
+	srv := &http.Server{Handler: h, ReadHeaderTimeout: 10 * time.Second}
+	go func() {
+		<-ctx.Done()
+		sctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+		srv.Shutdown(sctx)
+	}()
+	log.Printf("battery %s: serving %s on %s, store %s", version, basePath, l.Addr(), st.Health().State)
+	if err := srv.Serve(l); err != nil && err != http.ErrServerClosed {
+		return err
+	}
+	log.Printf("battery: stopping, writing the batch")
+	if err := st.Close(); err != nil {
+		log.Printf("battery: closing the store: %v", err)
+	}
+	os.Stdout.Sync()
+	return nil
+}

@@ -1,0 +1,11 @@
+/dist/
+/build/
+/.testtmp/
+/ui/node_modules/
+/ui/dist/
+/addon/battery/www/
+/addon/battery/bin/
+/addon/battery/versions
+*.db
+*.db-wal
+*.db-shm

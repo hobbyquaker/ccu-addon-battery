@@ -1,0 +1,73 @@
+#!/bin/sh
+#
+#   update_script of ccu-addon-battery (MIT): the CCU addon handbook's steps (chapter 02). The
+#   firmware unpacks the archive below /usr/local/tmp, cd's into it and runs
+#   ./update_script HM-RASPBERRYMATIC. Exit 10 = fresh install, 0 = update.
+#
+#   The addon's tree is battery/ next to this script: bin/battery (the daemon), www/ (the web app),
+#   rc.d (the service script), etc/lighttpd.conf (the proxy rule). On openccu-lite the manifest
+#   openccu-lite.json beside this script is read by the system before this script runs.
+#
+#   The data stays: etc/ (the settings) and var/ (the database, unless the user moved it) are never
+#   touched by an update, and an uninstall leaves them for a reinstall as well.
+#
+
+ADDON=battery
+ADDONS_DIR=/usr/local/addons
+ADDON_DIR=$ADDONS_DIR/$ADDON
+CONF_DIR=/usr/local/etc/config
+WWW_DIR=$CONF_DIR/addons/www/$ADDON
+EXITCODE=10
+
+mount | grep /usr/local >/dev/null 2>&1 || mount /usr/local
+
+mkdir -p $ADDONS_DIR && chmod 755 $ADDONS_DIR
+mkdir -p $CONF_DIR/addons/www && chmod 755 $CONF_DIR/addons/www
+mkdir -p $CONF_DIR/rc.d
+
+# an update: stop the running service through the previous version's script
+if [ -f $CONF_DIR/rc.d/$ADDON ]; then
+    EXITCODE=0
+    $CONF_DIR/rc.d/$ADDON stop
+fi
+
+# everything but etc/ and var/ is the program's: nothing stale may survive an update
+rm -rf "${ADDON_DIR:?}/bin" "${ADDON_DIR:?}/www" "${ADDON_DIR:?}/rc.d" "${ADDON_DIR:?}/versions"
+rm -f "${ADDON_DIR:?}/etc/lighttpd.conf"
+
+mkdir -p $ADDON_DIR
+cp -af $ADDON/bin $ADDON/www $ADDON/rc.d $ADDON/versions $ADDON_DIR/
+mkdir -p $ADDON_DIR/etc $ADDON_DIR/var
+cp -af $ADDON/etc/lighttpd.conf $ADDON_DIR/etc/
+chmod 755 $ADDON_DIR/bin/$ADDON $ADDON_DIR/rc.d
+
+# the program directories are not worth a backup; the data in var/ and etc/ is
+touch $ADDON_DIR/bin/.nobackup $ADDON_DIR/www/.nobackup
+
+# links: -n because busybox ln -T refuses to replace an existing directory symlink
+rmdir $WWW_DIR 2>/dev/null
+ln -sfn $ADDON_DIR/www $WWW_DIR
+ln -sf $ADDON_DIR/rc.d $CONF_DIR/rc.d/$ADDON
+
+# the classic CCU reads the lighttpd rule from its own directory; openccu-lite makes its own
+# validated copy of etc/lighttpd.conf and this directory is the system's there
+if ! grep -q '^LITE=' /VERSION 2>/dev/null && [ ! -x /usr/bin/occulited ]; then
+    mkdir -p $CONF_DIR/lighttpd
+    cp -f $ADDON_DIR/etc/lighttpd.conf $CONF_DIR/lighttpd/$ADDON.conf
+fi
+
+sync
+
+# OpenCCU runs this live and does not reboot after an update: start the service again. The
+# CCU3 firmware runs it in a chroot during the shutdown (S00InstallAddon); the boot starts it.
+# openccu-lite starts the unit itself after the install.
+if [ $EXITCODE -eq 0 ] && [ ! -f /etc/init.d/S00InstallAddon ]; then
+    if grep -q '^LITE=' /VERSION 2>/dev/null || [ -x /usr/bin/occulited ]; then
+        systemctl start addon-$ADDON.service 2>/dev/null || true
+    else
+        cd /
+        $CONF_DIR/rc.d/$ADDON start
+    fi
+fi
+
+exit $EXITCODE
