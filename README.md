@@ -3,18 +3,16 @@
 [:uk: English README](README.en.md)
 
 Batteriewechsel erkennen und Batterien auswerten, für Homematic-Geräte: ein Addon für
-[openccu-lite](https://github.com/hobbyquaker/openccu-lite) (und später für die klassische CCU3
-und OpenCCU). Es zeichnet die Batteriespannung und die Batterie-leer-Meldung jedes Geräts auf,
-erkennt daraus Batteriewechsel, lässt Sie eintragen, welche Batterien eingelegt wurden, und macht
-aus dem Protokoll: wie lange Batterien halten, welche Geräte Batteriefresser sind, welche
-Batterien am besten abschneiden, was bald fällig ist und was zu kaufen ist.
+[openccu-lite](https://github.com/hobbyquaker/openccu-lite), die klassische CCU3 und OpenCCU. Es
+zeichnet die Batteriespannung und die Batterie-leer-Meldung jedes Geräts auf, erkennt daraus
+Batteriewechsel, lässt Sie eintragen, welche Batterien eingelegt wurden, und macht aus dem
+Protokoll: wie lange Batterien halten, welche Geräte Batteriefresser sind, welche Batterien am
+besten abschneiden, was bald fällig ist und was zu kaufen ist.
 
-**Stand: in Entwicklung, noch kein Release.** Was heute funktioniert: die Aufzeichnung; die
-Batterietabelle (welches Gerät welche Batterien nimmt); die Wechselerkennung mit ihrem Eingang;
-von Hand gebuchte Wechsel mit den eingelegten Batterien (Hersteller, Typ, Preis); die
-Gerätebilder, die Haltedauern je Gerät, die Tabs Batterien und Statistik; die API zum Import
-vergangener Wechsel und Spannungsverläufe; die Wahl des Datenbank-Speicherorts. Die Prognosen, die
-Einkaufsliste und die Benachrichtigungen. Die klassische CCU (CCU3, OpenCCU) wird unterstützt.
+**Stand: 1.0.0** ([Änderungen](CHANGELOG.md); die Pakete stehen auf der
+[Release-Seite](https://github.com/hobbyquaker/ccu-addon-battery/releases)). Getestet auf
+openccu-lite mit echten Geräten und auf OpenCCU; auf der CCU3-Firmware bisher ohne angelernte
+Batteriegeräte – Rückmeldungen sind willkommen.
 
 ## Die Seiten
 
@@ -260,8 +258,8 @@ des Addons in der WebUI öffnet die Einstellungsseite (Dienst, Protokoll, Datenb
 Benachrichtigungen, Version), deren Knopf *Batterie öffnen* die Anwendung mit der Sitzung der WebUI
 öffnet. Nach außen spricht nur der Webserver. Einstellungen und Datenbank liegen in
 `/usr/local/addons/battery/etc` und `var`, in jedem Backup; *Deinstallieren* behält sie, wie oben.
-Getestet auf OpenCCU 3.89 (x86_64; die Pakete für `armv7l` und `aarch64` entstehen genauso); eine
-CCU3 mit der Firmware von eQ-3 steht noch aus.
+Getestet auf OpenCCU 3.89 (x86_64) und auf einer CCU3 mit der Firmware 3.89 von eQ-3 (`armv7l`),
+dort bisher ohne angelernte Batteriegeräte – Rückmeldungen sind willkommen.
 
 ## Entwicklung
 
@@ -269,7 +267,7 @@ CCU3 mit der Firmware von eQ-3 steht noch aus.
 go test -race ./...                      # Speicher, Aufzeichnung, Erkennung, Wechsel, Statistik, API, Paketdateien
 python3 data/check.py                    # die Batterietabelle
 (cd ui && npm ci && npm run check && npm test && npm run build)   # die Anwendung und die Einstellungsseite
-VERSION=0.1.0 scripts/build.sh           # dist/battery-<arch>-<version>.tar.gz für aarch64, x86_64, armv7l
+VERSION=1.0.0 scripts/build.sh           # dist/battery-<arch>-<version>.tar.gz für aarch64, x86_64, armv7l
 ```
 
 Die Go-Seite nutzt `addonkit` (Sitzung, CSRF, Token, Manifest) und `litesource` (der Ereignisstrom

@@ -3,18 +3,15 @@
 [:de: Deutsche README](README.md)
 
 Battery change detection and statistics for Homematic devices: an addon for
-[openccu-lite](https://github.com/hobbyquaker/openccu-lite) (and, later, for the classic CCU3 and
-OpenCCU). It records the battery voltage and the low-battery flag of every device, detects
-battery changes from them, lets you say which batteries went in, and turns the record into how
-long batteries last, which devices eat batteries, which batteries do best, what is due soon and
-what to buy.
+[openccu-lite](https://github.com/hobbyquaker/openccu-lite), the classic CCU3 and OpenCCU. It
+records the battery voltage and the low-battery flag of every device, detects battery changes from
+them, lets you say which batteries went in, and turns the record into how long batteries last, which
+devices eat batteries, which batteries do best, what is due soon and what to buy.
 
-**Status: in development, no release yet.** What works today: the recording; the battery table
-(which device takes which batteries); the change detection with its inbox; changes recorded by
-hand, with the batteries that went in (vendor, product line, price); the device pictures, the
-battery lives per device, the Batteries and Statistics tabs; the API for importing past changes
-and voltage series; the choice of where the database lives. The forecasts, the shopping list and
-the notifications. The classic CCU (CCU3, OpenCCU) is supported.
+**Status: 1.0.0** ([changelog](CHANGELOG.md); the packages are on the [releases
+page](https://github.com/hobbyquaker/ccu-addon-battery/releases)). Tested on openccu-lite with real
+devices and on OpenCCU; on the CCU3 firmware so far without paired battery devices - feedback is
+welcome.
 
 ## The pages
 
@@ -247,8 +244,8 @@ and takes the names and rooms from ReGaHSS; the WebUI's *Einstellungen* button o
 the settings page (service, log, database, notifications, version), whose *Open Battery* button
 opens the app with the WebUI's session. Nothing but the web server faces the network. The
 settings and the database live in `/usr/local/addons/battery/etc` and `var`, in every backup;
-`Deinstallieren` keeps them, as above. Tested on OpenCCU 3.89 (x86_64, `armv7l` and `aarch64`
-packages are built the same way); a CCU3 with eQ-3's own firmware is still to be tried.
+`Deinstallieren` keeps them, as above. Tested on OpenCCU 3.89 (x86_64) and on a CCU3 with eQ-3's
+firmware 3.89 (`armv7l`), there so far without paired battery devices - feedback is welcome.
 
 ## Development
 
@@ -256,7 +253,7 @@ packages are built the same way); a CCU3 with eQ-3's own firmware is still to be
 go test -race ./...                      # the store, the recorder, the detector, the changes, the statistics, the API, the package files
 python3 data/check.py                    # the battery table
 (cd ui && npm ci && npm run check && npm test && npm run build)   # the app and the settings page
-VERSION=0.1.0 scripts/build.sh           # dist/battery-<arch>-<version>.tar.gz for aarch64, x86_64, armv7l
+VERSION=1.0.0 scripts/build.sh           # dist/battery-<arch>-<version>.tar.gz for aarch64, x86_64, armv7l
 ```
 
 The Go side uses [ccu-addon-kit](https://github.com/hobbyquaker/ccu-addon-kit)'s `addonkit`
