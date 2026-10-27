@@ -7,7 +7,7 @@
 #
 
 ADDON=battery
-NAME="Battery"
+NAME="Batterie"
 CONF_DIR=/usr/local/etc/config
 ADDON_DIR=/usr/local/addons/$ADDON
 # /addons/$WWW/: the settings page (the ccu-addon-kit frame); the app is proxied at /addons/$ADDON/

@@ -4,6 +4,7 @@ package addonpkg
 
 import (
 	"os"
+	"regexp"
 	"strings"
 	"testing"
 
@@ -79,5 +80,42 @@ func TestScriptsAreExecutable(t *testing.T) {
 		if strings.Contains(string(b), "\r") {
 			t.Errorf("%s has CR line endings", f)
 		}
+	}
+}
+
+// B-2: the name the rc.d script's info gives is what openccu-lite's menu and Addons page show
+// (one string for both languages): the German one, as the settings page (kit.json) and the CCU's
+// button (battery.cfg) name the addon.
+func TestInfoName(t *testing.T) {
+	b, err := os.ReadFile("../../addon/battery/rc.d")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(b), "\nNAME=\"Batterie\"\n") {
+		t.Error(`rc.d: NAME="Batterie" expected`)
+	}
+	cfg, _ := os.ReadFile("../../addon/battery.cfg")
+	if !strings.Contains(string(cfg), "CONFIG_NAME Batterie") {
+		t.Error("battery.cfg: CONFIG_NAME Batterie expected")
+	}
+}
+
+// B-2: every file the app's page names next to itself (the favicon) is in the build: vite copies
+// ui/public/ into the app; a missing one is answered with the page by the daemon's fallback.
+func TestAppIcon(t *testing.T) {
+	page, err := os.ReadFile("../../ui/index.html")
+	if err != nil {
+		t.Fatal(err)
+	}
+	m := regexp.MustCompile(`<link rel="icon" href="\./([^"]+)"`).FindStringSubmatch(string(page))
+	if m == nil {
+		t.Fatal("ui/index.html names no icon")
+	}
+	icon, err := os.ReadFile("../../ui/public/" + m[1])
+	if err != nil {
+		t.Fatalf("the app's icon %s is not in ui/public: %v", m[1], err)
+	}
+	if !strings.HasPrefix(string(icon), "<svg") {
+		t.Errorf("%s is not an SVG", m[1])
 	}
 }
