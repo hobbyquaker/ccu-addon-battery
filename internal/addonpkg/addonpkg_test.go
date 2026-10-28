@@ -26,6 +26,10 @@ func TestManifest(t *testing.T) {
 	if m.ID != "battery" || !m.UI.SessionHeader || m.Undeclared() || !m.Runtime.Daemon {
 		t.Fatalf("manifest: %+v", m)
 	}
+	// the Addons page links the release notes beside an offered update
+	if m.Changelog != "https://github.com/hobbyquaker/ccu-addon-battery/blob/main/CHANGELOG.md" {
+		t.Errorf("changelog: %q", m.Changelog)
+	}
 	for _, want := range []string{"rpc:read", "meta:read"} {
 		if !strings.Contains(strings.Join(m.Runtime.APIScopes, ","), want) {
 			t.Errorf("scope %s missing", want)

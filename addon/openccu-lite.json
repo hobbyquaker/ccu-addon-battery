@@ -9,6 +9,7 @@
   "version": "1.0.3",
   "homepage": "https://github.com/hobbyquaker/ccu-addon-battery",
   "licence": "MIT",
+  "changelog": "https://github.com/hobbyquaker/ccu-addon-battery/blob/main/CHANGELOG.md",
   "release": {
     "github": "hobbyquaker/ccu-addon-battery",
     "asset": "battery-{arch}-{version}.tar.gz"

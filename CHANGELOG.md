@@ -6,6 +6,8 @@
   packages are built reproducibly, so every file has the same date in every version; the app's `index.html` was
   answered by that date, the browser's check said "unchanged", and it kept the old page until its cache was cleared.
   The page is now checked by its content.
+- **openccu-lite:** the Addons page links this changelog as the release notes beside an offered update (the manifest
+  names it again; it had been left out of 1.0.0).
 
 ## [1.0.3] - 2026-10-28
 
