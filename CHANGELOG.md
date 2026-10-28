@@ -1,5 +1,12 @@
 # Changelog
 
+## [Unreleased]
+
+- **Every system:** after an update the browser shows the new version of the app at the next normal reload. The
+  packages are built reproducibly, so every file has the same date in every version; the app's `index.html` was
+  answered by that date, the browser's check said "unchanged", and it kept the old page until its cache was cleared.
+  The page is now checked by its content.
+
 ## [1.0.3] - 2026-10-28
 
 - **Every system:** the devices of an interface whose radio process was not answering yet when the addon started (at

@@ -66,7 +66,7 @@ func New(o Options) http.Handler {
 
 	root := http.NewServeMux()
 	root.Handle("/api/", addonkit.CSRF(api))
-	root.Handle("/", http.HandlerFunc(o.static))
+	root.Handle("/", addonkit.AppFiles(o.WWW))
 
 	var h http.Handler = http.StripPrefix(o.BasePath, root)
 	switch {
@@ -263,30 +263,4 @@ func (o Options) storageMove(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	writeJSON(w, 200, map[string]any{"ok": true, "storage": o.Store.Health()})
-}
-
-// static serves the app: a file under WWW, or index.html for a path without one (the app's own
-// routes). Dotfiles and paths outside WWW answer 404.
-func (o Options) static(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodGet && r.Method != http.MethodHead {
-		addonkit.WriteError(w, http.StatusMethodNotAllowed, "method", r.Method)
-		return
-	}
-	p := path.Clean("/" + r.URL.Path)
-	if strings.Contains(p, "/.") {
-		http.NotFound(w, r)
-		return
-	}
-	file := filepath.Join(o.WWW, filepath.FromSlash(p))
-	if st, err := os.Stat(file); err == nil && !st.IsDir() {
-		if strings.HasPrefix(p, "/assets/") {
-			w.Header().Set("Cache-Control", "public, max-age=31536000, immutable")
-		} else {
-			w.Header().Set("Cache-Control", "no-cache")
-		}
-		http.ServeFile(w, r, file)
-		return
-	}
-	w.Header().Set("Cache-Control", "no-cache")
-	http.ServeFile(w, r, filepath.Join(o.WWW, "index.html"))
 }

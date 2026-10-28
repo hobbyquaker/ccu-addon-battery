@@ -93,6 +93,8 @@ func TestRoutes(t *testing.T) {
 	}
 	if w := call(h, "GET", "/addons/battery/", user, ""); w.Code != 200 || !strings.Contains(w.Body.String(), "app") {
 		t.Fatalf("index: %d %s", w.Code, w.Body)
+	} else if w.Header().Get("ETag") == "" || w.Header().Get("Last-Modified") != "" || w.Header().Get("Cache-Control") != "no-cache" {
+		t.Fatalf("index validators (a content ETag, no mtime): %v", w.Header())
 	}
 	if w := call(h, "GET", "/addons/battery/devices", user, ""); w.Code != 200 || !strings.Contains(w.Body.String(), "app") {
 		t.Fatalf("app route falls back to index: %d", w.Code)
