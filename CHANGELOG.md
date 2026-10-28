@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.0.2] - 2026-10-28
+
+- **openccu-lite:** the addon comes up by itself after a reboot. The system's web server answers every API request
+  with 503 "starting" for a few seconds after boot, until the system service is up; the daemon took that answer for
+  "not openccu-lite", exited and stayed failed until started by hand from the Addons page. It now waits for the system
+  (a log line when the wait begins, then one a minute) and keeps waiting on openccu-lite whatever the web server
+  answers; only on a system that is not openccu-lite is a missing API still the end.
+
 ## [1.0.1] - 2026-10-27
 
 - **openccu-lite:** the Addons page shows the addon's icon before the install. The icons are now in the repository at

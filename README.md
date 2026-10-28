@@ -9,7 +9,7 @@ Batteriewechsel, lässt Sie eintragen, welche Batterien eingelegt wurden, und ma
 Protokoll: wie lange Batterien halten, welche Geräte Batteriefresser sind, welche Batterien am
 besten abschneiden, was bald fällig ist und was zu kaufen ist.
 
-**Stand: 1.0.1** ([Änderungen](CHANGELOG.md); die Pakete stehen auf der
+**Stand: 1.0.2** ([Änderungen](CHANGELOG.md); die Pakete stehen auf der
 [Release-Seite](https://github.com/hobbyquaker/ccu-addon-battery/releases)). Getestet auf
 openccu-lite mit echten Geräten und auf OpenCCU; auf der CCU3-Firmware bisher ohne angelernte
 Batteriegeräte – Rückmeldungen sind willkommen.
@@ -267,7 +267,7 @@ dort bisher ohne angelernte Batteriegeräte – Rückmeldungen sind willkommen.
 go test -race ./...                      # Speicher, Aufzeichnung, Erkennung, Wechsel, Statistik, API, Paketdateien
 python3 data/check.py                    # die Batterietabelle
 (cd ui && npm ci && npm run check && npm test && npm run build)   # die Anwendung und die Einstellungsseite
-VERSION=1.0.1 scripts/build.sh           # dist/battery-<arch>-<version>.tar.gz für aarch64, x86_64, armv7l
+VERSION=1.0.2 scripts/build.sh           # dist/battery-<arch>-<version>.tar.gz für aarch64, x86_64, armv7l
 ```
 
 Die Go-Seite nutzt `addonkit` (Sitzung, CSRF, Token, Manifest) und `litesource` (der Ereignisstrom

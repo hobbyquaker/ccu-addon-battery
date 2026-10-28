@@ -90,21 +90,16 @@ func run(addonDir, id string, port int, base, basePath, www, tokenFile string, f
 			token = addonkit.AddonToken(id)
 		}
 		lite := litesource.New(base, token)
-		lite.Log = log.Printf
-		// wait for the system: before the token exists or occulited answers there is nothing to do
-		for {
-			if _, err := lite.Probe(ctx); err == nil {
-				break
-			} else if err == litesource.ErrNotOpenccuLite {
-				return fmt.Errorf("%s is not openccu-lite", base)
-			} else {
-				log.Printf("battery: waiting for the system: %v", err)
-			}
-			select {
-			case <-ctx.Done():
+		lite.Log = func(format string, args ...any) { log.Printf("battery: "+format, args...) }
+		// wait for the system: at boot its web server answers 503 "starting" until occulited is
+		// up, and the token may not exist yet. On openccu-lite (the platform rule, not the flag)
+		// that is never a reason to give up - the wait goes on, with a log line a minute; only
+		// elsewhere is "not openccu-lite" the end.
+		if _, err := lite.Await(ctx, addonkit.IsOpenccuLite()); err != nil {
+			if ctx.Err() != nil {
 				return nil
-			case <-time.After(5 * time.Second):
 			}
+			return fmt.Errorf("%s is not openccu-lite", base)
 		}
 		src = lite
 		if !noSession {
