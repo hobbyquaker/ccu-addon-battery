@@ -253,7 +253,7 @@ firmware 3.89.11 (`armv7l`), there so far without paired battery devices - feedb
 go test -race ./...                      # the store, the recorder, the detector, the changes, the statistics, the API, the package files
 python3 data/check.py                    # the battery table
 (cd ui && npm ci && npm run check && npm test && npm run build)   # the app and the settings page
-VERSION=1.0.2 scripts/build.sh           # dist/battery-<arch>-<version>.tar.gz for aarch64, x86_64, armv7l
+VERSION=1.0.3 scripts/build.sh           # dist/battery-<arch>-<version>.tar.gz for aarch64, x86_64, armv7l
 ```
 
 The Go side uses [ccu-addon-kit](https://github.com/hobbyquaker/ccu-addon-kit)'s `addonkit`

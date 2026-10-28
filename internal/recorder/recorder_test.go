@@ -2,10 +2,13 @@ package recorder
 
 import (
 	"context"
+	"errors"
+	"fmt"
 	"os"
 	"path/filepath"
 	"strconv"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -269,7 +272,7 @@ func TestDailyRow(t *testing.T) {
 	c := litesource.New(s.URL, addonkit.StaticToken("olt_test"))
 	r := New(Options{Source: c, Store: st, Log: t.Logf, ReadPause: time.Millisecond, Now: func() time.Time { return now }})
 	ctx := context.Background()
-	if err := r.learnDevices(ctx); err != nil {
+	if _, _, err := r.learnDevices(ctx, nil); err != nil {
 		t.Fatal(err)
 	}
 	ev := func(ts time.Time, v float64) {
@@ -386,5 +389,160 @@ func TestUnsupportedInterfacesRetired(t *testing.T) {
 	}
 	if n, _ := st.Counts(context.Background()); n["samples"] != 1 {
 		t.Fatalf("the imported rows stay: %v", n)
+	}
+}
+
+// refusing is a source whose interface process refuses listDevices while down is set, as
+// hmipserver does at boot before it listens.
+type refusing struct {
+	litesource.Source
+	mu    sync.Mutex
+	iface string
+	down  bool
+	calls int
+}
+
+func (f *refusing) Devices(ctx context.Context, iface string) ([]litesource.DeviceDescription, error) {
+	f.mu.Lock()
+	down := f.down && iface == f.iface
+	if iface == f.iface {
+		f.calls++
+	}
+	f.mu.Unlock()
+	if down {
+		return nil, errors.New("dial tcp 127.0.0.1:32010: connect: connection refused")
+	}
+	return f.Source.Devices(ctx, iface)
+}
+
+func (f *refusing) set(down bool) int {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	f.down = down
+	return f.calls
+}
+
+type logs struct {
+	mu    sync.Mutex
+	lines []string
+	t     *testing.T
+}
+
+func (l *logs) logf(f string, a ...any) {
+	l.mu.Lock()
+	l.lines = append(l.lines, fmt.Sprintf(f, a...))
+	l.mu.Unlock()
+	l.t.Logf(f, a...)
+}
+
+func (l *logs) count(sub string) int {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	n := 0
+	for _, s := range l.lines {
+		if strings.Contains(s, sub) {
+			n++
+		}
+	}
+	return n
+}
+
+func startRefusing(t *testing.T, s *fakelite.Server, retry time.Duration) (*Recorder, *refusing, *logs) {
+	t.Helper()
+	st, err := store.Open(store.Config{AddonDir: t.TempDir(), Log: t.Logf})
+	if err != nil {
+		t.Fatal(err)
+	}
+	c := litesource.New(s.URL, addonkit.StaticToken("olt_test"))
+	c.Reconnect.Min, c.Reconnect.Max = 10*time.Millisecond, 50*time.Millisecond
+	c.Log = t.Logf
+	src := &refusing{Source: c, iface: "HmIP-RF", down: true}
+	l := &logs{t: t}
+	r := New(Options{Source: src, Store: st, Log: l.logf, ReadPause: time.Millisecond, LearnRetry: retry, LearnRetryMax: 4 * retry})
+	ctx, cancel := context.WithCancel(context.Background())
+	go r.Run(ctx)
+	t.Cleanup(func() { cancel(); st.Close() })
+	waitFor(t, func() bool { return r.State() == "live" && s.Streams() > 0 })
+	return r, src, l
+}
+
+// B-8: the addon starts before hmipserver at boot. The interface that refuses listDevices is
+// learned again with a backoff, without a restart; the failure is logged once (not at every
+// retry); once learned, the state is seeded again, so what the state store kept meanwhile
+// (LOW_BAT) and hmipserver's cache (the voltage) are attributed to its devices.
+func TestLearnsAnInterfaceThatComesUpLate(t *testing.T) {
+	s := system(t)
+	// the flag only in the state store (it came while the interface was unlearned), the voltage
+	// only in hmipserver's cache
+	s.State = append(s.State, map[string]any{"interface": "HmIP-RF", "address": "WRC2:0", "datapoint": "LOW_BAT", "value": true, "ts": "2026-10-28T09:33:40Z", "confirmed": true, "source": "event"})
+	delete(s.Values["HmIP-RF/WRC2:0/VALUES"], "LOW_BAT")
+	r, src, l := startRefusing(t, s, 20*time.Millisecond)
+	if find(r.Devices("de"), "WRC2") != nil || find(r.Devices("de"), "RTDN") == nil {
+		t.Fatalf("at the start: BidCos-RF learned, HmIP-RF not: %+v", r.Devices("de"))
+	}
+	// a live report of the unlearned interface has no device to go to yet
+	s.PushEvent("HmIP-RF", "WRC2:0", "LOW_BAT", true)
+	waitFor(t, func() bool { return src.set(true) >= 4 }) // retried, still refused
+	if n := l.count("HmIP-RF: listDevices"); n != 1 {
+		t.Fatalf("the refusal is said once, not at every retry: %d", n)
+	}
+	src.set(false)
+	waitFor(t, func() bool {
+		v := find(r.Devices("de"), "WRC2")
+		return v != nil && v.Voltage != nil && v.LowBat != nil
+	})
+	wrc := find(r.Devices("de"), "WRC2")
+	if *wrc.Voltage != 2.9 || !*wrc.LowBat || wrc.VoltageDP != "0/OPERATING_VOLTAGE" {
+		t.Fatalf("WRC2 after the late learn: %+v", wrc)
+	}
+	if find(r.Devices("de"), "BBL") == nil || l.count("HmIP-RF: devices learned") != 1 {
+		t.Fatalf("BBL / the learned line: %+v %v", r.Devices("de"), l.lines)
+	}
+	// learned: no more retries
+	calls := src.set(false)
+	time.Sleep(200 * time.Millisecond)
+	if c := src.set(false); c != calls {
+		t.Fatalf("retried after learning: %d → %d", calls, c)
+	}
+	// and a live event now lands
+	s.PushEvent("HmIP-RF", "WRC2:0", "OPERATING_VOLTAGE", 2.7)
+	waitFor(t, func() bool { v := find(r.Devices("de"), "WRC2"); return *v.Voltage == 2.7 })
+}
+
+// The stream's interface message (up) learns the interface at once, without waiting for the
+// backoff; so does a resync.
+func TestLearnsOnInterfaceUpAndResync(t *testing.T) {
+	for _, how := range []string{"interface up", "resync"} {
+		t.Run(how, func(t *testing.T) {
+			s := system(t)
+			r, src, _ := startRefusing(t, s, time.Hour)
+			if find(r.Devices("de"), "WRC2") != nil {
+				t.Fatal("learned while refused")
+			}
+			src.set(false)
+			if how == "resync" {
+				s.Resync("gap")
+			} else {
+				s.Push("interface", map[string]any{"interface": "HmIP-RF", "state": "up", "ts": time.Now().UTC().Format(time.RFC3339Nano)})
+			}
+			waitFor(t, func() bool {
+				v := find(r.Devices("de"), "WRC2")
+				return v != nil && v.Voltage != nil && *v.Voltage == 2.9
+			})
+		})
+	}
+}
+
+// The backoff: 5 s doubling to a minute.
+func TestBackoff(t *testing.T) {
+	r := New(Options{LearnRetry: 5 * time.Second, LearnRetryMax: time.Minute})
+	want := []time.Duration{5 * time.Second, 10 * time.Second, 20 * time.Second, 40 * time.Second, time.Minute, time.Minute}
+	for i, w := range want {
+		if d := r.backoff(i + 1); d != w {
+			t.Errorf("attempt %d: %s, want %s", i+1, d, w)
+		}
+	}
+	if r.retryDelay() != 0 {
+		t.Fatal("nothing unlearned: no retry")
 	}
 }

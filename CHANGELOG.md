@@ -1,5 +1,15 @@
 # Changelog
 
+## [1.0.3] - 2026-10-28
+
+- **Every system:** the devices of an interface whose radio process was not answering yet when the addon started (at
+  boot the addon can be up before the HmIP process) are now learned as soon as it answers. Before, its devices stayed
+  unknown until a device was paired or the addon was restarted, and devices the addon had not recorded before were
+  missing from the Devices page. The addon tries again after 5 seconds, then less often up to once a minute, and at
+  once when the system reports the interface up or the event stream resynchronises; the log says so once when it
+  starts trying and once when the devices are learned. The values that came in meanwhile are read from the system's
+  state and the radio process's cache, without radio traffic.
+
 ## [1.0.2] - 2026-10-28
 
 - **openccu-lite:** the addon comes up by itself after a reboot. The system's web server answers every API request

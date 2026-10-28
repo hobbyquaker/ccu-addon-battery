@@ -9,6 +9,7 @@ package recorder
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"log"
 	"sort"
 	"strconv"
@@ -52,6 +53,10 @@ type Options struct {
 	ReadPause time.Duration
 	// Now is the clock; time.Now by default.
 	Now func() time.Time
+	// LearnRetry and LearnRetryMax are the backoff of learning an interface whose process did
+	// not answer (hmipserver still starting at boot): 5 s, doubling, then every 60 s; a test
+	// shortens them.
+	LearnRetry, LearnRetryMax time.Duration
 }
 
 // Recorder is the running recorder.
@@ -65,6 +70,17 @@ type Recorder struct {
 	state string              // starting | seeding | live | degraded
 	last  map[string]store.Sample
 	ctx   context.Context
+	// unlearned are the interfaces whose devices could not be learned yet, by name; "" is the
+	// interface list itself. Only the Run loop touches it.
+	unlearned map[string]*unlearned
+}
+
+// unlearned is one interface the recorder has not learned yet: how often it tried, and when it
+// last said so in the log (once, then once a minute).
+type unlearned struct {
+	since    time.Time
+	attempts int
+	logged   time.Time
 }
 
 type device struct {
@@ -86,7 +102,14 @@ func New(o Options) *Recorder {
 	if o.Now == nil {
 		o.Now = time.Now
 	}
-	r := &Recorder{o: o, logf: o.Log, devs: map[string]*device{}, state: "starting", last: map[string]store.Sample{}, ctx: context.Background()}
+	if o.LearnRetry == 0 {
+		o.LearnRetry = 5 * time.Second
+	}
+	if o.LearnRetryMax == 0 {
+		o.LearnRetryMax = time.Minute
+	}
+	r := &Recorder{o: o, logf: o.Log, devs: map[string]*device{}, state: "starting", last: map[string]store.Sample{}, ctx: context.Background(),
+		unlearned: map[string]*unlearned{}}
 	return r
 }
 
@@ -104,14 +127,16 @@ func (r *Recorder) setState(s string) {
 }
 
 // Run loads what the store has, learns the devices, seeds and follows the stream until ctx ends.
+// An interface whose process does not answer yet (hmipserver starts after the addon at boot) is
+// learned again with a backoff, at every resync and when the stream says the interface is up;
+// once it is learned the state is seeded again, so the values that came in meanwhile (the state
+// store keeps the last of each, hmipserver's cache the voltages) are attributed to its devices.
 func (r *Recorder) Run(ctx context.Context) error {
 	r.mu.Lock()
 	r.ctx = ctx
 	r.mu.Unlock()
 	r.loadStore(ctx)
-	if err := r.learnDevices(ctx); err != nil {
-		r.logf("recorder: learning the devices: %v (will retry with the stream)", err)
-	}
+	r.learn(ctx, nil)
 	r.refreshNames(ctx)
 	go r.followNames(ctx)
 	snap, err := r.seed(ctx)
@@ -123,7 +148,47 @@ func (r *Recorder) Run(ctx context.Context) error {
 	}
 	r.setState("live")
 	ch := r.o.Source.Subscribe(ctx, litesource.Filter{Interfaces: ifaces.Supported, Keys: Keys}, since)
-	for m := range ch {
+	retry := time.NewTimer(time.Hour)
+	retry.Stop()
+	defer retry.Stop()
+	armed := false
+	arm := func() {
+		if armed && !retry.Stop() {
+			select {
+			case <-retry.C:
+			default:
+			}
+		}
+		armed = false
+		if d := r.retryDelay(); d > 0 {
+			retry.Reset(d)
+			armed = true
+		}
+	}
+	arm()
+	reseed := func(why string) {
+		r.setState("seeding")
+		if _, err := r.seed(ctx); err != nil {
+			r.logf("recorder: re-seed (%s) failed: %v", why, err)
+		}
+		r.setState("live")
+	}
+	for {
+		var m litesource.Message
+		var ok bool
+		select {
+		case <-retry.C:
+			armed = false
+			if r.learn(ctx, r.unlearnedNames()) > 0 {
+				reseed("devices learned")
+			}
+			arm()
+			continue
+		case m, ok = <-ch:
+			if !ok {
+				return ctx.Err()
+			}
+		}
 		switch m.Type {
 		case "hello":
 			r.setState("live")
@@ -132,23 +197,123 @@ func (r *Recorder) Run(ctx context.Context) error {
 				r.apply(*m.Event, m.Event.Source == "event")
 			}
 		case "resync":
-			r.logf("recorder: resync (%s): reading the state again", m.Resync.Reason)
-			r.setState("seeding")
-			if _, err := r.seed(ctx); err != nil {
-				r.logf("recorder: re-seed failed: %v", err)
+			r.logf("recorder: resync (%s): learning the devices and reading the state again", m.Resync.Reason)
+			r.learn(ctx, nil)
+			reseed("resync")
+			arm()
+		case "interface":
+			// up, restarted or added: the process answers now - learn it if it was missing or
+			// came back (its devices may have changed while it was away)
+			if m.Interface != nil && ifaces.IsSupported(m.Interface.Interface) && (m.Interface.State == "up" || m.Interface.State == "restarted" || m.Interface.State == "added") {
+				if r.learn(ctx, []string{m.Interface.Interface}) > 0 {
+					reseed("interface " + m.Interface.State)
+				}
+				arm()
 			}
-			r.setState("live")
 		case "newDevices", "readdedDevice", "replaceDevice", "updateDevice":
-			if err := r.learnDevices(ctx); err != nil {
-				r.logf("recorder: learning the devices: %v", err)
-			}
+			r.learn(ctx, nil)
+			arm()
 		case "deleteDevices":
 			if m.Devices != nil {
 				r.retire(m.Devices.Interface, m.Devices.Addresses)
 			}
 		}
 	}
-	return ctx.Err()
+}
+
+// learn learns the devices of the interfaces named (nil: all) and keeps account of the ones that
+// failed; it answers how many devices became tracked that were not before.
+func (r *Recorder) learn(ctx context.Context, only []string) int {
+	added, failed, err := r.learnDevices(ctx, only)
+	now := r.o.Now()
+	if err != nil {
+		failed = map[string]error{"": err}
+	} else {
+		r.learned("")
+		asked := only
+		if asked == nil {
+			asked = ifaces.Supported
+		}
+		for _, name := range asked {
+			if _, bad := failed[name]; !bad {
+				r.learned(name)
+			}
+		}
+	}
+	for name, e := range failed {
+		u := r.unlearned[name]
+		if u == nil {
+			u = &unlearned{since: now}
+			r.unlearned[name] = u
+		}
+		u.attempts++
+		if u.logged.IsZero() || now.Sub(u.logged) >= time.Minute {
+			u.logged = now
+			what := name + ": listDevices"
+			if name == "" {
+				what = "the interface list"
+			}
+			r.logf("recorder: %s: %v (attempt %d, trying again in %s)", what, e, u.attempts, r.backoff(u.attempts))
+		}
+	}
+	return added
+}
+
+// learned clears an interface from the unlearned ones and says so when it had failed before.
+func (r *Recorder) learned(name string) {
+	u := r.unlearned[name]
+	if u == nil {
+		return
+	}
+	delete(r.unlearned, name)
+	if name != "" {
+		r.logf("recorder: %s: devices learned (after %d failed attempts since %s)", name, u.attempts, u.since.Format("15:04:05"))
+	}
+}
+
+func (r *Recorder) unlearnedNames() []string {
+	if _, all := r.unlearned[""]; all {
+		return nil
+	}
+	out := make([]string, 0, len(r.unlearned))
+	for n := range r.unlearned {
+		out = append(out, n)
+	}
+	sort.Strings(out)
+	return out
+}
+
+// backoff is LearnRetry doubled per failed attempt, at most LearnRetryMax.
+func (r *Recorder) backoff(attempts int) time.Duration {
+	d := r.o.LearnRetry
+	for i := 1; i < attempts && d < r.o.LearnRetryMax; i++ {
+		d *= 2
+	}
+	if d > r.o.LearnRetryMax {
+		d = r.o.LearnRetryMax
+	}
+	return d
+}
+
+// retryDelay is when to try the unlearned interfaces again (the one tried least often decides);
+// 0 when every interface is learned.
+func (r *Recorder) retryDelay() time.Duration {
+	var d time.Duration
+	for _, u := range r.unlearned {
+		if b := r.backoff(u.attempts); d == 0 || b < d {
+			d = b
+		}
+	}
+	return d
+}
+
+func contains(l []string, s string) bool {
+	for _, x := range l {
+		if x == s {
+			return true
+		}
+	}
+	return false
 }
 
 func (r *Recorder) loadStore(ctx context.Context) {
@@ -190,21 +355,28 @@ func (r *Recorder) loadStore(ctx context.Context) {
 	}
 }
 
-// learnDevices lists every interface's devices and finds, from the VALUES descriptions, which
-// datapoints each device reports; the result is upserted into the store.
-func (r *Recorder) learnDevices(ctx context.Context) error {
+// learnDevices lists the devices of every interface (only: of those named; nil is all) and finds,
+// from the VALUES descriptions, which datapoints each device reports; the result is upserted
+// into the store. It answers how many devices became tracked that were not, and the interfaces
+// whose process did not answer (their devices are left as they were); err is the interface list
+// itself failing.
+func (r *Recorder) learnDevices(ctx context.Context, only []string) (added int, failed map[string]error, err error) {
 	list, err := r.o.Source.Interfaces(ctx)
 	if err != nil {
-		return err
+		return 0, nil, err
 	}
+	failed = map[string]error{}
 	now := r.o.Now().UnixMilli()
 	for _, iface := range list {
 		if !ifaces.IsSupported(iface.Name) {
 			continue // never listed: no devices with a battery there
 		}
+		if only != nil && !contains(only, iface.Name) {
+			continue
+		}
 		descs, err := r.o.Source.Devices(ctx, iface.Name)
 		if err != nil {
-			r.logf("recorder: %s: listDevices: %v", iface.Name, err)
+			failed[iface.Name] = err
 			continue
 		}
 		byAddr := map[string]litesource.DeviceDescription{}
@@ -217,6 +389,7 @@ func (r *Recorder) learnDevices(ctx context.Context) error {
 		}
 		keys := map[string]string{}
 		sets := litesource.ParamsetCache{}
+		var descErr error
 		for i := 0; i < len(want); i += 500 {
 			end := i + 500
 			if end > len(want) {
@@ -224,7 +397,7 @@ func (r *Recorder) learnDevices(ctx context.Context) error {
 			}
 			k, s, err := r.o.Source.Descriptions(ctx, iface.Name, want[i:end])
 			if err != nil {
-				r.logf("recorder: %s: descriptions: %v", iface.Name, err)
+				descErr = err
 				break
 			}
 			for a, key := range k {
@@ -233,6 +406,11 @@ func (r *Recorder) learnDevices(ctx context.Context) error {
 			for key, set := range s {
 				sets[key] = set
 			}
+		}
+		if descErr != nil {
+			// without the descriptions every device would look untracked: leave them as they are
+			failed[iface.Name] = fmt.Errorf("descriptions: %w", descErr)
+			continue
 		}
 		for _, d := range descs {
 			if strings.Contains(d.Address, ":") || d.Address == "" {
@@ -273,9 +451,13 @@ func (r *Recorder) learnDevices(ctx context.Context) error {
 					dev.Power = ex.Power
 				}
 			}
+			was := ex.tracked
 			ex.Device = dev
 			ex.hmip = strings.HasPrefix(iface.Name, "HmIP")
 			ex.tracked = dev.VoltageDP != "" || dev.LowBatDP != ""
+			if ex.tracked && !was {
+				added++
+			}
 			if ex.tracked {
 				r.profileLocked(ctx, ex, true)
 				r.o.Store.UpsertDevice(ex.Device)
@@ -283,7 +465,7 @@ func (r *Recorder) learnDevices(ctx context.Context) error {
 			r.mu.Unlock()
 		}
 	}
-	return nil
+	return added, failed, nil
 }
 
 // profileLocked asks the Observer for the device's profile and takes power and slots from it;
