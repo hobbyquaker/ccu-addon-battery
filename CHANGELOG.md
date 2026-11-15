@@ -1,6 +1,6 @@
 # Changelog
 
-## [Unreleased]
+## [1.1.0] - 2026-11-15
 
 - **Every system:** a detected battery change shows in the inbox at once, while the addon still checks for a day that
   the voltage holds, marked "still being checked" with the time the check ends. It can be answered right away: confirm
