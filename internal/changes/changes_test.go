@@ -473,3 +473,93 @@ func TestUnsupportedInterfacesHidden(t *testing.T) {
 		t.Fatal("the old row is kept")
 	}
 }
+
+// A candidate is answered while it is still being checked: the answer is final. A yes (with the
+// batteries and another time) books it, a no closes it; the reading after the window decides
+// nothing any more, also when the service restarted in between. "pending" is no answer.
+func TestAnsweredWhileChecking(t *testing.T) {
+	ctx := context.Background()
+	open := func(t *testing.T, s *Service, c *clock) Change {
+		t.Helper()
+		for i := int64(0); i < 10; i++ {
+			feed(s, c, wrc2, t0-10*day+i*day, 2.8, false)
+		}
+		feed(s, c, wrc2, t0, 3.1, true)
+		l := list(t, s, InboxStatuses...)
+		if len(l) != 1 || l[0].Status != StatusCandidate {
+			t.Fatalf("the inbox: %+v", l)
+		}
+		// the window counts from the last trigger (the voltage 3 ms after BOOTED)
+		if l[0].CheckUntil != t0+3+day {
+			t.Fatalf("check_until %d, want %d", l[0].CheckUntil, t0+3+day)
+		}
+		return l[0]
+	}
+	t.Run("confirmed", func(t *testing.T) {
+		s, _, c := setup(t, "")
+		cand := open(t, s, c)
+		if _, err := s.Update(ctx, cand.ID, Patch{Status: ptr(StatusPending)}); err == nil {
+			t.Fatal("pending accepted for a candidate")
+		}
+		c.ms = t0 + 2*h
+		bat := []Battery{{Count: 2, Type: "AAA", Vendor: "Varta"}}
+		ch, err := s.Update(ctx, cand.ID, Patch{At: ptr(Time(t0 - h)), Batteries: &bat, Status: ptr(StatusAccepted)})
+		if err != nil || ch.Status != StatusAccepted || ch.At != t0-h || ch.CheckUntil != 0 || len(ch.Batteries) != 1 {
+			t.Fatalf("%+v %v", ch, err)
+		}
+		if s.OpenCandidate(wrc2.Interface, wrc2.Address) != 0 {
+			t.Fatal("the detector still holds the candidate")
+		}
+		// the next day's report has fallen back (a recovery): it would have been discarded
+		feed(s, c, wrc2, t0+day+h, 2.9, true)
+		got, _ := s.Get(ctx, cand.ID)
+		if got.Status != StatusAccepted || got.At != t0-h || got.Kind != KindDetected {
+			t.Fatalf("the check overrode the answer: %+v", got)
+		}
+		if l := list(t, s, StatusPending, StatusDiscarded, StatusCandidate); len(l) != 0 {
+			t.Fatalf("left behind: %+v", l)
+		}
+	})
+	t.Run("rejected", func(t *testing.T) {
+		s, _, c := setup(t, "")
+		cand := open(t, s, c)
+		c.ms = t0 + 2*h
+		if ch, err := s.Update(ctx, cand.ID, Patch{Status: ptr(StatusRejected)}); err != nil || ch.Status != StatusRejected {
+			t.Fatalf("%+v %v", ch, err)
+		}
+		// the voltage holds: it would have been offered
+		feed(s, c, wrc2, t0+day+h, 3.08, true)
+		got, _ := s.Get(ctx, cand.ID)
+		if got.Status != StatusRejected {
+			t.Fatalf("the check overrode the no: %+v", got)
+		}
+		if l := list(t, s, InboxStatuses...); len(l) != 0 {
+			t.Fatalf("the inbox: %+v", l)
+		}
+	})
+	t.Run("after a restart", func(t *testing.T) {
+		s, _, c := setup(t, "")
+		cand := open(t, s, c)
+		s2 := New(Options{Store: s.o.Store, Now: c.now, Log: t.Logf})
+		c.ms = t0 + 2*h
+		if _, err := s2.Update(ctx, cand.ID, Patch{Status: ptr(StatusAccepted)}); err != nil {
+			t.Fatal(err)
+		}
+		feed(s2, c, wrc2, t0+day+h, 2.9, true)
+		if got, _ := s2.Get(ctx, cand.ID); got.Status != StatusAccepted {
+			t.Fatalf("%+v", got)
+		}
+		if s2.OpenCandidate(wrc2.Interface, wrc2.Address) != 0 {
+			t.Fatal("the answered candidate was restored")
+		}
+	})
+	t.Run("unanswered", func(t *testing.T) {
+		s, _, c := setup(t, "")
+		cand := open(t, s, c)
+		feed(s, c, wrc2, t0+day+h, 3.08, true)
+		got, _ := s.Get(ctx, cand.ID)
+		if got.Status != StatusPending || got.CheckUntil != 0 {
+			t.Fatalf("%+v", got)
+		}
+	})
+}

@@ -1,5 +1,14 @@
 # Changelog
 
+## [Unreleased]
+
+- **Every system:** a detected battery change shows in the inbox at once, while the addon still checks for a day that
+  the voltage holds, marked "still being checked" with the time the check ends. It can be answered right away: confirm
+  it (with the batteries that went in, on another day if need be) or reject it. The answer is final; the check no
+  longer turns a confirmed change into a restart or a rejected one into a new entry. A detection nobody answers is
+  decided by the check as before, and the inbox notification still goes out only once the check passed. The API lists
+  such a detection with `status=candidate` and its `check_until`; the health `inbox` count includes it.
+
 ## [1.0.4] - 2026-10-28
 
 - **Every system:** after an update the browser shows the new version of the app at the next normal reload. The

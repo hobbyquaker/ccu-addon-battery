@@ -1,6 +1,7 @@
 <script lang="ts">
     // The inbox: every detection waits here for the user - yes (with the batteries that went in),
-    // another day, or no. Nothing the detector finds is booked on its own. Below it, the changes
+    // another day, or no - already while it is still being checked (a candidate, marked with the
+    // end of its window); the answer is final. Nothing the detector finds is booked on its own. Below it, the changes
     // recorded so far, each editable and deletable.
     import {DataTable} from 'occulite-ui';
     import {i18n, t} from 'occulite-ui/i18n';
@@ -11,11 +12,11 @@
     import ChangeDialog, {type EditorResult} from './ChangeDialog.svelte';
     import DevicePicture from './DevicePicture.svelte';
     import {del, get, patch} from './api.js';
-    import {batteryName, evidenceSummary, formatCents, formatDateTime, type Change, type DeviceView} from './model.js';
+    import {batteryName, checkState, evidenceSummary, formatCents, formatDateTime, type Change, type DeviceView} from './model.js';
 
     let {notices, onchanged}: {notices: NoticesStore; onchanged?: () => void} = $props();
 
-    let pending = $state<Change[]>([]);
+    let inbox = $state<Change[]>([]);
     let recorded = $state<Change[]>([]);
     let devices = $state<Record<string, DeviceView>>({});
     let loading = $state(true);
@@ -29,11 +30,11 @@
     async function load() {
         try {
             const [p, r, d] = await Promise.all([
-                get<{changes: Change[]}>(`api/v1/changes?status=pending&lang=${i18n.language}`),
+                get<{changes: Change[]}>(`api/v1/changes?status=candidate,pending&lang=${i18n.language}`),
                 get<{changes: Change[]}>(`api/v1/changes?status=accepted&limit=500&lang=${i18n.language}`),
                 get<{devices: DeviceView[]}>(`api/v1/devices?lang=${i18n.language}`),
             ]);
-            pending = p.changes;
+            inbox = p.changes;
             recorded = r.changes;
             const map: Record<string, DeviceView> = {};
             for (const x of d.devices) map[`${x.interface}.${x.address}`] = x;
@@ -174,17 +175,22 @@
     <section class="bat-inbox" aria-label={t('Inbox')}>
         <h2>{t('inbox.title')}</h2>
         <p class="bat-muted">{t('inbox.intro')}</p>
-        {#if pending.length === 0}
+        {#if inbox.length === 0}
             <p class="bat-empty">{t('inbox.empty')}</p>
         {:else}
             <ul class="bat-cards" data-testid="inbox">
-                {#each pending as c (c.id)}
+                {#each inbox as c (c.id)}
                     {@const d = deviceOf(c)}
-                    <li class="bat-card bat-detection">
+                    {@const check = checkState(c)}
+                    <li class="bat-card bat-detection" data-status={c.status}>
                         <div class="bat-detection-head">
                             <DevicePicture model={c.model ?? d?.model ?? ''} src={d?.image} size={28} />
                             <strong class="bat-truncate" title={c.name || c.address}>{c.name || c.address}</strong>
-                            <span class="bat-pill conf-{c.confidence || 'low'}" title={t('confidence.' + (c.confidence || 'low'))}>{t('confidence.' + (c.confidence || 'low'))}</span>
+                            {#if check}
+                                <span class="bat-pill checking" data-testid="checking" title={t('inbox.checkingUntil', {when: formatDateTime(check.until, lang)})}>{t('inbox.checking')}</span>
+                            {:else}
+                                <span class="bat-pill conf-{c.confidence || 'low'}" title={t('confidence.' + (c.confidence || 'low'))}>{t('confidence.' + (c.confidence || 'low'))}</span>
+                            {/if}
                         </div>
                         <div class="bat-muted">{c.model} · <span class="bat-mono">{c.address}</span></div>
                         <p>{t('inbox.question', {when: formatDateTime(c.at, lang)})}</p>
@@ -192,6 +198,9 @@
                             {triggersText(c)}{#if evidenceSummary(c.evidence, lang)}; {evidenceSummary(c.evidence, lang, t('inbox.after'))}{/if}
                             {#if c.evidence?.reason === 'unconfirmed'}<br />{t('inbox.unconfirmed')}{/if}
                         </p>
+                        {#if check}
+                            <p class="bat-muted">{t(check.late ? 'inbox.checkingLate' : 'inbox.checkingText', {when: formatDateTime(check.until, lang)})}</p>
+                        {/if}
                         <div class="bat-actions">
                             <button type="button" class="primary" disabled={busy !== 0} onclick={() => openConfirm(c)}>{t('inbox.confirm')}</button>
                             <button type="button" disabled={busy !== 0} onclick={() => decide(c, {status: 'rejected'})}>{t('inbox.reject')}</button>

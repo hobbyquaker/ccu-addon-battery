@@ -300,3 +300,22 @@ func TestRestore(t *testing.T) {
 	}
 	d2.Drop()
 }
+
+// The user answers a candidate while it is still being checked: Drop ends it, and the reading
+// after the window decides nothing - neither a recovery (which would discard it) nor a held level
+// (which would offer it) - and the held level opens no new candidate either.
+func TestAnsweredWhileChecking(t *testing.T) {
+	for _, after := range []float64{2.9, 3.08} {
+		d := New(DefaultParams(), wrc2)
+		reseat := t0 + 26*60*1000
+		rs := run(d, seq(daily(t0-20*day, 20, 2.8), report(reseat, 3.1, false, true)))
+		if len(rs) == 0 || rs[0].Kind != Opened || d.Open() == nil {
+			t.Fatalf("no candidate: %v", kinds(rs))
+		}
+		d.Drop()
+		rs = run(d, seq(report(reseat+6*h, 3.0, false, true), report(reseat+25*h, after, false, true), report(reseat+49*h, after, false, true)))
+		if len(rs) != 0 || d.Open() != nil {
+			t.Fatalf("%.2f V after the answer: %v", after, kinds(rs))
+		}
+	}
+}

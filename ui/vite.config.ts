@@ -1,11 +1,13 @@
 import {svelte} from '@sveltejs/vite-plugin-svelte';
+import {svelteTesting} from '@testing-library/svelte/vite';
 import {defineConfig} from 'vitest/config';
 
 // The app is served by the addon's Go backend at /addons/battery/ (and may sit at another base on
 // a classic CCU), so every asset URL is relative.
 export default defineConfig({
     base: './',
-    plugins: [svelte()],
+    // svelteTesting: under vitest only, Svelte's browser build for the component tests
+    plugins: [svelte(), svelteTesting()],
     resolve: {dedupe: ['svelte']},
     // the kit belongs to the settings page (settings/vite.config.mjs); the app does not import it,
     // and the dev server's dependency scan must not pre-bundle its .svelte.ts sources

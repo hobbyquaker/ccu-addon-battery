@@ -46,6 +46,9 @@ type Change struct {
 	CreatedBy  string          `json:"created_by,omitempty"`
 	CreatedAt  int64           `json:"created_at"`
 	UpdatedAt  int64           `json:"updated_at"`
+	// CheckUntil is, for a candidate, when its confirmation window ends: the first voltage
+	// reading after it decides it (a device without a voltage is decided then).
+	CheckUntil int64 `json:"check_until,omitempty"`
 }
 
 // Kinds and statuses.
@@ -55,8 +58,8 @@ const (
 	KindManual    = "manual"    // the user recorded it
 	KindImport    = "import"    // a script imported it
 
-	StatusCandidate = "candidate" // detected, waiting for the confirmation window; not in the inbox
-	StatusPending   = "pending"   // in the inbox
+	StatusCandidate = "candidate" // detected, its confirmation window still running: in the inbox as being checked, and answerable
+	StatusPending   = "pending"   // in the inbox, the check passed
 	StatusAccepted  = "accepted"
 	StatusRejected  = "rejected"
 	StatusDiscarded = "discarded" // the detector's own no: a boot or a recovery
@@ -64,6 +67,9 @@ const (
 
 // Statuses lists every status.
 var Statuses = []string{StatusCandidate, StatusPending, StatusAccepted, StatusRejected, StatusDiscarded}
+
+// InboxStatuses are what the inbox shows: the candidates still being checked and the pending ones.
+var InboxStatuses = []string{StatusCandidate, StatusPending}
 
 // live statuses: a change that counts for the dedup and the merge
 var liveStatuses = []string{StatusCandidate, StatusPending, StatusAccepted}
@@ -185,6 +191,9 @@ func scanChange(r scanner) (Change, error) {
 	}
 	if ev != "" {
 		c.Evidence = json.RawMessage(ev)
+		if c.Status == StatusCandidate {
+			c.CheckUntil = checkUntil(ev)
+		}
 	}
 	c.Batteries = []Battery{}
 	_ = json.Unmarshal([]byte(bat), &c.Batteries)
@@ -241,4 +250,17 @@ func anys(l []string) []any {
 		out[i] = s
 	}
 	return out
+}
+
+// checkUntil reads the end of a candidate's confirmation window from its evidence: the last
+// trigger plus the window; 0 when the evidence does not say.
+func checkUntil(ev string) int64 {
+	var e struct {
+		LastTrigger int64 `json:"last_trigger"`
+		WindowS     int64 `json:"window_s"`
+	}
+	if json.Unmarshal([]byte(ev), &e) != nil || e.LastTrigger <= 0 || e.WindowS <= 0 {
+		return 0
+	}
+	return e.LastTrigger + e.WindowS*1000
 }

@@ -26,7 +26,7 @@ mit dessen Design und Sprache):
   den Batterie-leer-Phasen als Bändern, und seine Wechsel, jeder bearbeitbar. *Gewechselt …* bucht
   einen Wechsel.
 - **Eingang:** was die Erkennung gefunden hat und auf Ihre Antwort wartet – ja (mit den eingelegten
-  Batterien), an einem anderen Tag, oder nein. Darunter alle gebuchten Wechsel.
+  Batterien), an einem anderen Tag, oder nein; auch schon, solange die Spannung noch geprüft wird. Darunter alle gebuchten Wechsel.
 - **Batterien:** jede je eingetragene Batterie (Hersteller, Typ, Größe): wie viele eingelegt
   wurden, in welchen Geräten und Modellen, wie lange sie hielten, was sie pro Batterie und pro
   Jahr kosteten – und, weil die Haltedauer vom Gerät abhängt, die Haltedauer je Gerätemodell
@@ -93,7 +93,8 @@ bezahlte) und ob es Akkus sind. Die Größe kommt aus der Batterietabelle.
 <picture><source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/04-eingang-dunkel.png"><img alt="Eingang" src="docs/screenshots/04-eingang.png"></picture>
 
 Was die Erkennung für einen Batteriewechsel hält, wartet hier auf Ihre Antwort: ja (mit den
-eingelegten Batterien), an einem anderen Tag, oder nein. Auf dem gezeigten System wartet gerade
+eingelegten Batterien), an einem anderen Tag, oder nein – auch schon, solange die Erkennung noch
+geprüft wird. Auf dem gezeigten System wartet gerade
 nichts. Darunter alle gebuchten Wechsel aller Geräte.
 
 ### Batterien
@@ -184,9 +185,11 @@ und [tools/](tools/README.md) enthält die Skripte, mit denen sie gebaut wurde.
 Ein Neustart des Geräts (`BOOTED`), ein Spannungssprung auf das Frischniveau oder das Erlöschen
 der Batterie-leer-Meldung ergibt einen *Kandidaten*. Dieselben halb verbrauchten Zellen neu
 einzusetzen sieht eine Weile genauso aus – ihre Spannung erholt sich, sobald die Last weg ist –,
-deshalb kommt ein Kandidat erst in den **Eingang**, wenn die Spannung einen Tag später noch das
-Frischniveau hält; sonst wird er als Neustart protokolliert. Nichts wird von allein gebucht: Sie
-bestätigen eine Erkennung, verwerfen sie oder sagen, dass es ein anderer Tag war. Geräte, die nur
+deshalb wird ein Kandidat einen Tag lang geprüft: hält die Spannung dann noch das Frischniveau, ist
+die Erkennung bestätigt, sonst wird sie als Neustart protokolliert. Im **Eingang** steht der
+Kandidat schon während der Prüfung, markiert mit „wird noch geprüft bis …“. Nichts wird von allein
+gebucht: Sie bestätigen eine Erkennung, verwerfen sie oder sagen, dass es ein anderer Tag war –
+gleich oder nach der Prüfung. Ihre Antwort gilt; die Prüfung ändert sie nicht mehr. Geräte, die nur
 eine Batterie-leer-Meldung liefern, werden erkannt, wenn die Meldung erlischt; für diese und jedes
 andere Gerät bucht *Gewechselt …* einen Wechsel von Hand. [docs/detection.md](docs/detection.md)
 beschreibt die Regeln.

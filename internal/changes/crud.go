@@ -194,7 +194,9 @@ func (s *Service) Get(ctx context.Context, id int64) (Change, error) {
 }
 
 // Update edits a change: the date, the batteries, the note, the status (accepted confirms an
-// inbox entry, rejected says no, pending puts it back).
+// inbox entry, rejected says no, pending puts it back). A candidate still being checked can be
+// answered the same way (accepted or rejected, not pending): the answer is final, the detector
+// forgets the candidate, and the reading after the window no longer decides it.
 func (s *Service) Update(ctx context.Context, id int64, p Patch) (Change, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -228,7 +230,13 @@ func (s *Service) Update(ctx context.Context, id int64, p Patch) (Change, error)
 			if !inList([]string{StatusAccepted, StatusRejected, StatusPending}, *p.Status) {
 				return bad("invalid", "status is accepted, rejected or pending")
 			}
+			if c.Status == StatusCandidate && *p.Status == StatusPending {
+				return bad("invalid", "a change still being checked is answered with accepted or rejected")
+			}
 			c.Status = *p.Status
+			if c.Status != StatusCandidate {
+				c.CheckUntil = 0
+			}
 		}
 		c.UpdatedAt = s.o.Now().UnixMilli()
 		if _, err := tx.Exec(`UPDATE changes SET at = ?, batteries = ?, note = ?, status = ?, updated_at = ? WHERE id = ?`,
@@ -242,10 +250,12 @@ func (s *Service) Update(ctx context.Context, id int64, p Patch) (Change, error)
 		return Change{}, err
 	}
 	if old.Status == StatusCandidate && out.Status != StatusCandidate {
+		// answered while being checked: the answer stands, the detector forgets the candidate
 		if x := s.devs[key(out.Interface, out.Address)]; x != nil && x.det != nil && x.candID == id {
 			x.det.Drop()
 			x.candID = 0
 		}
+		s.logf("changes: %s %s: answered while being checked: %s", out.Interface, out.Address, out.Status)
 	}
 	if out.Status == StatusAccepted {
 		s.settledLocked(out.Interface, out.Address, 0, out.At)

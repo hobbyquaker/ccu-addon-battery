@@ -261,8 +261,18 @@ export const MESSAGES: Catalogue = {
     },
     'inbox.title': {de: 'Erkannte Batteriewechsel', en: 'Detected battery changes'},
     'inbox.intro': {
-        de: 'Sieht es so aus, als wären die Batterien eines Geräts gewechselt worden, und hält die Spannung auch einen Tag später noch, erscheint der Wechsel hier. Gebucht wird er erst, wenn Sie ihn bestätigen.',
-        en: 'When the batteries of a device look changed and the voltage still holds a day later, the change appears here. It is only booked once you confirm it.',
+        de: 'Sieht es so aus, als wären die Batterien eines Geräts gewechselt worden, erscheint der Wechsel sofort hier. Einen Tag lang wird noch geprüft, ob die Spannung hält; antworten können Sie schon vorher, und Ihre Antwort gilt. Gebucht wird ein Wechsel erst, wenn Sie ihn bestätigen.',
+        en: 'When the batteries of a device look changed, the change appears here at once. For a day the system still checks that the voltage holds; you can answer before that, and your answer stands. A change is only booked once you confirm it.',
+    },
+    'inbox.checking': {de: 'in Prüfung', en: 'checking'},
+    'inbox.checkingUntil': {de: 'wird noch geprüft bis {when}', en: 'still being checked until {when}'},
+    'inbox.checkingText': {
+        de: 'Wird noch geprüft bis {when}: zeigt sich bis dahin, dass es kein Wechsel war, verschwindet die Erkennung. Sie können schon jetzt antworten; die Prüfung ändert Ihre Antwort nicht.',
+        en: 'Still being checked until {when}: if it turns out by then that it was no change, the detection goes away. You can answer now; the check does not change your answer.',
+    },
+    'inbox.checkingLate': {
+        de: 'Wird noch geprüft: entschieden wird mit der ersten Spannung, die das Gerät nach {when} meldet. Sie können schon jetzt antworten; die Prüfung ändert Ihre Antwort nicht.',
+        en: 'Still being checked: the first voltage the device reports after {when} decides it. You can answer now; the check does not change your answer.',
     },
     'inbox.empty': {de: 'Nichts zu bestätigen.', en: 'Nothing to confirm.'},
     'inbox.question': {de: 'Batterien gewechselt am {when}?', en: 'Batteries changed on {when}?'},

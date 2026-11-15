@@ -24,7 +24,8 @@ and language):
   opens its detail: the voltage curve over the whole record with the changes marked and the
   low-battery phases as bands, and its changes, each editable. *Changed…* records a change.
 - **Inbox:** what the detector found, waiting for your answer - yes (with the batteries that went
-  in), another day, or no. Below it, every recorded change.
+  in), another day, or no; already while the voltage is still being checked. Below it, every
+  recorded change.
 - **Batteries:** every battery ever recorded (vendor, product line, size): how many went in, in
   which devices and models, how long they lasted, what they cost per battery and per year - and,
   since a battery's life depends on the device, the life per device model behind each row, plus a
@@ -89,7 +90,8 @@ they are rechargeable. The size comes from the battery table.
 <picture><source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/04-eingang-dunkel.png"><img alt="Inbox" src="docs/screenshots/04-eingang.png"></picture>
 
 What the detector takes for a battery change waits here for your answer: yes (with the batteries
-that went in), on another day, or no. On the system shown nothing is waiting. Below it every
+that went in), on another day, or no - already while the detection is still being checked. On
+the system shown nothing is waiting. Below it every
 recorded change of every device.
 
 ### Batteries (Batterien)
@@ -176,9 +178,11 @@ the table are welcome as pull requests; `python3 data/check.py` checks it (CI ru
 
 A device restart (`BOOTED`), a voltage jump to the fresh level, or the low-battery flag clearing
 makes a *candidate*. Re-seating the same half-used cells looks the same for a while - their voltage
-recovers once the load is off - so a candidate only comes into the **inbox** when the voltage
-still holds the fresh level a day later; otherwise it is logged as a boot. Nothing is booked on
-its own: you confirm a detection, reject it, or say it was another day. Devices that report only
+recovers once the load is off - so a candidate is checked for a day: when the voltage still holds
+the fresh level then, the detection is confirmed; otherwise it is logged as a boot. The candidate
+is in the **inbox** already while it is being checked, marked "still being checked until …".
+Nothing is booked on its own: you confirm a detection, reject it, or say it was another day - right
+away or after the check. Your answer stands; the check no longer changes it. Devices that report only
 a low-battery flag are detected when the flag clears; for those, and for any other device,
 *Changed…* records a change by hand. [docs/detection.md](docs/detection.md) has the rules.
 

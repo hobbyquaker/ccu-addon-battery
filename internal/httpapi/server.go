@@ -138,12 +138,13 @@ func (o Options) health(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-// inbox counts the detections waiting for the user, -1 when the store cannot say.
+// inbox counts the detections waiting for the user (the ones still being checked included), -1
+// when the store cannot say.
 func (o Options) inbox(r *http.Request) int {
 	if o.Changes == nil {
 		return 0
 	}
-	l, err := o.Changes.List(r.Context(), changes.Filter{Statuses: []string{changes.StatusPending}})
+	l, err := o.Changes.List(r.Context(), changes.Filter{Statuses: changes.InboxStatuses})
 	if err != nil {
 		return -1
 	}

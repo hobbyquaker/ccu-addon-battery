@@ -1,6 +1,8 @@
 package httpapi
 
 import (
+	"context"
+	"database/sql"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
@@ -39,6 +41,12 @@ const user, admin = "USERUSERUSERUSERUSERUSERUS", "ADMINADMINADMINADMINADMINA"
 
 func server(t *testing.T) (http.Handler, *store.Store, *fakelite.Server, string) {
 	t.Helper()
+	o, st, s, addon := serverOptions(t)
+	return New(o), st, s, addon
+}
+
+func serverOptions(t *testing.T) (Options, *store.Store, *fakelite.Server, string) {
+	t.Helper()
 	s := fakelite.New()
 	t.Cleanup(s.Close)
 	s.Sessions[user] = fakelite.Session{User: "alice", Level: "configure"}
@@ -62,8 +70,8 @@ func server(t *testing.T) (http.Handler, *store.Store, *fakelite.Server, string)
 	os.WriteFile(devdb, []byte(`array set DEV_PATHS {HmIP-WRC2 {{50 /config/img/devices/50/112_hmip-wrc2_thumb.png} {250 /config/img/devices/250/112_hmip-wrc2.png}}}`), 0o644)
 	sf := settings.Fallback(filepath.Join(addon, "etc", "battery.json"))
 	notifier := notify.New(func() settings.Notify { return sf.Get().Notify }, st)
-	h := New(Options{BasePath: "/addons/battery", WWW: www, Store: st, Recorder: rec, Changes: chg, Images: &devimg.Catalog{Path: devdb}, Settings: sf, Notifier: notifier, Session: checker, Version: "test", Started: time.Now()})
-	return h, st, s, addon
+	o := Options{BasePath: "/addons/battery", WWW: www, Store: st, Recorder: rec, Changes: chg, Images: &devimg.Catalog{Path: devdb}, Settings: sf, Notifier: notifier, Session: checker, Version: "test", Started: time.Now()}
+	return o, st, s, addon
 }
 
 func call(h http.Handler, method, path, sid, body string, hdr ...string) *httptest.ResponseRecorder {
@@ -442,5 +450,80 @@ func TestForecastAndSettingsAPI(t *testing.T) {
 	defer mu.Unlock()
 	if len(got) != 1 || !strings.HasPrefix(got[0], "/hook ") || !strings.Contains(got[0], `"kind":"test"`) || !strings.Contains(got[0], "The Battery addon") {
 		t.Fatalf("sink: %v", got)
+	}
+}
+
+// A detection still being checked is in the inbox (the list with status=candidate,pending, the
+// health count) with check_until, can be answered at once, and sends no inbox notice: that stays
+// with a detection that passed the check (pending).
+func TestCandidateInInbox(t *testing.T) {
+	o, st, _, _ := serverOptions(t)
+	h := New(o)
+	csrf := []string{addonkit.HeaderRequest, "1"}
+	st.UpsertDevice(store.Device{Interface: "HmIP-RF", Address: "WRC2", Model: "HmIP-WRC2", VoltageDP: "0/OPERATING_VOLTAGE", LowBatDP: "0/LOW_BAT", FirstSeen: 1, LastSeen: 1})
+	st.Flush()
+	at := time.Now().Add(-2 * time.Hour).UnixMilli()
+	ev := `{"triggers":["A","B"],"voltage_before":2.8,"voltage_after":3.1,"booted":true,"fresh":2.96,"step":0.24,"window_s":86400,"last_trigger":` + strconv.FormatInt(at, 10) + `}`
+	var ids []int64
+	err := st.Write(context.Background(), func(tx *sql.Tx) error {
+		for i := 0; i < 2; i++ {
+			res, err := tx.Exec(`INSERT INTO changes (interface, address, at, kind, rule, status, evidence, batteries, source, created_by, created_at, updated_at)
+VALUES ('HmIP-RF', 'WRC2', ?, 'detected', 'A+B', 'candidate', ?, '[]', 'detector', 'detector', ?, ?)`, at-int64(i)*86400000*5, ev, at, at)
+			if err != nil {
+				return err
+			}
+			id, _ := res.LastInsertId()
+			ids = append(ids, id)
+		}
+		return nil
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	var l struct {
+		Changes []changes.Change `json:"changes"`
+	}
+	w := call(h, "GET", "/addons/battery/api/v1/changes?status=candidate,pending", user, "")
+	if w.Code != 200 || json.Unmarshal(w.Body.Bytes(), &l) != nil || len(l.Changes) != 2 || l.Changes[0].Status != "candidate" || l.Changes[0].CheckUntil != at+86400000 {
+		t.Fatalf("the inbox: %d %s", w.Code, w.Body)
+	}
+	if w := call(h, "GET", "/addons/battery/api/v1/health", user, ""); !strings.Contains(w.Body.String(), `"inbox":2`) {
+		t.Fatalf("inbox count: %s", w.Body)
+	}
+	for _, e := range o.Events(context.Background()) {
+		if e.Kind == "inbox" {
+			t.Fatalf("an inbox notice for a candidate: %+v", e)
+		}
+	}
+	a, b := strconv.FormatInt(ids[0], 10), strconv.FormatInt(ids[1], 10)
+	if w := call(h, "PATCH", "/addons/battery/api/v1/changes/"+a, user, `{"status":"pending"}`, csrf...); w.Code != 422 {
+		t.Fatalf("pending for a candidate: %d %s", w.Code, w.Body)
+	}
+	w = call(h, "PATCH", "/addons/battery/api/v1/changes/"+a, user, `{"status":"accepted","at":"2026-01-10","batteries":[{"count":2,"type":"AAA"}]}`, csrf...)
+	if w.Code != 200 || !strings.Contains(w.Body.String(), `"status":"accepted"`) || strings.Contains(w.Body.String(), "check_until") {
+		t.Fatalf("confirm: %d %s", w.Code, w.Body)
+	}
+	if w := call(h, "PATCH", "/addons/battery/api/v1/changes/"+b, user, `{"status":"rejected"}`, csrf...); w.Code != 200 || !strings.Contains(w.Body.String(), `"status":"rejected"`) {
+		t.Fatalf("reject: %d %s", w.Code, w.Body)
+	}
+	if w := call(h, "GET", "/addons/battery/api/v1/health", user, ""); !strings.Contains(w.Body.String(), `"inbox":0`) {
+		t.Fatalf("inbox count after the answers: %s", w.Body)
+	}
+	// a detection that passed the check still rings
+	if err := st.Write(context.Background(), func(tx *sql.Tx) error {
+		_, err := tx.Exec(`INSERT INTO changes (interface, address, at, kind, rule, confidence, status, evidence, batteries, source, created_by, created_at, updated_at)
+VALUES ('HmIP-RF', 'WRC2', ?, 'detected', 'A+B', 'high', 'pending', ?, '[]', 'detector', 'detector', ?, ?)`, at-86400000*20, ev, at, at)
+		return err
+	}); err != nil {
+		t.Fatal(err)
+	}
+	n := 0
+	for _, e := range o.Events(context.Background()) {
+		if e.Kind == "inbox" {
+			n++
+		}
+	}
+	if n != 1 {
+		t.Fatalf("inbox notices for a pending detection: %d", n)
 	}
 }

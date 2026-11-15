@@ -7,8 +7,9 @@
 // their voltage for a while (2.8 -> 3.1 V measured on an HmIP-WRC2), so a candidate is only
 // offered when the voltage still holds the fresh level a confirmation window later; otherwise it
 // is discarded as a boot or a recovery. A device without a voltage is offered when its
-// low-battery flag stayed clear through the window. Nothing here books a change: an offered
-// candidate goes into the user's inbox. docs/detection.md describes the rules.
+// low-battery flag stayed clear through the window. Nothing here books a change: the user
+// answers a candidate (already while it is being checked) or an offered one in the inbox, and an
+// answer ends the candidate (Drop). docs/detection.md describes the rules.
 package detect
 
 import (

@@ -53,17 +53,17 @@ imported entry said the same), `manual` or `import`. Its `status`:
 
 | Status | Meaning |
 | --- | --- |
-| `candidate` | detected, waiting for its confirmation window ([detection.md](detection.md)); not in the inbox |
-| `pending` | in the inbox, waiting for the user |
+| `candidate` | detected, still being checked: its confirmation window runs ([detection.md](detection.md)); in the inbox already, marked as such, and can be answered; `check_until` says when the window ends |
+| `pending` | in the inbox, the check passed, waiting for the user |
 | `accepted` | a change: confirmed by the user, or recorded by hand or by an import |
 | `rejected` | the user said no |
 | `discarded` | the detector's own no (a boot, a recovery); kept as evidence |
 
 | Route | Does |
 | --- | --- |
-| `GET changes?device=&from=&to=&status=&limit=` | the list, newest first; `status` takes a comma-separated list (`pending` is the inbox) |
+| `GET changes?device=&from=&to=&status=&limit=` | the list, newest first; `status` takes a comma-separated list (`candidate,pending` is the inbox) |
 | `POST changes` | one change: `{"device": "<address>", "at": "2024-03-01", "batteries": [...], "note": "…", "source": "manual", "external_id": "…"}` → `201 {"status": "created", "id": …}` or `200` with `merged`/`duplicate` |
-| `GET`/`PUT`/`PATCH`/`DELETE changes/{id}` | one change; PUT and PATCH take the fields to change: `{"status": "accepted"}` confirms an inbox entry, `"rejected"` rejects it, `{"at": …, "status": "accepted"}` confirms it with another date |
+| `GET`/`PUT`/`PATCH`/`DELETE changes/{id}` | one change; PUT and PATCH take the fields to change: `{"status": "accepted"}` confirms an inbox entry, `"rejected"` rejects it, `{"at": …, "status": "accepted"}` confirms it with another date. A `candidate` is answered the same way while it is still being checked (`accepted` or `rejected`, not `pending`); the answer is final, the check no longer decides it |
 | `PUT`/`PATCH changes/by-external-id/{id}?source=import` | the same, for the change a client knows by its own id |
 | `POST changes:bulk` | many changes, see below |
 
@@ -123,7 +123,8 @@ call `detect`, then go through the inbox. Both end in the same tables.
 
 Every quarter of an hour the addon looks at the forecast and the inbox and sends, over the
 channel of `PUT settings`, what the chosen `events` ask for: a device reporting a low battery, a
-change that is due or due within the horizon, a detection waiting in the inbox. Each notice goes
+change that is due or due within the horizon, a detection waiting in the inbox (once it passed the
+check: a candidate still being checked sends nothing, and one answered before rings no more). Each notice goes
 out once; the same one again only after seven days. The webhook body is
 `{"kind", "key", "title", "text", "link", "device", "name", "model", "at"}`; ntfy gets the text as the
 body with `Title`, `Tags: battery`, `Priority: high` for low and due, and `Click`. The system
@@ -141,6 +142,6 @@ itself offers an addon no channel yet; once it does, it becomes a third `channel
 | `GET forecast?days=` | every battery device with its forecast: `expected_days` and its `basis` (`own` - the median of the device's own lives, with fewer than two `model` - the model's lives in this installation -, else `table` - the battery table's typical life), `due_at` = the last change + the expected life - 14 days, pulled forward to the voltage `trend`'s date (a regression over the last 60 days reaching the device's low level) where that is earlier, `days_left`, `state` (`low`, `due`, `soon` within the horizon, `ok`, `unknown`); the urgent ones first |
 | `GET shopping?days=` | the shopping list: the devices low now or due within the horizon, and per battery type what they need, the stock, and what to buy |
 | `POST notify/test` | sends a test notice over the saved channel; 502 `send-failed` when it does not take it |
-| `GET health` | the addon's state; `inbox` counts the pending detections |
+| `GET health` | the addon's state; `inbox` counts the detections in the inbox (pending, and candidates still being checked) |
 | `GET storage`, `POST storage/check`, `POST storage/move` | the database's location ([storage.md](storage.md)) |
 | `GET openapi.json` | the specification |

@@ -1,8 +1,9 @@
 # Detecting a battery change
 
 The addon never books a change on its own. It watches every battery device's reports, and when
-they look like fresh batteries it puts a **detection into the inbox**; the user confirms it,
-rejects it, or gives another date. This page describes the rules (`internal/detect`).
+they look like fresh batteries it puts a **detection into the inbox** at once, marked as still
+being checked; the user confirms it, rejects it, or gives another date - right away or after the
+check. This page describes the rules (`internal/detect`).
 
 ## The signals
 
@@ -39,7 +40,7 @@ the system restored after a restart) never trigger. A second trigger while a can
 attaches to it (its evidence lists both). Once a change is offered or recorded, triggers within
 the next 24 h are ignored (the debounce).
 
-## Why a candidate is not yet a change
+## Why a candidate is checked first
 
 Re-seating the *same* half-used cells sets `BOOTED` and lifts their voltage for a while: on an
 HmIP-WRC2 we measured 2.8 → 3.1 V, which meets rules A and B. A cell that recovered after the
@@ -47,8 +48,8 @@ load was taken off falls back over the next hours; fresh cells stay up. So a can
 a **confirmation window** (24 h by default, measured from its last trigger) and is decided by the
 first voltage reading after it:
 
-- **offered** (into the inbox) when that reading is still at the fresh level and at least half a
-  step above the voltage before the trigger;
+- **offered** (`pending`: the check passed) when that reading is still at the fresh level and at
+  least half a step above the voltage before the trigger;
 - **discarded** otherwise, with the reason `recovered` (there was a jump) or `boot` (a `BOOTED`
   alone). The readings of a discarded candidate are dropped from the 30-day maximum, so the
   recovery does not hide a real change in the following weeks.
@@ -57,7 +58,20 @@ A low-battery flag that comes back during the window discards the candidate (`lo
 device without a voltage (rule C alone) is offered when the window passed without the flag coming
 back. A voltage device that sends no reading for a week after the trigger is offered anyway,
 with low confidence and the reason `unconfirmed`. Discarded candidates stay in the database as
-evidence (`status: discarded`); they are not shown in the inbox.
+evidence (`status: discarded`); they leave the inbox.
+
+## Answering while it is being checked
+
+A candidate shows in the inbox from the moment it opens, marked *still being checked until* the
+end of its window (`check_until` on the API: the last trigger plus the window; a voltage device is
+decided by its first reading after that, so the mark can stay a little longer). The user can
+answer it at once, like an offered detection: confirm it (with the batteries that went in, and
+another date if it was another day) or reject it. **The answer is final:** the detector forgets
+the candidate, and the reading after the window no longer turns a confirmed change into a boot or
+a recovery, nor a rejected one into an offer. A confirmed candidate starts the debounce like any
+change; a rejected one does not, as with a rejected offer. A candidate nobody answers is decided
+as described above. The inbox notification is sent only for an offered (`pending`) detection,
+never for a candidate still being checked.
 
 ## Confidence
 
@@ -67,7 +81,8 @@ evidence (`status: discarded`); they are not shown in the inbox.
 | medium | rule A with half a step; rule B; rule C confirmed by the voltage |
 | low | rule D; rule C on a device without a voltage; `unconfirmed` |
 
-Whatever the confidence, the detection waits in the inbox.
+Whatever the confidence, the detection waits in the inbox. A candidate still being checked has no
+confidence yet; it gets one when the check offers it.
 
 ## The windows
 

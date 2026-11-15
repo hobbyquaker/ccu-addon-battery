@@ -94,6 +94,8 @@ export interface Change {
     external_id?: string;
     created_at: number;
     updated_at: number;
+    /** A candidate still being checked: when its confirmation window ends (Unix ms). */
+    check_until?: number;
 }
 
 /** A device's battery lives as GET devices carries them. */
@@ -416,6 +418,16 @@ export function evidenceSummary(ev: Evidence | undefined, lang = 'en', after = '
         parts.push(`${formatVoltage(ev.voltage_confirmed, lang)} ${after} ${Math.round(ev.window_s / 3600)} h`);
     }
     return parts.join(', ');
+}
+
+/**
+ * The check of a detection still being checked (a candidate): until when, and whether that time has
+ * passed - a voltage device is decided by its first reading after the window, so it can stay a
+ * little longer. undefined for any other change.
+ */
+export function checkState(c: Pick<Change, 'status' | 'check_until'>, now = Date.now()): {until: number; late: boolean} | undefined {
+    if (c.status !== 'candidate' || !c.check_until) return undefined;
+    return {until: c.check_until, late: now >= c.check_until};
 }
 
 /** A date and time in the user's language, "27.10.2026, 11:26". */

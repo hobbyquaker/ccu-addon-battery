@@ -366,6 +366,7 @@
       "description": "the rules that fired, e.g. A+B; E for a manual entry"
      },
      "status": {
+      "description": "candidate: still being checked (in the inbox, can be answered); pending: in the inbox, the check passed",
       "enum": [
        "candidate",
        "pending",
@@ -401,6 +402,10 @@
      },
      "updated_at": {
       "type": "integer"
+     },
+     "check_until": {
+      "type": "integer",
+      "description": "a candidate only: when its confirmation window ends (Unix ms); the first voltage reading after it decides it, unless the user answered first"
      }
     }
    },
@@ -484,6 +489,7 @@
       "type": "string"
      },
      "status": {
+      "description": "accepted confirms, rejected says no, pending puts an answered change back into the inbox; a candidate still being checked takes accepted or rejected (final: the check no longer decides it)",
       "enum": [
        "accepted",
        "rejected",
@@ -1220,7 +1226,7 @@
           },
           "inbox": {
            "type": "integer",
-           "description": "pending detections"
+           "description": "the detections in the inbox: pending, and candidates still being checked"
           }
          }
         }

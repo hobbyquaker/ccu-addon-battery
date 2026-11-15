@@ -302,6 +302,13 @@ body,
     color: var(--hmm-info, #2c6fb3);
 }
 
+/* a detection still being checked: the same box as a confidence pill, the end of the check in its tooltip */
+.bat-pill.checking {
+    border-style: dashed;
+    border-color: var(--hmm-info, #2c6fb3);
+    color: var(--hmm-info, #2c6fb3);
+}
+
 .bat-pill.conf-low {
     border-color: var(--hmm-warning, #b7791f);
     color: var(--hmm-warning, #b7791f);

@@ -1,6 +1,6 @@
 import {describe, expect, it} from 'vitest';
 
-import {batteryName, compareDevices, describeSlots, evidenceSummary, formatBytes, formatCents, formatDays, formatRange, formatVoltage, fromLocalInput, isMains, lifeText, modelInitials, parsePrice, priceInput, relativeTime, statusOf, toLocalInput, type DeviceView} from './model.js';
+import {batteryName, checkState, compareDevices, describeSlots, evidenceSummary, formatBytes, formatCents, formatDays, formatRange, formatVoltage, fromLocalInput, isMains, lifeText, modelInitials, parsePrice, priceInput, relativeTime, statusOf, toLocalInput, type DeviceView} from './model.js';
 
 const dev = (p: Partial<DeviceView>): DeviceView => ({
     interface: 'HmIP-RF',
@@ -148,5 +148,15 @@ describe('durations and prices', () => {
         expect(batteryName({type: 'AAA'}, 'ohne Angabe')).toBe('ohne Angabe · AAA');
         expect(modelInitials('HmIP-WRC2')).toBe('WR');
         expect(modelInitials('HM-Sec-SC-2')).toBe('SE');
+    });
+});
+
+describe('checkState', () => {
+    it('answers the end of a candidate\'s check and whether it has passed', () => {
+        expect(checkState({status: 'candidate', check_until: 2000}, 1000)).toEqual({until: 2000, late: false});
+        expect(checkState({status: 'candidate', check_until: 2000}, 2000)).toEqual({until: 2000, late: true});
+        expect(checkState({status: 'candidate'}, 1000)).toBeUndefined();
+        expect(checkState({status: 'pending', check_until: 2000}, 1000)).toBeUndefined();
+        expect(checkState({status: 'accepted'}, 1000)).toBeUndefined();
     });
 });
