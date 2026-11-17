@@ -38,6 +38,23 @@ func TestManifest(t *testing.T) {
 	if m.Description["de"] == "" || m.Description["en"] == "" || m.Runtime.Note["de"] == "" || m.Runtime.Note["en"] == "" {
 		t.Error("texts in both languages")
 	}
+	// the system backup: the hook and the restore program are the tracked wrappers, executable;
+	// after a restore onto a new system bin/ (tagged .nobackup) comes back with the reinstall, and
+	// the unit's next start runs the restore program
+	b := m.Backup
+	if b == nil || b.Hook != "bin/backup-snapshot" || b.Restore != "bin/backup-restore" || b.Staging != "backup" || b.Large() {
+		t.Fatalf("backup: %+v", b)
+	}
+	for _, p := range []string{b.Hook, b.Restore} {
+		st, err := os.Stat("../../addon/battery/" + p)
+		if err != nil || st.Mode()&0o111 == 0 {
+			t.Errorf("%s: not an executable file in the package (%v)", p, err)
+		}
+	}
+	// a system before 1.3.0-beta.0 ignores the block: no minimum, the addon keeps its own daily copy
+	if m.Requires != nil && m.Requires.Lite != "" {
+		t.Errorf("requires.lite %q: the block needs no minimum", m.Requires.Lite)
+	}
 }
 
 // The fragment is the kit CLI's output (kit.json: proxied /addons/battery/ to the port, the

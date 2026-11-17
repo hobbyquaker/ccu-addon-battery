@@ -2855,7 +2855,7 @@
   },
   "/api/v1/storage": {
    "get": {
-    "summary": "the database's location, health and the candidate locations",
+    "summary": "the database's location, health, the candidate locations and its part in the system backup (backup: mode system or daily, last, error, notice)",
     "responses": {
      "200": {
       "description": "OK",

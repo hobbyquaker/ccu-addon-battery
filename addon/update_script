@@ -43,10 +43,11 @@ mkdir -p $ADDON_DIR
 cp -af $ADDON/bin $ADDON/app $ADDON/www $ADDON/lib $ADDON/rc.d $ADDON/versions $ADDON_DIR/
 mkdir -p $ADDON_DIR/etc $ADDON_DIR/var
 cp -af $ADDON/etc/lighttpd.conf $ADDON_DIR/etc/
-chmod 755 $ADDON_DIR/bin/$ADDON $ADDON_DIR/bin/kit-run $ADDON_DIR/bin/update_addon $ADDON_DIR/rc.d
+chmod 755 $ADDON_DIR/bin/$ADDON $ADDON_DIR/bin/kit-run $ADDON_DIR/bin/update_addon $ADDON_DIR/bin/backup-snapshot $ADDON_DIR/bin/backup-restore $ADDON_DIR/rc.d
 find $ADDON_DIR/www -name '*.cgi' -exec chmod 755 {} +
 
-# the program directories are not worth a backup; the data in var/ and etc/ is
+# the program directories are not worth a backup; the settings in etc/ are, and the database is
+# there through its checked copy in backup/ (the daemon tags var/ while such a copy covers it)
 touch $ADDON_DIR/bin/.nobackup $ADDON_DIR/app/.nobackup $ADDON_DIR/www/.nobackup $ADDON_DIR/lib/.nobackup
 
 # links: -n because busybox ln -T refuses to replace an existing directory symlink. The settings

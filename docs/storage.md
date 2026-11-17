@@ -39,8 +39,8 @@ location picker stores a choice, so a stick that comes back at another mount poi
 
 | id | Where | In the system's backups |
 | --- | --- | --- |
-| `userfs` (the default) | `/usr/local/addons/battery/var/battery.db` | yes (`createBackup.sh` takes `/usr/local`; `bin/` and `www/` are tagged `.nobackup`, `var/` and `etc/` are not) |
-| `usb:<label>` | `<mount>/<folder>/battery.db` on the stick whose filesystem label is `<label>`, wherever the system mounted it (`/media/usb1`…`8`); `folder` defaults to `battery`, up to four levels of letters, digits, `. _ -` | **no** - the page and the README say so |
+| `userfs` (the default) | `/usr/local/addons/battery/var/battery.db` | as its snapshot (below) |
+| `usb:<label>` | `<mount>/<folder>/battery.db` on the stick whose filesystem label is `<label>`, wherever the system mounted it (`/media/usb1`…`8`); `folder` defaults to `battery`, up to four levels of letters, digits, `. _ -` | as its snapshot (below) |
 | `share:<name>` | refused | SQLite's locking is not reliable on NFS and SMB; the system keeps its own database off them for the same reason |
 
 The addon learns the sticks from `/proc/mounts` (`/media/usb1`…`8`) and their labels from
@@ -51,6 +51,43 @@ handbook, chapter 11); without them the sticks are read-only to the addon and th
 A target is validated before anything happens: the directory exists or can be made, it is
 writable (a probe file), it is not on tmpfs, ramfs, a network or a pseudo filesystem, it is not
 mounted read-only, and it has room for twice the file plus 16 MiB.
+
+## In the system's backups
+
+The system's backup is a tar of `/usr/local` that skips directories tagged `.nobackup`: a database
+on a stick is never in it, and a live file on the user partition can be copied while the daemon
+writes. So the backup takes a **snapshot** instead, in `/usr/local/addons/battery/backup/battery.db`
+(ccu-addon-kit's `addonkit/backup`):
+
+- **openccu-lite from 1.3.0-beta.0:** the manifest's `backup` block names `bin/backup-snapshot` as
+  the hook. Before every backup the system runs it as the addon's user: a process of its own opens
+  the database at its configured location, writes `VACUUM INTO backup/battery.db.tmp` (one read
+  transaction, consistent while the daemon writes; the daemon's RAM batch of at most ten minutes is
+  not in it), checks the copy with `PRAGMA integrity_check` and renames it into place. The tar takes
+  it, the system empties `backup/` afterwards. The Backup page can switch it off for this addon
+  (`size_hint_mb` 20: on by default).
+- **Everywhere else** (a CCU3, OpenCCU, an older openccu-lite, or one whose stored manifest predates
+  the block - an addon installed on 1.2.x until it is updated): the daemon writes the same snapshot
+  itself, through the store with the batch written first, when there is none of its own or it is
+  older than a day (checked hourly), and keeps it there for the firmware's backup.
+- **Which of the two** the daemon learns from the system: `bin/backup-restore`, the manifest's
+  `restore`, runs before every start of the unit exactly when the system knows the block, and leaves
+  the start's `INVOCATION_ID` in `var/`; the daemon started by the same start finds it.
+- **`var/` is tagged `.nobackup`** while a snapshot covers the database: always where the system
+  runs the hook (switched off on the Backup page, the database is then in no backup - the user's
+  choice), elsewhere after the daemon's first snapshot. A snapshot that fails removes the tag, so the
+  backup then takes the live file as it lies; the hook exits 1 and the Backup page names it.
+- **After a restore** the snapshot is back in `backup/`, `var/` is not. `backup-restore` (and the
+  daemon's start, where nothing runs it) copies it to the configured location unless the file there
+  is newer (its `-wal` counts), removing the old `-wal` and `-shm`; a stick that is not plugged in
+  gets it on the user partition, the setting follows, and the settings page shows a notice for two
+  weeks. A marker in `var/` names the snapshot the system wrote last, so a restart during a backup
+  never takes it for a restored one. On openccu-lite `backup/` is emptied afterwards; elsewhere it
+  stays as the daily copy.
+- By hand: `rc.d backup-prepare` and `rc.d backup-restore`.
+
+`GET api/v1/storage` answers `backup: {mode: "system" | "daily", last?, error?, notice?}`; the
+settings page says which.
 
 ## The move
 

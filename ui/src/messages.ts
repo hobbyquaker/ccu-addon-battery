@@ -55,6 +55,22 @@ export const MESSAGES: Catalogue = {
         de: 'Die Datenbank liegt auf einem USB-Stick. Sie ist nicht in den Backups des Systems enthalten; sichern Sie den Stick selbst.',
         en: "The database is on a USB stick. It is not part of the system's backups; back the stick up yourself.",
     },
+    'storage.backup.system': {
+        de: 'Vor jeder Sicherung des Systems legt das Addon eine geprüfte Kopie der Datenbank in seinen Ordner, und die Sicherung enthält diese Kopie – auch wenn die Datenbank auf einem USB-Stick liegt. Auf der Seite Sicherung des Systems lässt sich das für dieses Addon ausschalten; die Datenbank ist dann in keiner Sicherung.',
+        en: "Before every backup of the system the addon puts a checked copy of the database into its folder, and the backup holds that copy - also when the database is on a USB stick. The system's Backup page can switch this off for this addon; the database is then in no backup.",
+    },
+    'storage.backup.daily': {
+        de: 'Einmal am Tag legt das Addon eine geprüfte Kopie der Datenbank in seinen Ordner (zuletzt: {when}), und die Sicherungen des Systems enthalten diese Kopie – auch wenn die Datenbank auf einem USB-Stick liegt.',
+        en: "Once a day the addon puts a checked copy of the database into its folder (last: {when}), and the system's backups hold that copy - also when the database is on a USB stick.",
+    },
+    'storage.backup.failed': {
+        de: 'Die letzte Kopie für die Sicherung ist fehlgeschlagen: {error}',
+        en: 'The last copy for the backup failed: {error}',
+    },
+    'storage.backup.notice': {
+        de: 'Nach der Wiederherstellung war der USB-Stick „{label}“ nicht eingesteckt: Die Datenbank liegt jetzt auf der Benutzerpartition ({path}). Sie lässt sich wieder auf den Stick verschieben.',
+        en: 'After the restore the USB stick "{label}" was not plugged in: the database is on the user partition now ({path}). It can be moved back to the stick.',
+    },
     'storage.unavailableHint': {
         de: 'Der gewählte Speicherort ist nicht vorhanden (Stick nicht eingesteckt?). Neue Werte werden im Arbeitsspeicher gesammelt, bis er wieder da ist; es wird nirgends eine neue Datenbank angelegt.',
         en: 'The chosen location is not present (stick unplugged?). New values are kept in memory until it is back; no new database is created anywhere else.',

@@ -47,9 +47,9 @@ for arch in $ARCHES; do
     out=dist/battery-$arch-$VERSION.tar.gz
     stage=$(mktemp -d)
     cp -a addon/update_script addon/openccu-lite.json addon/battery.cfg addon/battery "$stage/"
-    rm -rf "$stage/battery/var" "$stage/battery/etc/battery.json"
+    rm -rf "$stage/battery/var" "$stage/battery/backup" "$stage/battery/etc/battery.json"
     find "$stage" \( -name '._*' -o -name '.DS_Store' \) -exec rm -f {} +
-    chmod 755 "$stage/update_script" "$stage/battery/rc.d" "$stage/battery/bin/battery" "$stage/battery/bin/kit-run" "$stage/battery/bin/update_addon"
+    chmod 755 "$stage/update_script" "$stage/battery/rc.d" "$stage/battery/bin/battery" "$stage/battery/bin/kit-run" "$stage/battery/bin/update_addon" "$stage/battery/bin/backup-snapshot" "$stage/battery/bin/backup-restore"
     find "$stage/battery/www" -name '*.cgi' -exec chmod 755 {} +
     COPYFILE_DISABLE=1 tar --owner=root --group=root --sort=name --mtime='2026-01-01 00:00Z' -czf "$out" -C "$stage" .
     rm -rf "$stage"

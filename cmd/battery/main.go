@@ -24,6 +24,7 @@ import (
 	"github.com/hobbyquaker/ccu-addon-battery/internal/notify"
 	"github.com/hobbyquaker/ccu-addon-battery/internal/recorder"
 	"github.com/hobbyquaker/ccu-addon-battery/internal/settings"
+	"github.com/hobbyquaker/ccu-addon-battery/internal/snapshot"
 	"github.com/hobbyquaker/ccu-addon-battery/internal/store"
 	"github.com/hobbyquaker/ccu-addon-kit/go/addonkit"
 	"github.com/hobbyquaker/ccu-addon-kit/go/addonkit/ccuauth"
@@ -53,6 +54,13 @@ func main() {
 		fmt.Println(version)
 		return
 	}
+	switch flag.Arg(0) {
+	case "":
+	case "backup-snapshot", "backup-restore":
+		os.Exit(backupCommand(flag.Arg(0), *addonDir))
+	default:
+		log.Fatalf("battery: unknown command %q (backup-snapshot, backup-restore)", flag.Arg(0))
+	}
 	if *basePath == "" {
 		*basePath = "/addons/" + *id
 	}
@@ -72,12 +80,20 @@ func run(addonDir, id string, port int, base, basePath, www, tokenFile string, f
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer stop()
 
+	// a snapshot a restore brought back goes where the database lives before it is opened (the
+	// system's restore program did that already where there is one; then this finds nothing)
+	if _, err := snapshot.Restore(addonDir, store.DefaultMounts, false, log.Printf); err != nil {
+		log.Printf("battery: backup: restoring the snapshot: %v", err)
+	}
 	st, err := store.Open(store.Config{AddonDir: addonDir, Log: log.Printf})
 	if err != nil {
 		return err
 	}
 	defer st.Close()
 	go st.Run(ctx, flush)
+	snaps := &snapshot.Runner{AddonDir: addonDir, Store: st, Log: log.Printf}
+	snaps.Init()
+	go snaps.Run(ctx)
 
 	// the system: openccu-lite's APIs, or on a classic CCU the interface processes and ReGa
 	var src litesource.Source
@@ -155,7 +171,7 @@ func run(addonDir, id string, port int, base, basePath, www, tokenFile string, f
 	notifier := notify.New(func() settings.Notify { return sf.Get().Notify }, st)
 	notifier.Log = log.Printf
 
-	opts := httpapi.Options{BasePath: basePath, WWW: www, Store: st, Recorder: rec, Changes: chg, Images: &devimg.Catalog{}, Settings: sf, Notifier: notifier, Wrap: wrap, Version: version, Started: time.Now()}
+	opts := httpapi.Options{BasePath: basePath, WWW: www, Store: st, Recorder: rec, Changes: chg, Images: &devimg.Catalog{}, Settings: sf, Notifier: notifier, Backup: snaps.Status, Wrap: wrap, Version: version, Started: time.Now()}
 	h := httpapi.New(opts)
 	go notifier.Run(ctx, 15*time.Minute, opts.Events)
 	l, err := addonkit.Listen(port, "")
@@ -184,6 +200,32 @@ func run(addonDir, id string, port int, base, basePath, www, tokenFile string, f
 	}
 	os.Stdout.Sync()
 	return nil
+}
+
+// backupCommand runs the manifest's backup programs (bin/backup-snapshot, bin/backup-restore, and
+// the rc.d verbs backup-prepare and backup-restore): one line of output, exit 0 or 1.
+func backupCommand(cmd, addonDir string) int {
+	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
+	defer stop()
+	switch cmd {
+	case "backup-snapshot":
+		msg, err := snapshot.Hook(ctx, addonDir, store.DefaultMounts)
+		if err != nil {
+			fmt.Printf("battery: backup: the snapshot failed: %v\n", err)
+			return 1
+		}
+		fmt.Println("battery: backup: " + msg)
+	case "backup-restore":
+		res, err := snapshot.Restore(addonDir, store.DefaultMounts, true, log.Printf)
+		if err != nil {
+			fmt.Printf("battery: backup: the restore failed: %v\n", err)
+			return 1
+		}
+		if res == "nothing" || res == "own" {
+			return 0
+		}
+	}
+	return 0
 }
 
 // detectionSettings reads the "detection" key of etc/battery.json: {"window_hours": 24,

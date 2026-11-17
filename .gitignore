@@ -10,7 +10,10 @@
 !/addon/battery/www/icon-dark.svg
 /addon/battery/app/
 /addon/battery/lib/
-/addon/battery/bin/
+# the build puts the daemon and the kit's programs into bin/; the backup programs are tracked
+/addon/battery/bin/*
+!/addon/battery/bin/backup-snapshot
+!/addon/battery/bin/backup-restore
 /ui/settings/dist/
 /addon/battery/versions
 *.db

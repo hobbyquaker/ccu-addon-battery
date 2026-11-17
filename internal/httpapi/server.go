@@ -21,6 +21,7 @@ import (
 	"github.com/hobbyquaker/ccu-addon-battery/internal/notify"
 	"github.com/hobbyquaker/ccu-addon-battery/internal/recorder"
 	"github.com/hobbyquaker/ccu-addon-battery/internal/settings"
+	"github.com/hobbyquaker/ccu-addon-battery/internal/snapshot"
 	"github.com/hobbyquaker/ccu-addon-battery/internal/stats"
 	"github.com/hobbyquaker/ccu-addon-battery/internal/store"
 	"github.com/hobbyquaker/ccu-addon-kit/go/addonkit"
@@ -45,7 +46,9 @@ type Options struct {
 	Session *addonkit.Checker
 	// Wrap is the session check as a handler wrapper (openccu-lite's or a classic CCU's); it
 	// takes precedence over Session. nil (and no Session): no check, development only.
-	Wrap    func(http.Handler) http.Handler
+	Wrap func(http.Handler) http.Handler
+	// Backup answers the database's part in the system backup; nil: not shown.
+	Backup  func() snapshot.Status
 	Version string
 	Started time.Time
 }
@@ -183,10 +186,14 @@ func (o Options) devices(w http.ResponseWriter, r *http.Request) {
 }
 
 func (o Options) storage(w http.ResponseWriter, r *http.Request) {
-	writeJSON(w, 200, map[string]any{
+	out := map[string]any{
 		"health":     o.Store.Health(),
 		"candidates": o.Store.Candidates(),
-	})
+	}
+	if o.Backup != nil {
+		out["backup"] = o.Backup()
+	}
+	writeJSON(w, 200, out)
 }
 
 type moveBody struct {

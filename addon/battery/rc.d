@@ -116,6 +116,11 @@ case "$1" in
     stop) Stop; exit $? ;;
     restart) Stop; sleep 1; Start; exit $? ;;
     status) Status; exit $? ;;
+    # the system backup (ccu-addon-kit's backup convention): a checked copy of the database into
+    # backup/, and a restored copy put back where the database lives; on openccu-lite the system
+    # runs bin/backup-snapshot and bin/backup-restore itself
+    backup-prepare) $DAEMON $DAEMON_ARGS backup-snapshot; exit $? ;;
+    backup-restore) $DAEMON $DAEMON_ARGS backup-restore; exit $? ;;
     info)
         echo "Info: <div>$NAME</div>"
         echo "Name: $NAME"

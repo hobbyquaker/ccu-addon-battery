@@ -23,6 +23,13 @@
     "settings_url": "/addons/battery-config/settings.cgi",
     "session_header": true
   },
+  "backup": {
+    "hook": "bin/backup-snapshot",
+    "staging": "backup",
+    "timeout": 300,
+    "size_hint_mb": 20,
+    "restore": "bin/backup-restore"
+  },
   "runtime": {
     "daemon": true,
     "needs": [],

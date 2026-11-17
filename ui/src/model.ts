@@ -256,6 +256,15 @@ export interface StorageHealth {
     in_backup: boolean;
 }
 
+/** The database's part in the system backup (GET storage → backup). */
+export interface BackupStatus {
+    /** system: the system takes the snapshot before every backup; daily: the addon keeps one. */
+    mode: 'system' | 'daily';
+    last?: string;
+    error?: string;
+    notice?: {at: string; label: string; path: string};
+}
+
 export interface Candidate {
     id: string;
     name: string;

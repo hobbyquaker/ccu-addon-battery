@@ -493,6 +493,24 @@ func (s *Store) Write(ctx context.Context, fn func(tx *sql.Tx) error) error {
 	return tx.Commit()
 }
 
+// Snapshot runs fn on the open database after writing the batch, with the writers held for its
+// duration (a VACUUM INTO of the daemon's own: the copy then holds every row reported so far).
+// ErrUnavailable while there is no file, ErrBusy while it is being moved.
+func (s *Store) Snapshot(ctx context.Context, fn func(db *sql.DB) error) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if s.db == nil {
+		return fmt.Errorf("%w: %v", ErrUnavailable, s.err)
+	}
+	if s.paused {
+		return ErrBusy
+	}
+	if err := s.flushLocked(); err != nil {
+		return err
+	}
+	return fn(s.db)
+}
+
 // DB is the open database for reads, ErrUnavailable while there is none.
 func (s *Store) DB() (*sql.DB, error) { return s.reader() }
 

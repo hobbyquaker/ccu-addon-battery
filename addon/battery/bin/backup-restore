@@ -1,0 +1,3 @@
+#!/bin/sh
+# The manifest's backup.restore on openccu-lite (ccu-addon-kit's backup convention): a snapshot a restore brought back goes where the database lives, run by the unit before every start.
+exec /usr/local/addons/battery/bin/battery -addon-dir /usr/local/addons/battery backup-restore

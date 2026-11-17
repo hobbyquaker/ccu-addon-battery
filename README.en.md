@@ -133,8 +133,8 @@ mark is the median. Further down, out of the picture, the exports.
 <picture><source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/10-einstellungen-datenbank-dunkel.png"><img alt="Settings: database" src="docs/screenshots/10-einstellungen-datenbank.png"></picture>
 
 The settings page (on openccu-lite under *Zusatzsoftware → Batterie → Einstellungen*) shows where
-the database lives and how it is doing, and moves it between the user partition (in every backup)
-and a USB stick - here it is on the stick.
+the database lives and how it is doing, and moves it between the user partition and a USB stick
+(in the system's backups either way, as a checked copy) - here it is on the stick.
 
 <picture><source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/11-einstellungen-benachrichtigungen-dunkel.png"><img alt="Settings: notifications" src="docs/screenshots/11-einstellungen-benachrichtigungen.png"></picture>
 
@@ -216,10 +216,19 @@ its settings page is `/addons/battery-config/`. Updates come from the system's A
 ### Where the database lives
 
 The database is one SQLite file, `battery.db`. By default it is in the addon's own directory on
-the user partition, `/usr/local/addons/battery/var/`, which every backup of the system includes.
-It can be moved to a USB stick the system has mounted (the settings page); the stick is **not**
-part of the system's backups, and the page says so. Network shares are not offered: SQLite needs
-local file locking, which NFS and SMB do not give.
+the user partition, `/usr/local/addons/battery/var/`. It can be moved to a USB stick the system has
+mounted (the settings page). Network shares are not offered: SQLite needs local file locking, which
+NFS and SMB do not give.
+
+**In the system's backups** the database is a checked copy, wherever it lives - the stick
+included: before every backup the system runs the addon's snapshot (`VACUUM INTO` into
+`/usr/local/addons/battery/backup/`, then `integrity_check` on the copy; openccu-lite from
+1.3.0-beta.0), and the backup takes that copy instead of the live file, which could be torn while
+the addon writes. The system's Backup page shows it under *Addon data in the backup* and can switch
+it off for this addon; the database is then in no backup. After a restore the copy goes back where
+the database lives, unless the file there is newer; a stick that is not plugged in then gets the
+database on the user partition, and the settings page says so. On an older openccu-lite the addon
+keeps a copy at most a day old in the same place itself.
 
 The move is safe: the writers pause (new values wait in memory), the pending rows are written, a
 consistent copy is made with `VACUUM INTO`, the copy is verified (`integrity_check`, the row count
@@ -235,8 +244,8 @@ The setting is `storage` in `/usr/local/addons/battery/etc/battery.json`
 
 ### Uninstall
 
-Removes the program and keeps `/usr/local/addons/battery/etc` (the settings) and `var` (the
-database) for a reinstall. Remove that directory by hand to be rid of the data.
+Removes the program and keeps `/usr/local/addons/battery/etc` (the settings), `var` (the
+database) and `backup` (its copy) for a reinstall. Remove that directory by hand to be rid of the data.
 
 ## On a CCU3 or OpenCCU
 
@@ -247,8 +256,9 @@ devices and reads the Homematic IP channel 0 from the process's cache every quar
 and takes the names and rooms from ReGaHSS; the WebUI's *Einstellungen* button of the addon opens
 the settings page (service, log, database, notifications, version), whose *Open Battery* button
 opens the app with the WebUI's session. Nothing but the web server faces the network. The
-settings and the database live in `/usr/local/addons/battery/etc` and `var`, in every backup;
-`Deinstallieren` keeps them, as above. Tested on OpenCCU 3.89 (x86_64) and on a CCU3 with eQ-3's
+settings and the database live in `/usr/local/addons/battery/etc` and `var`; the addon keeps a
+checked copy of the database at most a day old in `backup/`, which the CCU's backup takes - also
+when the database is on a USB stick. `Deinstallieren` keeps them, as above. Tested on OpenCCU 3.89 (x86_64) and on a CCU3 with eQ-3's
 firmware 3.89.11 (`armv7l`), there so far without paired battery devices - feedback is welcome.
 
 ## Development
@@ -257,7 +267,7 @@ firmware 3.89.11 (`armv7l`), there so far without paired battery devices - feedb
 go test -race ./...                      # the store, the recorder, the detector, the changes, the statistics, the API, the package files
 python3 data/check.py                    # the battery table
 (cd ui && npm ci && npm run check && npm test && npm run build)   # the app and the settings page
-VERSION=1.1.0 scripts/build.sh           # dist/battery-<arch>-<version>.tar.gz for aarch64, x86_64, armv7l
+VERSION=1.2.0 scripts/build.sh           # dist/battery-<arch>-<version>.tar.gz for aarch64, x86_64, armv7l
 ```
 
 The Go side uses [ccu-addon-kit](https://github.com/hobbyquaker/ccu-addon-kit)'s `addonkit`

@@ -137,8 +137,9 @@ bis zur längsten, die Marke ist der Median. Weiter unten, nicht mehr im Bild, d
 <picture><source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/10-einstellungen-datenbank-dunkel.png"><img alt="Einstellungen: Datenbank" src="docs/screenshots/10-einstellungen-datenbank.png"></picture>
 
 Die Einstellungsseite (auf openccu-lite unter *Zusatzsoftware → Batterie → Einstellungen*) zeigt,
-wo die Datenbank liegt und wie es ihr geht, und verschiebt sie zwischen der Benutzerpartition
-(in jedem Backup) und einem USB-Stick – hier liegt sie auf dem Stick.
+wo die Datenbank liegt und wie es ihr geht, und verschiebt sie zwischen der Benutzerpartition und
+einem USB-Stick (so oder so als geprüfte Kopie in den Backups des Systems) – hier liegt sie auf dem
+Stick.
 
 <picture><source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/11-einstellungen-benachrichtigungen-dunkel.png"><img alt="Einstellungen: Benachrichtigungen" src="docs/screenshots/11-einstellungen-benachrichtigungen.png"></picture>
 
@@ -225,11 +226,20 @@ Oberfläche des Systems mit dessen Design und Sprache; seine Einstellungsseite i
 ### Wo die Datenbank liegt
 
 Die Datenbank ist eine SQLite-Datei, `battery.db`. Standardmäßig liegt sie im eigenen Verzeichnis
-des Addons auf der Benutzerpartition, `/usr/local/addons/battery/var/`, das jedes Backup des
-Systems enthält. Sie kann auf einen vom System eingebundenen USB-Stick verschoben werden (die
-Einstellungsseite); der Stick ist **nicht** Teil der Backups des Systems, und die Seite sagt das.
-Netzwerkfreigaben werden nicht angeboten: SQLite braucht lokale Dateisperren, die NFS und SMB
-nicht geben.
+des Addons auf der Benutzerpartition, `/usr/local/addons/battery/var/`. Sie kann auf einen vom
+System eingebundenen USB-Stick verschoben werden (die Einstellungsseite). Netzwerkfreigaben werden
+nicht angeboten: SQLite braucht lokale Dateisperren, die NFS und SMB nicht geben.
+
+**In den Backups des Systems** ist die Datenbank eine geprüfte Kopie, wo immer sie liegt – auch auf
+dem Stick: Vor jedem Backup lässt das System das Addon eine Kopie anlegen (`VACUUM INTO` nach
+`/usr/local/addons/battery/backup/`, danach `integrity_check` auf der Kopie; openccu-lite ab
+1.3.0-beta.0), und das Backup nimmt diese Kopie statt der laufenden Datei, die während eines
+Schreibvorgangs halb geschrieben sein könnte. Die Seite *Sicherung* des Systems zeigt das unter den
+Addon-Daten und kann es für dieses Addon ausschalten; die Datenbank ist dann in keinem Backup. Nach
+einer Wiederherstellung kommt die Kopie dorthin zurück, wo die Datenbank liegt, außer die Datei dort
+ist neuer; ist der Stick dann nicht eingesteckt, landet die Datenbank auf der Benutzerpartition, und
+die Einstellungsseite sagt das. Auf einem älteren openccu-lite legt das Addon selbst einmal am Tag
+eine Kopie an derselben Stelle ab.
 
 Das Verschieben ist sicher: Die Schreiber halten an (neue Werte warten im Arbeitsspeicher), die
 ausstehenden Zeilen werden geschrieben, mit `VACUUM INTO` entsteht eine konsistente Kopie, die
@@ -246,8 +256,8 @@ Die Einstellung ist `storage` in `/usr/local/addons/battery/etc/battery.json`
 
 ### Deinstallation
 
-Entfernt das Programm und behält `/usr/local/addons/battery/etc` (die Einstellungen) und `var`
-(die Datenbank) für eine Neuinstallation. Entfernen Sie dieses Verzeichnis von Hand, um die Daten
+Entfernt das Programm und behält `/usr/local/addons/battery/etc` (die Einstellungen), `var`
+(die Datenbank) und `backup` (ihre Kopie) für eine Neuinstallation. Entfernen Sie dieses Verzeichnis von Hand, um die Daten
 loszuwerden.
 
 ## Auf einer CCU3 oder OpenCCU
@@ -260,7 +270,9 @@ aus dem Cache des Prozesses – und nimmt Namen und Räume aus der ReGaHSS; der 
 des Addons in der WebUI öffnet die Einstellungsseite (Dienst, Protokoll, Datenbank,
 Benachrichtigungen, Version), deren Knopf *Batterie öffnen* die Anwendung mit der Sitzung der WebUI
 öffnet. Nach außen spricht nur der Webserver. Einstellungen und Datenbank liegen in
-`/usr/local/addons/battery/etc` und `var`, in jedem Backup; *Deinstallieren* behält sie, wie oben.
+`/usr/local/addons/battery/etc` und `var`; eine geprüfte Kopie der Datenbank, höchstens einen Tag
+alt, legt das Addon in `backup/` ab, und das Backup der CCU nimmt sie mit – auch wenn die Datenbank
+auf einem USB-Stick liegt. *Deinstallieren* behält sie, wie oben.
 Getestet auf OpenCCU 3.89 (x86_64) und auf einer CCU3 mit der Firmware 3.89.11 von eQ-3 (`armv7l`),
 dort bisher ohne angelernte Batteriegeräte – Rückmeldungen sind willkommen.
 
@@ -270,7 +282,7 @@ dort bisher ohne angelernte Batteriegeräte – Rückmeldungen sind willkommen.
 go test -race ./...                      # Speicher, Aufzeichnung, Erkennung, Wechsel, Statistik, API, Paketdateien
 python3 data/check.py                    # die Batterietabelle
 (cd ui && npm ci && npm run check && npm test && npm run build)   # die Anwendung und die Einstellungsseite
-VERSION=1.1.0 scripts/build.sh           # dist/battery-<arch>-<version>.tar.gz für aarch64, x86_64, armv7l
+VERSION=1.2.0 scripts/build.sh           # dist/battery-<arch>-<version>.tar.gz für aarch64, x86_64, armv7l
 ```
 
 Die Go-Seite nutzt `addonkit` (Sitzung, CSRF, Token, Manifest) und `litesource` (der Ereignisstrom

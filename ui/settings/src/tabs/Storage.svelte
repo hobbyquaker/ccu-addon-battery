@@ -5,7 +5,7 @@
     import {Dialog} from 'occulite-ui';
     import {getKit, KitError, KitLoading, REQUEST_HEADER} from 'ccu-addon-kit/frame';
 
-    import {formatBytes, relativeTime, type Candidate, type StorageHealth} from '../../../src/model.js';
+    import {formatBytes, relativeTime, type BackupStatus, type Candidate, type StorageHealth} from '../../../src/model.js';
 
     let {active}: {active: boolean; path: string} = $props();
     const kit = getKit();
@@ -50,6 +50,7 @@
     }
 
     let health = $state<StorageHealth | undefined>();
+    let backup = $state<BackupStatus | undefined>();
     let candidates = $state<Candidate[]>([]);
     let error = $state<unknown>(null);
     let loaded = $state(false);
@@ -64,8 +65,9 @@
     async function load(): Promise<void> {
         error = null;
         try {
-            const r = await call<{health: StorageHealth; candidates: Candidate[]}>('storage');
+            const r = await call<{health: StorageHealth; candidates: Candidate[]; backup?: BackupStatus}>('storage');
             health = r.health;
+            backup = r.backup;
             candidates = r.candidates;
             const cur = r.candidates.find((c) => c.current);
             if (cur && cur.id !== 'usb:') target = cur.id;
@@ -152,7 +154,19 @@
             <dt>{kit.t('storage.lastFlush')}</dt>
             <dd>{health.last_flush ? relativeTime(Date.parse(health.last_flush), Date.now(), kit.lang) : kit.t('time.never')}</dd>
         </dl>
-        <p class="kit-muted">{health.in_backup ? kit.t('storage.inBackup') : kit.t('storage.notInBackup')}</p>
+        {#if backup?.notice}
+            <p class="kit-notice" data-testid="storage-restore-notice">{kit.t('storage.backup.notice', {label: backup.notice.label, path: backup.notice.path})}</p>
+        {/if}
+        {#if backup}
+            <p class="kit-muted" data-testid="storage-backup">
+                {backup.mode === 'system'
+                    ? kit.t('storage.backup.system')
+                    : kit.t('storage.backup.daily', {when: backup.last ? relativeTime(Date.parse(backup.last), Date.now(), kit.lang) : kit.t('time.never')})}
+            </p>
+            {#if backup.error}<p class="kit-muted" data-testid="storage-backup-error">{kit.t('storage.backup.failed', {error: backup.error})}</p>{/if}
+        {:else}
+            <p class="kit-muted">{health.in_backup ? kit.t('storage.inBackup') : kit.t('storage.notInBackup')}</p>
+        {/if}
 
         <h3 class="st-h">{kit.t('storage.move.title')}</h3>
         <p class="kit-muted">{kit.t('storage.move.intro')}</p>
@@ -186,7 +200,7 @@
 
         <Dialog bind:open={confirmOpen} title={kit.t('storage.move.title')} width="30rem" closable={!moving} onclose={() => (confirmOpen = false)}>
             <p>{kit.t('storage.move.confirm', {path: checkResult?.path ?? (isUsb ? `${sticks.find((s) => s.id === target)?.path ?? ''}/${folder}/battery.db` : health.path)})}</p>
-            <p class="kit-muted">{target === 'userfs' ? kit.t('storage.inBackup') : kit.t('storage.notInBackup')}</p>
+            {#if !backup}<p class="kit-muted">{target === 'userfs' ? kit.t('storage.inBackup') : kit.t('storage.notInBackup')}</p>{/if}
             <label><input type="checkbox" bind:checked={keepOld} /> {kit.t('storage.move.keepOld')}</label>
             {#snippet buttons()}
                 <div class="st-actions">
