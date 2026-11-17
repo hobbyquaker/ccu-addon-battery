@@ -20,7 +20,7 @@ curl -sb jar -H 'X-CCU-Addon-Request: 1' -H 'Content-Type: text/csv' \
 
 - **Every writing request** (POST, PUT, PATCH, DELETE) carries the header `X-CCU-Addon-Request`
   (any value): a page of another site cannot set it, so it cannot write in the user's name.
-- **A program with an API token** (openccu-lite): make one under *Settings → Remote access → API
+- **A program with an API token** (openccu-lite): make one under *System → Remote access → API
   tokens* with the scope `addon:battery` (listed under *Addons*) and send it as
   `Authorization: Bearer olt_…`, no login, no cookie. The token's `ips` restriction applies at the
   gate as for the system's API:

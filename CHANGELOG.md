@@ -11,7 +11,7 @@
   where the database lives unless the file there is newer; when its USB stick is not plugged in, the database lands on
   the user partition and the settings page says so. The settings page says how the database gets into the backups.
 - **openccu-lite:** a program can use the addon's API with an API token of the scope `addon:battery` (made under
-  *Settings → Remote access → API tokens*), without a login; it counts as a user's session, and a Full-access token as
+  *System → Remote access → API tokens*), without a login; it counts as a user's session, and a Full-access token as
   an administrator's. Before, the addon refused every token although the system let it through.
 
 ## [1.1.0] - 2026-11-15
