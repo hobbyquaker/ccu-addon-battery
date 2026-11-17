@@ -1,5 +1,19 @@
 # Changelog
 
+## [1.2.0] - 2026-11-17
+
+- **Every system:** the database is in the system's backups as a checked copy, wherever it lives - a database on a USB
+  stick included, which no backup held before. On openccu-lite (from 1.3.0-beta.0) the system has the addon write the
+  copy right before every backup (`VACUUM INTO`, then `integrity_check` on the copy) and takes it instead of the live
+  file, which could be caught half-written; the system's Backup page lists the addon under its addon data and can
+  switch it off. On a CCU3, OpenCCU and an older openccu-lite the addon keeps such a copy at most a day old in
+  `/usr/local/addons/battery/backup/` itself, which the firmware's backup takes. After a restore the copy goes back
+  where the database lives unless the file there is newer; when its USB stick is not plugged in, the database lands on
+  the user partition and the settings page says so. The settings page says how the database gets into the backups.
+- **openccu-lite:** a program can use the addon's API with an API token of the scope `addon:battery` (made under
+  *Settings → Remote access → API tokens*), without a login; it counts as a user's session, and a Full-access token as
+  an administrator's. Before, the addon refused every token although the system let it through.
+
 ## [1.1.0] - 2026-11-15
 
 - **Every system:** a detected battery change shows in the inbox at once, while the addon still checks for a day that
