@@ -103,7 +103,7 @@ func run(addonDir, id string, port int, base, basePath, www, tokenFile string, f
 		}
 		src = lite
 		if !noSession {
-			c := addonkit.NewChecker(addonkit.SessionOptions{Base: base, Need: addonkit.LevelUser, OnRefused: func(r *http.Request, reason string) {
+			c := addonkit.NewChecker(addonkit.SessionOptions{Base: base, Need: addonkit.LevelUser, AddonID: id, OnRefused: func(r *http.Request, reason string) {
 				log.Printf("battery: refused %s %s: %s", r.Method, r.URL.Path, reason)
 			}})
 			wrap = c.Handler

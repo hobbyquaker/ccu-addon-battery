@@ -20,8 +20,18 @@ curl -sb jar -H 'X-CCU-Addon-Request: 1' -H 'Content-Type: text/csv' \
 
 - **Every writing request** (POST, PUT, PATCH, DELETE) carries the header `X-CCU-Addon-Request`
   (any value): a page of another site cannot set it, so it cannot write in the user's name.
-- Reading and writing need a session of level `operate` or above; moving the database needs an
-  administrator. The system's API tokens (`olt_…`) do not open the gate.
+- **A program with an API token** (openccu-lite): make one under *Settings → Remote access → API
+  tokens* with the scope `addon:battery` (listed under *Addons*) and send it as
+  `Authorization: Bearer olt_…`, no login, no cookie. The token's `ips` restriction applies at the
+  gate as for the system's API:
+
+```sh
+curl -s -H 'Authorization: Bearer olt_…' $SYS/addons/battery/api/v1/devices
+```
+
+- Reading and writing need a session of level `operate` or above, or a token with `addon:battery`
+  (it counts as a user's session); moving the database needs an administrator's session or a token
+  with Full access (`*`). On a classic CCU there are no API tokens: a script logs in to the WebUI.
 
 **Times** are Unix milliseconds in every answer. Requests take milliseconds, an RFC 3339 string
 (`2024-03-01T08:30:00+01:00`) or a date (`2024-03-01`, noon in the system's time zone). **Errors**
