@@ -1,6 +1,6 @@
 # Changelog
 
-## [Unreleased]
+## [1.3.0] - 2026-11-20
 
 - **Every system:** the addon writes less to the SD card. A report that only repeats a device's values writes nothing
   any more (its time is kept in memory and written at most every six hours and at the stop), and new values are written
