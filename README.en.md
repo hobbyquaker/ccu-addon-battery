@@ -283,6 +283,11 @@ python3 data/check.py                    # the battery table
 VERSION=1.2.0 scripts/build.sh           # dist/battery-<arch>-<version>.tar.gz for aarch64, x86_64, armv7l
 ```
 
+A release is a tag `v<version>` on `main`: [release.yml](.github/workflows/release.yml) checks that
+the manifest has that version and the changelog a section for it, runs the checks, builds the three
+packages with their `.sha256` files and makes the release (title = the tag, marked Latest). Its notes
+are `release-notes/<version>.md` when that file exists, otherwise the changelog's section.
+
 The Go side uses [ccu-addon-kit](https://github.com/hobbyquaker/ccu-addon-kit)'s `addonkit`
 (session, CSRF, token, manifest) and `litesource` (the event stream with resume, the state store,
 the metadata API); the web app is Svelte 5 on [occulite-ui](https://github.com/hobbyquaker/occulite-ui)

@@ -300,6 +300,12 @@ python3 data/check.py                    # die Batterietabelle
 VERSION=1.2.0 scripts/build.sh           # dist/battery-<arch>-<version>.tar.gz für aarch64, x86_64, armv7l
 ```
 
+Ein Release ist ein Tag `v<version>` auf `main`: [release.yml](.github/workflows/release.yml) prüft,
+dass die Version im Manifest steht und das Changelog einen Abschnitt dafür hat, lässt die Prüfungen
+laufen, baut die drei Pakete mit ihren `.sha256`-Dateien und legt das Release an (Titel = Tag, als
+Latest). Die Release-Notizen sind `release-notes/<version>.md`, wenn es die Datei gibt, sonst der
+Abschnitt des Changelogs.
+
 Die Go-Seite nutzt `addonkit` (Sitzung, CSRF, Token, Manifest) und `litesource` (der Ereignisstrom
 mit Wiederaufnahme, der Zustandsspeicher, die Metadaten-API) aus
 [ccu-addon-kit](https://github.com/hobbyquaker/ccu-addon-kit); die Anwendung ist Svelte 5 auf
