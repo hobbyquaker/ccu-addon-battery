@@ -93,6 +93,8 @@ type device struct {
 	// its timestamps alone (a report that repeated the values), which waits for CurrentRefresh
 	written int64
 	dirty   bool
+	// flap is the voltage change waiting for FlapHold before it is recorded (nil: none)
+	flap *flap
 }
 
 // CurrentRefresh is how long a device's current row may lag behind in its timestamps alone
@@ -361,6 +363,12 @@ func (r *Recorder) loadStore(ctx context.Context) {
 		r.profileLocked(ctx, d, false)
 	}
 	for k, d := range r.devs {
+		// the flap filter compares with the last recorded row; the current row may hold a
+		// flip the history left out
+		if s, err := r.o.Store.LastSample(ctx, d.Interface, d.Address); err == nil && s != nil {
+			r.last[k] = store.Sample{TS: s.TS, Voltage: s.Voltage, LowBat: s.LowBat}
+			continue
+		}
 		if d.cur.VoltageTS != 0 {
 			r.last[k] = store.Sample{TS: d.cur.VoltageTS, Voltage: d.cur.Voltage, LowBat: d.cur.LowBat}
 		}
@@ -643,9 +651,11 @@ func (r *Recorder) apply(e litesource.Event, live bool) {
 		if !ok {
 			break
 		}
-		if cur.Voltage == nil || *cur.Voltage != v {
+		if cur.Voltage == nil {
 			changed = true
 		}
+		// a voltage that moved is written with its sample row; one the flap filter holds back
+		// waits like the timestamps (CurrentRefresh)
 		vv := v
 		cur.Voltage, cur.VoltageTS = &vv, ms
 		sample = true
@@ -750,26 +760,86 @@ func statusName(e litesource.Event) string {
 	return e.String()
 }
 
-// maybeSample writes a sample row when the downsampling rule says so (the caller holds the
-// lock); true when it did.
+// The flap filter. A device reports its voltage in steps of 0.1 V, and a voltage that lies near
+// a step flips between the two values with the load (a thermostat's motor) and the temperature
+// (day and night) for days, as the pack drains past it. A change of at most FlapBand from the last
+// recorded value is therefore only recorded once it held: the reports stayed on the same side of
+// the recorded value for FlapHold, half a day, over two reports at least; it is then recorded at
+// the time it first came, so the history shows it where it happened. Half a day leaves out the
+// motor's dips and the night's, and still takes a falling pack's next step within a day of the
+// time it is reached for good (TestFlapFilterSlowTrend). A report back at the recorded value
+// ends the wait and records nothing. A change of more than FlapBand (a battery change, a pack
+// giving out) is recorded at once, and so is every change of the low-battery flag. Only the
+// history (the samples) is filtered: the current values, the detector and the warnings see every
+// report as it comes.
+const (
+	FlapBand = 0.1
+	FlapHold = 12 * time.Hour
+)
+
+// flap is a device's voltage waiting for its FlapHold: the first value that left the recorded
+// one, since when, whether that report was live, and how many reports kept to its side.
+type flap struct {
+	v     float64
+	since int64
+	live  bool
+	n     int
+}
+
+// maybeSample writes a sample row when the downsampling rule and the flap filter say so (the
+// caller holds the lock); true when it did.
 func (r *Recorder) maybeSample(key string, d *device, ms int64, live bool) bool {
 	last, had := r.last[key]
-	write := !had
-	if had {
-		if d.cur.Voltage != nil && (last.Voltage == nil || abs(*d.cur.Voltage-*last.Voltage) >= Step-1e-9) {
-			write = true
-		}
-		if (d.cur.LowBat == nil) != (last.LowBat == nil) || d.cur.LowBat != nil && last.LowBat != nil && *d.cur.LowBat != *last.LowBat {
-			write = true
-		}
-		if ms-last.TS >= MaxGap.Milliseconds() {
-			write = true
+	if !had || lowBatDiffers(d.cur.LowBat, last.LowBat) || d.cur.Voltage != nil && last.Voltage == nil {
+		d.flap = nil
+		return r.writeSample(key, d, ms, d.cur.Voltage, live)
+	}
+	if v := d.cur.Voltage; v != nil {
+		diff := *v - *last.Voltage
+		switch {
+		case abs(diff) < Step-1e-9:
+			// still, or back, at the recorded value: a flip that came back leaves nothing
+			d.flap = nil
+		case abs(diff) > FlapBand+1e-9:
+			d.flap = nil
+			return r.writeSample(key, d, ms, v, live)
+		case d.flap == nil || (d.flap.v < *last.Voltage) != (diff < 0):
+			d.flap = &flap{v: *v, since: ms, live: live, n: 1}
+		default:
+			f := d.flap
+			f.n++
+			if f.n >= 2 && ms-f.since >= FlapHold.Milliseconds() {
+				ts := f.since
+				if ts < last.TS {
+					// a daily row was written meanwhile: the history must stay in order (a daily
+					// row at the very report that started the wait is replaced by this one)
+					ts = ms
+				}
+				held := f.v
+				d.flap = nil
+				r.writeSample(key, d, ts, &held, f.live)
+				if abs(*v-held) >= Step-1e-9 {
+					// the value moved on while it was held: it waits on its own
+					d.flap = &flap{v: *v, since: ms, live: live, n: 1}
+				}
+				return true
+			}
 		}
 	}
-	if !write {
-		return false
+	if ms-last.TS >= MaxGap.Milliseconds() {
+		v := d.cur.Voltage
+		if d.flap != nil {
+			v = last.Voltage // the daily row keeps the recorded value while a change waits
+		}
+		return r.writeSample(key, d, ms, v, live)
 	}
-	if had && ms <= last.TS {
+	return false
+}
+
+// writeSample queues one sample row of the device with the voltage v and its current low-battery
+// flag, and makes it the device's last row (the caller holds the lock).
+func (r *Recorder) writeSample(key string, d *device, ms int64, v *float64, live bool) bool {
+	if last, had := r.last[key]; had && ms <= last.TS {
 		// two reports in the same millisecond (one status multicall): one row with the newest values
 		ms = last.TS
 	}
@@ -777,10 +847,14 @@ func (r *Recorder) maybeSample(key string, d *device, ms int64, live bool) bool 
 	if live {
 		src = "live"
 	}
-	s := store.Sample{Interface: d.Interface, Address: d.Address, TS: ms, Voltage: copyF(d.cur.Voltage), LowBat: copyB(d.cur.LowBat), Source: src}
+	s := store.Sample{Interface: d.Interface, Address: d.Address, TS: ms, Voltage: copyF(v), LowBat: copyB(d.cur.LowBat), Source: src}
 	r.last[key] = s
 	r.o.Store.AddSample(s)
 	return true
+}
+
+func lowBatDiffers(a, b *bool) bool {
+	return (a == nil) != (b == nil) || a != nil && b != nil && *a != *b
 }
 
 func abs(f float64) float64 {

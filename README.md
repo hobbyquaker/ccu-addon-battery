@@ -166,7 +166,12 @@ Beschreibungen einen der Batterie-Datenpunkte tragen.
 Beim Start übernimmt das Addon die Werte aus dem Zustandsspeicher des Systems und, für Homematic
 IP, aus dem Cache des Funkprozesses (kein Funkverkehr); BidCos-Werte werden nie gelesen, nur
 empfangen. Die Werte werden ausgedünnt: eine Zeile, wenn sich die Spannung um 0,01 V bewegt hat,
-wenn sich die Batterie-leer-Meldung geändert hat, oder einmal am Tag. Die Übergänge von
+wenn sich die Batterie-leer-Meldung geändert hat, oder einmal am Tag. Kurzes Hin- und Herspringen
+um 0,1 V zeichnet der Verlauf nicht mehr auf: Eine Änderung um höchstens 0,1 V kommt erst hinein,
+wenn sie einen halben Tag (und mindestens zwei Meldungen lang) gehalten hat, dann mit der Zeit, zu
+der sie zuerst kam; springt der Wert vorher zurück, bleibt nichts davon. Größere Sprünge (ein
+Batteriewechsel, ein nachgebender Satz) und jede Batterie-leer-Meldung kommen sofort hinein, und die
+aktuellen Werte, die Wechselerkennung und die Warnungen sehen jede Meldung, wie sie kommt. Die Übergänge von
 Batterie-leer und Nicht-erreichbar sowie `BOOTED` bleiben als Beleg erhalten.
 
 ## Welche Batterien ein Gerät nimmt
@@ -247,7 +252,8 @@ gesammelt in die Datenbank, standardmäßig alle 30 Minuten; auf der Einstellung
 lässt sich 1, 5, 10, 30 oder 60 Minuten wählen. Ein längerer Abstand schreibt seltener; bei einem
 Stromausfall gehen die Spannungswerte von höchstens so langer Zeit verloren. Batteriewechsel, Ihre
 Eingaben und die Einstellungen werden immer sofort geschrieben. Ein Bericht, der nur dieselben
-Werte wiederholt, schreibt nichts.
+Werte wiederholt, schreibt nichts, und ebenso wenig ein kurzer Sprung der Spannung um 0,1 V, der
+gleich wieder zurückgeht (oben, *Was aufgezeichnet wird*).
 
 Das Verschieben ist sicher: Die Schreiber halten an (neue Werte warten im Arbeitsspeicher), die
 ausstehenden Zeilen werden geschrieben, mit `VACUUM INTO` entsteht eine konsistente Kopie, die

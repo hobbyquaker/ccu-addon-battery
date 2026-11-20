@@ -9,6 +9,12 @@
   lost; battery changes, your entries and the settings are still written at once. In a simulation of 100 battery
   devices on a grown database this cuts the addon's writes from about 310 to 230 KB an hour and its transactions from
   six to two an hour.
+- **Every system:** the voltage history no longer records short 0.1 V flips. A device reports its voltage in steps of
+  0.1 V, and near a step it flips back and forth with the load and the temperature, often for days; such a change now
+  goes into the history only once it held for half a day, and then at the time it first came. Larger steps - a battery
+  change, a pack giving out - and every low-battery report go in at once, and the current values, the change detection
+  and the warnings still see every report. History recorded before stays as it is. In the same simulation this cuts
+  the addon's writes further to about 40 KB an hour.
 - **CCU3, OpenCCU and openccu-lite before 1.3.0-beta.0:** the copy of the database the addon keeps for the system's
   backup can be renewed weekly instead of daily (settings page, *Database*). Each copy writes the whole database to the
   SD card; a weekly one spares six of seven, and a restored backup then lacks up to a week of readings instead of a day.

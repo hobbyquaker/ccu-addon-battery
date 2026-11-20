@@ -217,19 +217,19 @@ func TestWriteOnlyChanges(t *testing.T) {
 		t.Fatalf("150 minutes of the same values queued %d rows", p)
 	}
 	clock = clock.Add(3 * time.Minute)
-	report(2.8) // a new value: a sample and the current row
+	report(2.7) // a new value beyond the flap band: a sample and the current row
 	if p := st.Health().Pending; p != 2 {
 		t.Fatalf("a changed voltage queued %d rows, want 2", p)
 	}
 	st.Flush()
 	clock = clock.Add(CurrentRefresh)
-	report(2.8) // the same value, but the row's timestamps are older than CurrentRefresh
+	report(2.7) // the same value, but the row's timestamps are older than CurrentRefresh
 	if p := st.Health().Pending; p != 1 {
 		t.Fatalf("the refresh queued %d rows, want 1", p)
 	}
 	st.Flush()
 	clock = clock.Add(3 * time.Minute)
-	report(2.8)
+	report(2.7)
 	if p := st.Health().Pending; p != 0 {
 		t.Fatalf("right after the refresh: %d rows", p)
 	}
@@ -239,7 +239,7 @@ func TestWriteOnlyChanges(t *testing.T) {
 	}
 	st.Flush()
 	curs, err := st.Currents(context.Background())
-	if err != nil || len(curs) != 1 || curs[0].LastReport != clock.UnixMilli() || *curs[0].Voltage != 2.8 {
+	if err != nil || len(curs) != 1 || curs[0].LastReport != clock.UnixMilli() || *curs[0].Voltage != 2.7 {
 		t.Fatalf("the current row after the stop: %v %+v", err, curs)
 	}
 	r.Persist()

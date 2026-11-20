@@ -187,7 +187,7 @@ func TestLearnSeedRecord(t *testing.T) {
 		time.Sleep(3 * time.Millisecond)
 	}
 	push("HmIP-RF", "WRC2:0", "OPERATING_VOLTAGE", 2.905)
-	push("HmIP-RF", "WRC2:0", "OPERATING_VOLTAGE", 2.88)
+	push("HmIP-RF", "WRC2:0", "OPERATING_VOLTAGE", 2.7)
 	push("HmIP-RF", "WRC2:0", "LOW_BAT", true)
 	push("HmIP-RF", "WRC2:0", "BOOTED", true)
 	push("BidCos-RF", "RTDN:4", "BATTERY_STATE", 2.7)
@@ -203,7 +203,7 @@ func TestLearnSeedRecord(t *testing.T) {
 	if c0["samples"] != 3 {
 		t.Fatalf("seed samples: %v", c0)
 	}
-	// + WRC2 2.88, WRC2 LOW_BAT true (same voltage, flag changed), RTDN 2.7 = 3 more
+	// + WRC2 2.7 (beyond the flap band), WRC2 LOW_BAT true (same voltage, flag changed), RTDN 2.7 = 3 more
 	if c1["samples"] != 6 {
 		rows, _ := st.Samples(ctx, "HmIP-RF", "WRC2", 0, 0)
 		t.Fatalf("live samples: %v %+v", c1, rows)
@@ -213,7 +213,7 @@ func TestLearnSeedRecord(t *testing.T) {
 		t.Fatalf("events: %v %v", c0, c1)
 	}
 	wrc = find(r.Devices("de"), "WRC2")
-	if *wrc.Voltage != 2.88 || !*wrc.LowBat {
+	if *wrc.Voltage != 2.7 || !*wrc.LowBat {
 		t.Fatalf("WRC2 after events: %+v", wrc)
 	}
 	rows, _ := st.Samples(ctx, "HmIP-RF", "WRC2", 0, 0)
@@ -283,7 +283,7 @@ func TestDailyRow(t *testing.T) {
 	ev(now.Add(23*time.Hour), 2.905) // within the step: no row
 	ev(now.Add(25*time.Hour), 2.905) // a day passed: a row
 	ev(now.Add(25*time.Hour), 2.905) // the same millisecond: no second row
-	ev(now.Add(26*time.Hour), 2.895) // a step down from the last row (2.905): a row
+	ev(now.Add(26*time.Hour), 2.795) // more than the flap band down from the last row (2.905): a row
 	st.Flush()
 	rows, _ := st.Samples(ctx, "HmIP-RF", "WRC2", 0, 0)
 	if len(rows) != 3 {

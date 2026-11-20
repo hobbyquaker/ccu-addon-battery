@@ -28,13 +28,35 @@ a battery change, an override, a detection's state - is written at once, the que
 
 What reaches the queue is only what changed:
 
-- a **sample** row when the voltage moved by 0.01 V or more since the device's last row, its
-  low-battery flag changed, or 24 hours passed;
+- a **sample** row when the voltage moved by 0.01 V or more since the device's last row (through
+  the flap filter below), its low-battery flag changed, or 24 hours passed;
 - a device's **current** row when one of its values changed or a sample was written. A report that
-  repeats the values moves only the row's timestamps (`voltage_ts`, `last_report`); those are kept
-  in RAM and written at most every 6 hours and at stop - the system hands them back at the next
+  repeats the values moves only the row's timestamps (`voltage_ts`, `last_report`), and a voltage
+  the flap filter holds back is treated the same; those are kept in RAM (the pages show them at
+  once) and written at most every 6 hours and at stop - the system hands them back at the next
   start anyway;
 - an **event** for a low-battery, unreachable or boot transition.
+
+**The flap filter** (always on). The devices report their voltage in steps of 0.1 V, and a voltage
+near a step flips between the two values with the load (a thermostat's motor) and the temperature
+(day and night), for days while a pack drains past it. The history no longer records such short
+flips:
+
+- a change of **more than 0.1 V** from the last recorded value is recorded at once - a battery
+  change, a pack giving out;
+- a change of **at most 0.1 V** is recorded only once it held: every report for **12 hours** stayed
+  on the same side of the recorded value, and at least two reports came. It is then recorded at the
+  time it first came, so the chart shows it where it happened. A report back at the recorded value
+  before ends the wait and leaves nothing; a report on the other side starts a new wait;
+- a **low-battery** transition is recorded at once, with the voltage it came with;
+- the **daily row** keeps the recorded value while a change waits;
+- after a restart the filter compares with the last recorded row.
+
+Half a day leaves out the motor's dips and the night's, and a falling pack's next step is still
+recorded within a day of the time it is reached for good (with the time it came). Only the history
+is filtered: the current values, the change detection (it sees every report live), the low-battery
+warnings and the device's own status see every report as it comes. History recorded before is left
+as it is.
 
 SQLite rewrites whole 4 KiB pages: a sample of some 30 bytes costs a page in the WAL, and the
 samples of different devices lie on different pages. Every transaction also touches the
@@ -58,8 +80,12 @@ every 3 minutes, the voltage flipping by 0.1 V in 3 % of the reports - on a data
 | --- | --- | --- |
 | every report's current row, 10 minutes (up to 1.2.0) | 6 | 308 KB |
 | changed rows only, 10 minutes | 6 | 280 KB |
-| changed rows only, 30 minutes (the default) | 2 | 229 KB |
+| changed rows only, 30 minutes | 2 | 229 KB |
 | changed rows only, 60 minutes | 1 | 197 KB |
+| changed rows only and the flap filter, 30 minutes (the default) | 0.5 | 41 KB |
+
+With the flap filter the simulated day records 107 sample rows instead of 917, and 13 of the 48
+write intervals find anything to write.
 
 Where the addon keeps its own copy for the firmware's backup (below), that copy is a full write of
 the file: with this 9.7 MB database 9.7 MB a day (about 400 KB/h) when renewed daily, 1.4 MB a day

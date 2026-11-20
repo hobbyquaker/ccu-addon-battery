@@ -161,7 +161,11 @@ datapoints. At the start the
 addon seeds the values from the system's state store and, for Homematic IP, from the radio
 process's cache (no radio traffic); BidCos values are never read, only received. Samples are
 downsampled: a row when the voltage moved by 0.01 V, when the low-battery flag changed, or once a
-day. The low-battery and unreachable transitions and `BOOTED` are kept as evidence.
+day. The history no longer records short 0.1 V flips: a change of at most 0.1 V goes in only once
+it held for half a day (over two reports at least), at the time it first came; if the value flips
+back before, nothing of it stays. Larger steps (a battery change, a pack giving out) and every
+low-battery transition go in at once, and the current values, the change detection and the warnings
+see every report as it comes. The low-battery and unreachable transitions and `BOOTED` are kept as evidence.
 
 ## Which batteries a device takes
 
@@ -235,7 +239,8 @@ which spares the SD card.
 together, every 30 minutes by default; the settings page (*Database*) offers 1, 5, 10, 30 or 60
 minutes. A longer interval writes less often; at a power cut the voltage readings of at most that
 long are lost. Battery changes, your entries and the settings are always written at once. A report
-that only repeats the same values writes nothing.
+that only repeats the same values writes nothing, and neither does a short 0.1 V flip of the
+voltage that goes back (above, *What it records*).
 
 The move is safe: the writers pause (new values wait in memory), the pending rows are written, a
 consistent copy is made with `VACUUM INTO`, the copy is verified (`integrity_check`, the row count
