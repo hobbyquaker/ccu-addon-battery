@@ -375,3 +375,82 @@ func TestUnavailableAndDegraded(t *testing.T) {
 		t.Fatalf("degraded: %+v", h)
 	}
 }
+
+func TestInterval(t *testing.T) {
+	s, dir := testStore(t, nil)
+	settings := filepath.Join(dir, "etc", "battery.json")
+	if s.Interval() != IntervalDefault || s.Health().Interval != 30 || s.Health().Fixed {
+		t.Fatalf("default: %s %+v", s.Interval(), s.Health())
+	}
+	if err := SaveLocation(settings, Location{ID: "userfs"}); err != nil {
+		t.Fatal(err)
+	}
+	if err := s.SetInterval(7); err == nil {
+		t.Fatal("7 minutes accepted")
+	}
+	if err := s.SetInterval(60); err != nil {
+		t.Fatal(err)
+	}
+	if s.Interval() != time.Hour || s.Health().Interval != 60 {
+		t.Fatalf("after SetInterval: %s", s.Interval())
+	}
+	// the other keys stay, and a new store reads it back
+	if loc, err := LoadLocation(settings); err != nil || loc.ID != "userfs" {
+		t.Fatalf("the location after SetInterval: %v %v", loc, err)
+	}
+	if d := LoadInterval(settings, t.Logf); d != time.Hour {
+		t.Fatalf("LoadInterval: %s", d)
+	}
+	for body, want := range map[string]time.Duration{
+		`{"write_interval": 5}`:   5 * time.Minute,
+		`{"write_interval": 7}`:   IntervalDefault,
+		`{"write_interval": "x"}`: IntervalDefault,
+		`{}`:                      IntervalDefault,
+		`not json`:                IntervalDefault,
+	} {
+		p := filepath.Join(t.TempDir(), "battery.json")
+		os.WriteFile(p, []byte(body), 0o640)
+		if d := LoadInterval(p, t.Logf); d != want {
+			t.Errorf("%s: %s, want %s", body, d, want)
+		}
+	}
+	if d := LoadInterval(filepath.Join(t.TempDir(), "none.json"), nil); d != IntervalDefault {
+		t.Errorf("no file: %s", d)
+	}
+}
+
+// Run follows the setting: a change writes what waits at once and the new interval counts from
+// then; a fixed interval (the -flush flag) wins over the setting.
+func TestRunInterval(t *testing.T) {
+	s, _ := testStore(t, nil)
+	ctx, cancel := context.WithCancel(context.Background())
+	done := make(chan struct{})
+	go func() { s.Run(ctx, 0); close(done) }()
+	s.AddEvent(Event{Interface: "HmIP-RF", Address: "DEVA", TS: 1, Key: "BOOTED", Value: "true"})
+	if err := s.SetInterval(1); err != nil {
+		t.Fatal(err)
+	}
+	deadline := time.Now().Add(3 * time.Second)
+	for s.Health().Pending != 0 {
+		if time.Now().After(deadline) {
+			t.Fatal("the change of the interval did not write the batch")
+		}
+		time.Sleep(5 * time.Millisecond)
+	}
+	cancel()
+	<-done
+
+	ctx, cancel = context.WithCancel(context.Background())
+	defer cancel()
+	go s.Run(ctx, time.Hour)
+	deadline = time.Now().Add(3 * time.Second)
+	for !s.Health().Fixed {
+		if time.Now().After(deadline) {
+			t.Fatal("not fixed")
+		}
+		time.Sleep(5 * time.Millisecond)
+	}
+	if s.Interval() != time.Hour || s.Health().Interval != 60 {
+		t.Fatalf("fixed: %s", s.Interval())
+	}
+}

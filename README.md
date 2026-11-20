@@ -238,8 +238,16 @@ Schreibvorgangs halb geschrieben sein könnte. Die Seite *Sicherung* des Systems
 Addon-Daten und kann es für dieses Addon ausschalten; die Datenbank ist dann in keinem Backup. Nach
 einer Wiederherstellung kommt die Kopie dorthin zurück, wo die Datenbank liegt, außer die Datei dort
 ist neuer; ist der Stick dann nicht eingesteckt, landet die Datenbank auf der Benutzerpartition, und
-die Einstellungsseite sagt das. Auf einem älteren openccu-lite legt das Addon selbst einmal am Tag
-eine Kopie an derselben Stelle ab.
+die Einstellungsseite sagt das. Auf einem älteren openccu-lite legt das Addon selbst eine Kopie an
+derselben Stelle ab, täglich oder – auf der Einstellungsseite wählbar – wöchentlich, was die SD-Karte
+schont.
+
+**Schreiben auf die SD-Karte:** Neue Werte sammelt das Addon im Arbeitsspeicher und schreibt sie
+gesammelt in die Datenbank, standardmäßig alle 30 Minuten; auf der Einstellungsseite (*Datenbank*)
+lässt sich 1, 5, 10, 30 oder 60 Minuten wählen. Ein längerer Abstand schreibt seltener; bei einem
+Stromausfall gehen die Spannungswerte von höchstens so langer Zeit verloren. Batteriewechsel, Ihre
+Eingaben und die Einstellungen werden immer sofort geschrieben. Ein Bericht, der nur dieselben
+Werte wiederholt, schreibt nichts.
 
 Das Verschieben ist sicher: Die Schreiber halten an (neue Werte warten im Arbeitsspeicher), die
 ausstehenden Zeilen werden geschrieben, mit `VACUUM INTO` entsteht eine konsistente Kopie, die
@@ -250,8 +258,9 @@ abgezogen, sammelt das Addon die neuen Werte im Arbeitsspeicher (bis zu 20.000 Z
 auf seiner Seite und im Journal und macht weiter, sobald der Stick zurück ist – es beginnt nie von
 sich aus anderswo eine neue Datenbank.
 
-Die Einstellung ist `storage` in `/usr/local/addons/battery/etc/battery.json`
-(`{"storage": {"location": "usb:<label>", "folder": "battery"}}`); die Einzelheiten stehen in
+Die Einstellungen sind `storage`, `write_interval` (Minuten) und `backup_copy_days` in
+`/usr/local/addons/battery/etc/battery.json`
+(`{"storage": {"location": "usb:<label>", "folder": "battery"}, "write_interval": 30}`); die Einzelheiten stehen in
 [docs/storage.md](docs/storage.md).
 
 ### Deinstallation
@@ -271,7 +280,7 @@ des Addons in der WebUI öffnet die Einstellungsseite (Dienst, Protokoll, Datenb
 Benachrichtigungen, Version), deren Knopf *Batterie öffnen* die Anwendung mit der Sitzung der WebUI
 öffnet. Nach außen spricht nur der Webserver. Einstellungen und Datenbank liegen in
 `/usr/local/addons/battery/etc` und `var`; eine geprüfte Kopie der Datenbank, höchstens einen Tag
-alt, legt das Addon in `backup/` ab, und das Backup der CCU nimmt sie mit – auch wenn die Datenbank
+(oder, nach Wahl, eine Woche) alt, legt das Addon in `backup/` ab, und das Backup der CCU nimmt sie mit – auch wenn die Datenbank
 auf einem USB-Stick liegt. *Deinstallieren* behält sie, wie oben.
 Getestet auf OpenCCU 3.89 (x86_64) und auf einer CCU3 mit der Firmware 3.89.11 von eQ-3 (`armv7l`),
 dort bisher ohne angelernte Batteriegeräte – Rückmeldungen sind willkommen.

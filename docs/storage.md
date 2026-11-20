@@ -21,9 +21,53 @@ migrations above it.
 ## Writes
 
 Reports are applied to the in-memory current values at once and queued as rows; the queue is
-written in one transaction every 10 minutes and at stop (SIGTERM), to spare an SD card. A failed
-write keeps the queue for the next try. The queue is capped at 20,000 rows; beyond it the oldest
-rows are dropped and counted (`dropped` in the health).
+written in one transaction at the **write interval** and at stop (SIGTERM), to spare an SD card.
+A failed write keeps the queue for the next try. The queue is capped at 20,000 rows; beyond it the
+oldest rows are dropped and counted (`dropped` in the health). What a user or a script changes -
+a battery change, an override, a detection's state - is written at once, the queue first.
+
+What reaches the queue is only what changed:
+
+- a **sample** row when the voltage moved by 0.01 V or more since the device's last row, its
+  low-battery flag changed, or 24 hours passed;
+- a device's **current** row when one of its values changed or a sample was written. A report that
+  repeats the values moves only the row's timestamps (`voltage_ts`, `last_report`); those are kept
+  in RAM and written at most every 6 hours and at stop - the system hands them back at the next
+  start anyway;
+- an **event** for a low-battery, unreachable or boot transition.
+
+SQLite rewrites whole 4 KiB pages: a sample of some 30 bytes costs a page in the WAL, and the
+samples of different devices lie on different pages. Every transaction also touches the
+`-shm` index and the file's metadata. A longer interval puts more rows on each page and costs
+fewer transactions.
+
+**The write interval** is the user's choice on the settings page (*Database* tab), the key
+`write_interval` (minutes) of `etc/battery.json`: 1, 5, 10, 30 (the default) or 60 minutes.
+`PUT api/v1/storage/interval {"minutes": 30}` sets it (an administrator's session) and takes
+effect at once (the queue is written first); `GET api/v1/storage` answers it as the health's
+`interval_minutes`. The daemon's `-flush` flag overrides it (`interval_fixed` in the health). At a
+power cut the voltage readings of at most one interval are lost; the system's current values come
+back at the next start.
+
+Measured with the recorder test `TestWriteLoadMeasure` under `strace` (100 battery devices - 30
+HmIP thermostats every 3 minutes, 50 other HmIP devices every 20 minutes, 20 BidCos thermostats
+every 3 minutes, the voltage flipping by 0.1 V in 3 % of the reports - on a database grown to
+9.7 MB, 24 hours):
+
+| | transactions/h | written/h (WAL + checkpoint) |
+| --- | --- | --- |
+| every report's current row, 10 minutes (up to 1.2.0) | 6 | 308 KB |
+| changed rows only, 10 minutes | 6 | 280 KB |
+| changed rows only, 30 minutes (the default) | 2 | 229 KB |
+| changed rows only, 60 minutes | 1 | 197 KB |
+
+Where the addon keeps its own copy for the firmware's backup (below), that copy is a full write of
+the file: with this 9.7 MB database 9.7 MB a day (about 400 KB/h) when renewed daily, 1.4 MB a day
+on average when weekly.
+
+The WAL is checkpointed into the file by SQLite every 1,000 pages (about 4 MB of WAL: with
+`synchronous=NORMAL` the only `fsync`s, a few a day here); the WAL file keeps its size and is
+reused.
 
 ## The location
 
@@ -62,14 +106,19 @@ writes. So the backup takes a **snapshot** instead, in `/usr/local/addons/batter
 - **openccu-lite from 1.3.0-beta.0:** the manifest's `backup` block names `bin/backup-snapshot` as
   the hook. Before every backup the system runs it as the addon's user: a process of its own opens
   the database at its configured location, writes `VACUUM INTO backup/battery.db.tmp` (one read
-  transaction, consistent while the daemon writes; the daemon's RAM batch of at most ten minutes is
-  not in it), checks the copy with `PRAGMA integrity_check` and renames it into place. The tar takes
+  transaction, consistent while the daemon writes; the daemon's RAM batch of at most one write
+  interval is not in it), checks the copy with `PRAGMA integrity_check` and renames it into place. The tar takes
   it, the system empties `backup/` afterwards. The Backup page can switch it off for this addon
   (`size_hint_mb` 20: on by default).
 - **Everywhere else** (a CCU3, OpenCCU, an older openccu-lite, or one whose stored manifest predates
   the block - an addon installed on 1.2.x until it is updated): the daemon writes the same snapshot
   itself, through the store with the batch written first, when there is none of its own or it is
-  older than a day (checked hourly), and keeps it there for the firmware's backup.
+  older than a day (checked hourly), and keeps it there for the firmware's backup. Every such
+  snapshot is a full copy of the database on the user partition - the largest single write of the
+  addon on these systems - so the age is the user's choice: 1 day (the default) or 7, the key
+  `backup_copy_days` of `etc/battery.json`, set on the settings page or with
+  `PUT api/v1/storage/backup-copy {"days": 7}` (an administrator's session; refused with 409 where
+  the system runs the hook).
 - **Which of the two** the daemon learns from the system: `bin/backup-restore`, the manifest's
   `restore`, runs before every start of the unit exactly when the system knows the block, and leaves
   the start's `INVOCATION_ID` in `var/`; the daemon started by the same start finds it.
@@ -86,7 +135,7 @@ writes. So the backup takes a **snapshot** instead, in `/usr/local/addons/batter
   stays as the daily copy.
 - By hand: `rc.d backup-prepare` and `rc.d backup-restore`.
 
-`GET api/v1/storage` answers `backup: {mode: "system" | "daily", last?, error?, notice?}`; the
+`GET api/v1/storage` answers `backup: {mode: "system" | "daily", last?, error?, notice?, copy_days?}`; the
 settings page says which.
 
 ## The move

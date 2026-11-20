@@ -9,6 +9,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"net/http"
 	"os"
 	"path"
@@ -48,9 +49,11 @@ type Options struct {
 	// takes precedence over Session. nil (and no Session): no check, development only.
 	Wrap func(http.Handler) http.Handler
 	// Backup answers the database's part in the system backup; nil: not shown.
-	Backup  func() snapshot.Status
-	Version string
-	Started time.Time
+	Backup func() snapshot.Status
+	// BackupCopy sets how many days the addon's own snapshot may get old (1 or 7); nil: not offered.
+	BackupCopy func(days int) error
+	Version    string
+	Started    time.Time
 }
 
 // New builds the handler.
@@ -62,6 +65,8 @@ func New(o Options) http.Handler {
 	handle(api, "GET /api/v1/storage", o.storage)
 	handle(api, "POST /api/v1/storage/check", o.storageCheck)
 	handle(api, "POST /api/v1/storage/move", o.storageMove)
+	handle(api, "PUT /api/v1/storage/interval", o.storageInterval)
+	handle(api, "PUT /api/v1/storage/backup-copy", o.storageBackupCopy)
 	o.routesChanges(api)
 	api.HandleFunc("/api/", func(w http.ResponseWriter, r *http.Request) {
 		addonkit.WriteError(w, http.StatusNotFound, "not-found", r.URL.Path)
@@ -249,12 +254,68 @@ func (o Options) mounts() []store.Mount {
 	return out
 }
 
-func (o Options) storageMove(w http.ResponseWriter, r *http.Request) {
+func (o Options) admin(w http.ResponseWriter, r *http.Request, what string) bool {
 	if o.Session != nil || o.Wrap != nil {
 		if s := addonkit.FromRequest(r); s == nil || !addonkit.Admits(addonkit.LevelAdmin, s.Level) {
-			addonkit.WriteError(w, http.StatusForbidden, "forbidden", "moving the database needs an administrator")
-			return
+			addonkit.WriteError(w, http.StatusForbidden, "forbidden", what+" needs an administrator")
+			return false
 		}
+	}
+	return true
+}
+
+// storageInterval sets the write interval: {"minutes": 1 | 5 | 10 | 30 | 60}.
+func (o Options) storageInterval(w http.ResponseWriter, r *http.Request) {
+	if !o.admin(w, r, "changing the write interval") {
+		return
+	}
+	var b struct {
+		Minutes int `json:"minutes"`
+	}
+	if !decode(w, r, &b) {
+		return
+	}
+	if !store.ValidInterval(b.Minutes) {
+		addonkit.WriteError(w, http.StatusUnprocessableEntity, "invalid-interval", fmt.Sprintf("minutes is one of %v", store.IntervalChoices))
+		return
+	}
+	if err := o.Store.SetInterval(b.Minutes); err != nil {
+		writeErr(w, err)
+		return
+	}
+	writeJSON(w, 200, map[string]any{"ok": true, "storage": o.Store.Health()})
+}
+
+// storageBackupCopy sets how old the addon's own snapshot for the firmware's backup may get:
+// {"days": 1 | 7}. Only where the system runs no hook (the backup's mode "daily").
+func (o Options) storageBackupCopy(w http.ResponseWriter, r *http.Request) {
+	if !o.admin(w, r, "changing the backup copy") {
+		return
+	}
+	var b struct {
+		Days int `json:"days"`
+	}
+	if !decode(w, r, &b) {
+		return
+	}
+	if o.BackupCopy == nil || o.Backup == nil || o.Backup().Mode != "daily" {
+		addonkit.WriteError(w, http.StatusConflict, "not-daily", "the system takes the copy before every backup itself")
+		return
+	}
+	if !snapshot.ValidCopyDays(b.Days) {
+		addonkit.WriteError(w, http.StatusUnprocessableEntity, "invalid-days", fmt.Sprintf("days is one of %v", snapshot.CopyChoices))
+		return
+	}
+	if err := o.BackupCopy(b.Days); err != nil {
+		writeErr(w, err)
+		return
+	}
+	writeJSON(w, 200, map[string]any{"ok": true, "backup": o.Backup()})
+}
+
+func (o Options) storageMove(w http.ResponseWriter, r *http.Request) {
+	if !o.admin(w, r, "moving the database") {
+		return
 	}
 	b, ok := decodeMove(w, r)
 	if !ok {

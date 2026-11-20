@@ -42,7 +42,7 @@ func noticePath(addonDir string) string { return filepath.Join(addonDir, "var", 
 
 // Hook is the manifest's hook (bin/backup-snapshot): a snapshot of the database at its configured
 // location, made by a process of its own while the daemon runs. The rows of the daemon's RAM batch
-// (at most its flush interval, 10 minutes) are not in it. A database that does not exist yet is
+// (at most its write interval, 30 minutes by default) are not in it. A database that does not exist yet is
 // nothing to copy: no snapshot, no error.
 func Hook(ctx context.Context, addonDir string, mounts func() []store.Mount) (string, error) {
 	s := For(addonDir)
@@ -143,12 +143,15 @@ func Restore(addonDir string, mounts func() []store.Mount, program bool, logf fu
 // Status is what the API shows about the database's part in the backup.
 type Status struct {
 	// Mode: "system" - the system runs the hook before every backup (openccu-lite from
-	// 1.3.0-beta.0); "daily" - the addon keeps a snapshot at most a day old for the firmware's own
-	// backup.
+	// 1.3.0-beta.0); "daily" - the addon keeps a snapshot at most CopyDays old for the firmware's
+	// own backup.
 	Mode string `json:"mode"`
 	// Last is when the addon last wrote its own snapshot (daily), Error why the last one failed.
-	Last  *time.Time `json:"last,omitempty"`
-	Error string     `json:"error,omitempty"`
+	Last *time.Time `json:"last,omitempty"`
+	// CopyDays is how old the addon's own snapshot may get before it is written again (daily
+	// mode): 1 or 7, the user's setting.
+	CopyDays int    `json:"copy_days,omitempty"`
+	Error    string `json:"error,omitempty"`
 	// Notice: a restore put the database on the user partition because its stick was missing.
 	Notice *Notice `json:"notice,omitempty"`
 }
@@ -159,7 +162,8 @@ type Runner struct {
 	AddonDir string
 	Store    *store.Store
 	Log      func(string, ...any)
-	// Every is how often the snapshot's age is checked (1 h), MaxAge when it is renewed (24 h).
+	// Every is how often the snapshot's age is checked (1 h), MaxAge when it is renewed (the
+	// user's setting backup_copy_days, 1 or 7 days, when 0).
 	Every, MaxAge time.Duration
 
 	mu     sync.Mutex
@@ -167,6 +171,65 @@ type Runner struct {
 	last   *time.Time
 	err    string
 	notice *Notice
+	days   int
+}
+
+// CopyChoices are the ages in days the addon's own snapshot may reach before it is written again
+// (where the system runs no hook): every write is a full copy of the database on the user
+// partition, so a weekly one spares the SD card six of seven copies, and a restored backup then
+// lacks up to a week of readings instead of a day.
+var CopyChoices = []int{1, 7}
+
+// ValidCopyDays says whether days is one of CopyChoices.
+func ValidCopyDays(days int) bool {
+	for _, d := range CopyChoices {
+		if d == days {
+			return true
+		}
+	}
+	return false
+}
+
+// loadCopyDays reads backup_copy_days from etc/battery.json; 1 without it.
+func loadCopyDays(addonDir string) int {
+	b, err := os.ReadFile(settingsPath(addonDir))
+	if err != nil {
+		return 1
+	}
+	var f struct {
+		Days int `json:"backup_copy_days"`
+	}
+	if json.Unmarshal(b, &f) != nil || !ValidCopyDays(f.Days) {
+		return 1
+	}
+	return f.Days
+}
+
+// SetCopyDays saves how old the addon's own snapshot may get (one of CopyChoices); the next
+// hourly check follows it.
+func (r *Runner) SetCopyDays(days int) error {
+	if !ValidCopyDays(days) {
+		return fmt.Errorf("the copy is renewed after one of %v days", CopyChoices)
+	}
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	if err := store.SaveSetting(settingsPath(r.AddonDir), "backup_copy_days", days); err != nil {
+		return err
+	}
+	r.days = days
+	return nil
+}
+
+func (r *Runner) maxAge() time.Duration {
+	if r.MaxAge > 0 {
+		return r.MaxAge
+	}
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	if r.days <= 0 {
+		r.days = loadCopyDays(r.AddonDir)
+	}
+	return time.Duration(r.days) * 24 * time.Hour
 }
 
 // Status answers the current state.
@@ -176,6 +239,12 @@ func (r *Runner) Status() Status {
 	st := Status{Mode: r.mode, Last: r.last, Error: r.err, Notice: r.notice}
 	if st.Mode == "" {
 		st.Mode = "daily"
+	}
+	if st.Mode == "daily" {
+		if r.days <= 0 {
+			r.days = loadCopyDays(r.AddonDir)
+		}
+		st.CopyDays = r.days
 	}
 	return st
 }
@@ -222,12 +291,9 @@ func (r *Runner) Run(ctx context.Context) {
 	if r.Status().Mode != "daily" {
 		return
 	}
-	every, maxAge := r.Every, r.MaxAge
+	every := r.Every
 	if every <= 0 {
 		every = time.Hour
-	}
-	if maxAge <= 0 {
-		maxAge = 24 * time.Hour
 	}
 	first := time.NewTimer(30 * time.Second)
 	defer first.Stop()
@@ -240,7 +306,7 @@ func (r *Runner) Run(ctx context.Context) {
 		case <-first.C:
 		case <-t.C:
 		}
-		r.Check(ctx, maxAge)
+		r.Check(ctx, r.maxAge())
 	}
 }
 

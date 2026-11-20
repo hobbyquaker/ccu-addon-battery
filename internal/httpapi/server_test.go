@@ -20,6 +20,7 @@ import (
 	"github.com/hobbyquaker/ccu-addon-battery/internal/notify"
 	"github.com/hobbyquaker/ccu-addon-battery/internal/recorder"
 	"github.com/hobbyquaker/ccu-addon-battery/internal/settings"
+	"github.com/hobbyquaker/ccu-addon-battery/internal/snapshot"
 	"github.com/hobbyquaker/ccu-addon-battery/internal/stats"
 	"github.com/hobbyquaker/ccu-addon-battery/internal/store"
 	"github.com/hobbyquaker/ccu-addon-kit/go/addonkit"
@@ -166,6 +167,55 @@ func TestRoutes(t *testing.T) {
 	}
 	if w := call(h, "GET", "/addons/battery/api/v1/storage", user, ""); !strings.Contains(w.Body.String(), `"in_backup":false`) {
 		t.Fatalf("after the move: %s", w.Body)
+	}
+}
+
+func TestStorageBackupCopy(t *testing.T) {
+	o, _, _, addon := serverOptions(t)
+	t.Setenv("INVOCATION_ID", "")
+	r := &snapshot.Runner{AddonDir: addon, Log: t.Logf}
+	r.Init()
+	o.Backup, o.BackupCopy = r.Status, r.SetCopyDays
+	h := New(o)
+	if w := call(h, "GET", "/addons/battery/api/v1/storage", user, ""); !strings.Contains(w.Body.String(), `"copy_days":1`) {
+		t.Fatalf("the default: %s", w.Body)
+	}
+	if w := call(h, "PUT", "/addons/battery/api/v1/storage/backup-copy", user, `{"days":7}`, addonkit.HeaderRequest, "1"); w.Code != 403 {
+		t.Fatalf("a user: %d %s", w.Code, w.Body)
+	}
+	if w := call(h, "PUT", "/addons/battery/api/v1/storage/backup-copy", admin, `{"days":3}`, addonkit.HeaderRequest, "1"); w.Code != 422 {
+		t.Fatalf("3 days: %d %s", w.Code, w.Body)
+	}
+	if w := call(h, "PUT", "/addons/battery/api/v1/storage/backup-copy", admin, `{"days":7}`, addonkit.HeaderRequest, "1"); w.Code != 200 || !strings.Contains(w.Body.String(), `"copy_days":7`) {
+		t.Fatalf("7 days: %d %s", w.Code, w.Body)
+	}
+}
+
+func TestStorageInterval(t *testing.T) {
+	h, st, _, addon := server(t)
+	if w := call(h, "GET", "/addons/battery/api/v1/storage", user, ""); !strings.Contains(w.Body.String(), `"interval_minutes":30`) {
+		t.Fatalf("the default interval: %s", w.Body)
+	}
+	if w := call(h, "PUT", "/addons/battery/api/v1/storage/interval", user, `{"minutes":60}`, addonkit.HeaderRequest, "1"); w.Code != 403 || !strings.Contains(w.Body.String(), "administrator") {
+		t.Fatalf("a user may not change it: %d %s", w.Code, w.Body)
+	}
+	if w := call(h, "PUT", "/addons/battery/api/v1/storage/interval", admin, `{"minutes":7}`, addonkit.HeaderRequest, "1"); w.Code != 422 || !strings.Contains(w.Body.String(), "invalid-interval") {
+		t.Fatalf("7 minutes: %d %s", w.Code, w.Body)
+	}
+	if w := call(h, "PUT", "/addons/battery/api/v1/storage/interval", admin, `{"minutes":60,"x":1}`, addonkit.HeaderRequest, "1"); w.Code != 400 {
+		t.Fatalf("an unknown field: %d %s", w.Code, w.Body)
+	}
+	if w := call(h, "PUT", "/addons/battery/api/v1/storage/interval", admin, `{"minutes":60}`, addonkit.HeaderRequest, "1"); w.Code != 200 || !strings.Contains(w.Body.String(), `"interval_minutes":60`) {
+		t.Fatalf("60 minutes: %d %s", w.Code, w.Body)
+	}
+	if w := call(h, "PUT", "/addons/battery/api/v1/storage/backup-copy", admin, `{"days":7}`, addonkit.HeaderRequest, "1"); w.Code != 409 {
+		t.Fatalf("no backup status: %d %s", w.Code, w.Body)
+	}
+	if st.Interval() != time.Hour {
+		t.Fatalf("the store's interval: %s", st.Interval())
+	}
+	if b, err := os.ReadFile(filepath.Join(addon, "etc", "battery.json")); err != nil || !strings.Contains(string(b), `"write_interval": 60`) {
+		t.Fatalf("the setting: %v %s", err, b)
 	}
 }
 

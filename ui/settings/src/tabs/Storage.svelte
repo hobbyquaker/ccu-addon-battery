@@ -22,14 +22,14 @@
         }
     }
 
-    async function call<T>(path: string, body?: unknown): Promise<T> {
+    async function call<T>(path: string, body?: unknown, method?: 'POST' | 'PUT'): Promise<T> {
         // the frame took the sid out of the address bar on load (reading location.search found
         // nothing on a CCU and the API answered 401); kit.app.url carries it, as the frame hands
         // it to the application
         const sid = kit.platform.kind === 'openccu-lite' || !kit.app ? '' : (new URL(kit.app.url, location.href).searchParams.get('sid') ?? '');
         const url = API + path + (sid ? (path.includes('?') ? '&' : '?') + 'sid=' + encodeURIComponent(sid) : '');
         const res = await fetch(url, {
-            method: body === undefined ? 'GET' : 'POST',
+            method: body === undefined ? 'GET' : (method ?? 'POST'),
             headers: {Accept: 'application/json', ...(body === undefined ? {} : {'Content-Type': 'application/json', [REQUEST_HEADER]: '1'})},
             credentials: 'same-origin',
             cache: 'no-store',
@@ -61,6 +61,15 @@
     let confirmOpen = $state(false);
     let keepOld = $state(true);
     let moving = $state(false);
+    // the write interval: 1, 5, 10, 30 (the default) or 60 minutes (the backend's IntervalChoices)
+    const INTERVALS = [1, 5, 10, 30, 60];
+    const INTERVAL_DEFAULT = 30;
+    let interval = $state(INTERVAL_DEFAULT);
+    let savingInterval = $state(false);
+    // the age of the addon's own backup copy (daily mode): 1 or 7 days
+    const COPY_DAYS = [1, 7];
+    let copyDays = $state(1);
+    let savingCopy = $state(false);
 
     async function load(): Promise<void> {
         error = null;
@@ -72,6 +81,8 @@
             const cur = r.candidates.find((c) => c.current);
             if (cur && cur.id !== 'usb:') target = cur.id;
             if (r.health.location.folder) folder = r.health.location.folder;
+            interval = r.health.interval_minutes ?? INTERVAL_DEFAULT;
+            copyDays = r.backup?.copy_days ?? 1;
             loaded = true;
         } catch (e) {
             error = e;
@@ -95,6 +106,39 @@
         if (c.reason === 'read-only') parts.push(kit.t('storage.candidate.readOnly'));
         if (c.free_bytes) parts.push(kit.t('storage.candidate.free', {free: formatBytes(c.free_bytes)}));
         return parts.join(' – ');
+    }
+
+    function intervalLabel(n: number): string {
+        const label = n === 1 ? kit.t('storage.interval.minute') : kit.t('storage.interval.minutes', {n: String(n)});
+        return n === INTERVAL_DEFAULT ? kit.t('storage.interval.default', {label}) : label;
+    }
+
+    async function saveInterval(): Promise<void> {
+        savingInterval = true;
+        try {
+            const r = await call<{ok: boolean; storage: StorageHealth}>('storage/interval', {minutes: interval}, 'PUT');
+            health = r.storage;
+            kit.notify('success', kit.t('storage.interval.saved', {label: intervalLabel(interval)}));
+        } catch (e) {
+            const msg = e instanceof ApiError && e.status === 403 ? kit.t('storage.interval.admin') : (e as Error).message;
+            kit.notify('error', kit.t('storage.interval.failed', {error: msg}));
+        } finally {
+            savingInterval = false;
+        }
+    }
+
+    async function saveCopyDays(): Promise<void> {
+        savingCopy = true;
+        try {
+            const r = await call<{ok: boolean; backup: BackupStatus}>('storage/backup-copy', {days: copyDays}, 'PUT');
+            backup = r.backup;
+            kit.notify('success', kit.t('storage.backup.copy.saved'));
+        } catch (e) {
+            const msg = e instanceof ApiError && e.status === 403 ? kit.t('storage.interval.admin') : (e as Error).message;
+            kit.notify('error', kit.t('storage.backup.copy.failed', {error: msg}));
+        } finally {
+            savingCopy = false;
+        }
     }
 
     async function check(): Promise<void> {
@@ -164,9 +208,46 @@
                     : kit.t('storage.backup.daily', {when: backup.last ? relativeTime(Date.parse(backup.last), Date.now(), kit.lang) : kit.t('time.never')})}
             </p>
             {#if backup.error}<p class="kit-muted" data-testid="storage-backup-error">{kit.t('storage.backup.failed', {error: backup.error})}</p>{/if}
+            {#if backup.mode === 'daily'}
+                <p class="kit-muted">{kit.t('storage.backup.copy.intro')}</p>
+                <div class="st-form">
+                    <label for="st-copy">{kit.t('storage.backup.copy.label')}</label>
+                    <select id="st-copy" class="hmm-select" bind:value={copyDays} data-testid="storage-backup-copy">
+                        {#each COPY_DAYS as n (n)}
+                            <option value={n}>{kit.t('storage.backup.copy.' + n)}</option>
+                        {/each}
+                    </select>
+                </div>
+                <div class="st-actions">
+                    <button type="button" class="hmm-button" onclick={saveCopyDays} disabled={!admin || savingCopy || copyDays === (backup.copy_days ?? 1)}>
+                        {kit.t('storage.interval.save')}
+                    </button>
+                </div>
+            {/if}
         {:else}
             <p class="kit-muted">{health.in_backup ? kit.t('storage.inBackup') : kit.t('storage.notInBackup')}</p>
         {/if}
+
+        <h3 class="st-h">{kit.t('storage.interval.title')}</h3>
+        <p class="kit-muted">{kit.t('storage.interval.intro')}</p>
+        <div class="st-form">
+            <label for="st-interval">{kit.t('storage.interval.label')}</label>
+            <select id="st-interval" class="hmm-select" bind:value={interval} disabled={health.interval_fixed} data-testid="storage-interval">
+                {#each INTERVALS as n (n)}
+                    <option value={n}>{intervalLabel(n)}</option>
+                {/each}
+            </select>
+        </div>
+        {#if health.interval_fixed}
+            <p class="kit-muted">{kit.t('storage.interval.fixed')}</p>
+        {:else if !admin}
+            <p class="kit-muted">{kit.t('storage.interval.admin')}</p>
+        {/if}
+        <div class="st-actions">
+            <button type="button" class="hmm-button" onclick={saveInterval} disabled={!admin || savingInterval || health.interval_fixed || interval === (health.interval_minutes ?? INTERVAL_DEFAULT)}>
+                {kit.t('storage.interval.save')}
+            </button>
+        </div>
 
         <h3 class="st-h">{kit.t('storage.move.title')}</h3>
         <p class="kit-muted">{kit.t('storage.move.intro')}</p>

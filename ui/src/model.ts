@@ -254,6 +254,9 @@ export interface StorageHealth {
     flushes: number;
     size_bytes: number;
     in_backup: boolean;
+    /** The write interval in minutes; interval_fixed: the daemon's -flush flag sets it. */
+    interval_minutes?: number;
+    interval_fixed?: boolean;
 }
 
 /** The database's part in the system backup (GET storage → backup). */
@@ -263,6 +266,8 @@ export interface BackupStatus {
     last?: string;
     error?: string;
     notice?: {at: string; label: string; path: string};
+    /** daily mode: how many days the addon's copy may get old before it is written again (1 or 7). */
+    copy_days?: number;
 }
 
 export interface Candidate {

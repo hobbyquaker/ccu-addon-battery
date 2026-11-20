@@ -2855,7 +2855,7 @@
   },
   "/api/v1/storage": {
    "get": {
-    "summary": "the database's location, health, the candidate locations and its part in the system backup (backup: mode system or daily, last, error, notice)",
+    "summary": "the database's location, health, the candidate locations and its part in the system backup (backup: mode system or daily, last, error, notice, copy_days in daily mode); the health carries the write interval (interval_minutes, and interval_fixed when the daemon's -flush flag sets it)",
     "responses": {
      "200": {
       "description": "OK",
@@ -3004,6 +3004,181 @@
      },
      "409": {
       "description": "conflict",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Error"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "invalid input (error code in the body)",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Error"
+        }
+       }
+      }
+     }
+    },
+    "parameters": [
+     {
+      "name": "X-CCU-Addon-Request",
+      "in": "header",
+      "required": true,
+      "description": "the CSRF header every writing request carries (any value)",
+      "schema": {
+       "type": "string",
+       "example": "1"
+      }
+     }
+    ]
+   }
+  },
+  "/api/v1/storage/interval": {
+   "put": {
+    "summary": "set the write interval (administrators): how long reports wait in RAM before they are written in one transaction; minutes is one of 1, 5, 10, 30 (the default), 60. Answers the storage health with interval_minutes",
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "type": "object",
+        "required": [
+         "minutes"
+        ],
+        "properties": {
+         "minutes": {
+          "type": "integer",
+          "enum": [
+           1,
+           5,
+           10,
+           30,
+           60
+          ]
+         }
+        }
+       }
+      }
+     }
+    },
+    "responses": {
+     "200": {
+      "description": "OK",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "object"
+        }
+       }
+      }
+     },
+     "400": {
+      "description": "the body is not valid JSON for the route",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Error"
+        }
+       }
+      }
+     },
+     "403": {
+      "description": "no CSRF header, or the level does not suffice",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Error"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "invalid input (error code in the body)",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Error"
+        }
+       }
+      }
+     }
+    },
+    "parameters": [
+     {
+      "name": "X-CCU-Addon-Request",
+      "in": "header",
+      "required": true,
+      "description": "the CSRF header every writing request carries (any value)",
+      "schema": {
+       "type": "string",
+       "example": "1"
+      }
+     }
+    ]
+   }
+  },
+  "/api/v1/storage/backup-copy": {
+   "put": {
+    "summary": "set how old the addon's own copy of the database for the firmware's backup may get before it is written again (administrators; only where the backup's mode is daily): days is 1 (the default) or 7. Answers the backup status with copy_days",
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "type": "object",
+        "required": [
+         "days"
+        ],
+        "properties": {
+         "days": {
+          "type": "integer",
+          "enum": [
+           1,
+           7
+          ]
+         }
+        }
+       }
+      }
+     }
+    },
+    "responses": {
+     "200": {
+      "description": "OK",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "object"
+        }
+       }
+      }
+     },
+     "400": {
+      "description": "the body is not valid JSON for the route",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Error"
+        }
+       }
+      }
+     },
+     "403": {
+      "description": "no CSRF header, or the level does not suffice",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Error"
+        }
+       }
+      }
+     },
+     "409": {
+      "description": "the system takes the copy before every backup itself (the backup's mode is system)",
       "content": {
        "application/json": {
         "schema": {

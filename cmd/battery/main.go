@@ -44,7 +44,7 @@ func main() {
 	basePath := flag.String("base-path", "", "the path the app is served at (/addons/<id> by default)")
 	www := flag.String("www", "", "the built web app (<addon-dir>/app by default; www/ holds the settings page)")
 	tokenFile := flag.String("token-file", "", "a token file for the system's API (the addon's own token by default)")
-	flush := flag.Duration("flush", 10*time.Minute, "how often the RAM batch is written to the database")
+	flush := flag.Duration("flush", 0, "how often the RAM batch is written to the database, overriding the setting (0: the setting, 30 min by default)")
 	noSession := flag.Bool("no-session-check", false, "serve without the session check (development on a system that is not openccu-lite)")
 	platform := flag.String("platform", "", "openccu-lite, openccu or ccu3; detected from the system by default")
 	callbackPort := flag.Int("callback-port", 8292, "classic CCU: the loopback port the interface processes send events to")
@@ -171,7 +171,7 @@ func run(addonDir, id string, port int, base, basePath, www, tokenFile string, f
 	notifier := notify.New(func() settings.Notify { return sf.Get().Notify }, st)
 	notifier.Log = log.Printf
 
-	opts := httpapi.Options{BasePath: basePath, WWW: www, Store: st, Recorder: rec, Changes: chg, Images: &devimg.Catalog{}, Settings: sf, Notifier: notifier, Backup: snaps.Status, Wrap: wrap, Version: version, Started: time.Now()}
+	opts := httpapi.Options{BasePath: basePath, WWW: www, Store: st, Recorder: rec, Changes: chg, Images: &devimg.Catalog{}, Settings: sf, Notifier: notifier, Backup: snaps.Status, BackupCopy: snaps.SetCopyDays, Wrap: wrap, Version: version, Started: time.Now()}
 	h := httpapi.New(opts)
 	go notifier.Run(ctx, 15*time.Minute, opts.Events)
 	l, err := addonkit.Listen(port, "")

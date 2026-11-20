@@ -228,7 +228,14 @@ the addon writes. The system's Backup page shows it under *Addon data in the bac
 it off for this addon; the database is then in no backup. After a restore the copy goes back where
 the database lives, unless the file there is newer; a stick that is not plugged in then gets the
 database on the user partition, and the settings page says so. On an older openccu-lite the addon
-keeps a copy at most a day old in the same place itself.
+keeps a copy in the same place itself, renewed daily or - a choice on the settings page - weekly,
+which spares the SD card.
+
+**Writing to the SD card:** the addon keeps new values in memory and writes them to the database
+together, every 30 minutes by default; the settings page (*Database*) offers 1, 5, 10, 30 or 60
+minutes. A longer interval writes less often; at a power cut the voltage readings of at most that
+long are lost. Battery changes, your entries and the settings are always written at once. A report
+that only repeats the same values writes nothing.
 
 The move is safe: the writers pause (new values wait in memory), the pending rows are written, a
 consistent copy is made with `VACUUM INTO`, the copy is verified (`integrity_check`, the row count
@@ -238,8 +245,9 @@ is pulled, the addon keeps the new values in memory (up to 20,000 rows), says so
 the journal, and goes on where it was once the stick is back - it never starts a fresh database
 somewhere else on its own.
 
-The setting is `storage` in `/usr/local/addons/battery/etc/battery.json`
-(`{"storage": {"location": "usb:<label>", "folder": "battery"}}`); the details are in
+The settings are `storage`, `write_interval` (minutes) and `backup_copy_days` in
+`/usr/local/addons/battery/etc/battery.json`
+(`{"storage": {"location": "usb:<label>", "folder": "battery"}, "write_interval": 30}`); the details are in
 [docs/storage.md](docs/storage.md).
 
 ### Uninstall
@@ -257,7 +265,7 @@ and takes the names and rooms from ReGaHSS; the WebUI's *Einstellungen* button o
 the settings page (service, log, database, notifications, version), whose *Open Battery* button
 opens the app with the WebUI's session. Nothing but the web server faces the network. The
 settings and the database live in `/usr/local/addons/battery/etc` and `var`; the addon keeps a
-checked copy of the database at most a day old in `backup/`, which the CCU's backup takes - also
+checked copy of the database at most a day (or, as chosen, a week) old in `backup/`, which the CCU's backup takes - also
 when the database is on a USB stick. `Deinstallieren` keeps them, as above. Tested on OpenCCU 3.89 (x86_64) and on a CCU3 with eQ-3's
 firmware 3.89.11 (`armv7l`), there so far without paired battery devices - feedback is welcome.
 

@@ -8,6 +8,7 @@ package store
 import (
 	"context"
 	"database/sql"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"log"
@@ -45,6 +46,30 @@ type Store struct {
 	last   time.Time
 	flushN int64
 	maxQ   int
+	// every is the write interval (the user's setting, IntervalDefault without one); fixed
+	// overrides it (the -flush flag); reset tells Run that it changed
+	every time.Duration
+	fixed time.Duration
+	reset chan struct{}
+}
+
+// The write interval: how long reports wait in RAM before they are written in one transaction.
+// A longer one costs fewer writes on the SD card - each transaction rewrites whole 4 KiB pages
+// for a few rows - and loses more of the voltage readings at a power cut (the system's values
+// come back at the next start; changes, edits and settings are written at once either way).
+var (
+	IntervalChoices = []int{1, 5, 10, 30, 60} // minutes
+	IntervalDefault = 30 * time.Minute
+)
+
+// ValidInterval says whether minutes is one of IntervalChoices.
+func ValidInterval(minutes int) bool {
+	for _, m := range IntervalChoices {
+		if m == minutes {
+			return true
+		}
+	}
+	return false
 }
 
 type op func(tx *sql.Tx) error
@@ -77,12 +102,13 @@ func Open(cfg Config) (*Store, error) {
 	if cfg.Mounts == nil {
 		cfg.Mounts = DefaultMounts
 	}
-	s := &Store{cfg: cfg, logf: cfg.Log, maxQ: cfg.MaxQueue}
+	s := &Store{cfg: cfg, logf: cfg.Log, maxQ: cfg.MaxQueue, reset: make(chan struct{}, 1)}
 	loc, err := LoadLocation(cfg.settingsPath())
 	if err != nil {
 		return nil, err
 	}
 	s.loc = loc
+	s.every = LoadInterval(cfg.settingsPath(), s.logf)
 	s.Retry()
 	return s, nil
 }
@@ -192,15 +218,20 @@ type Health struct {
 	Dropped   int64      `json:"dropped"`
 	LastFlush *time.Time `json:"last_flush,omitempty"`
 	Flushes   int64      `json:"flushes"`
-	SizeBytes int64      `json:"size_bytes"`
-	InBackup  bool       `json:"in_backup"`
+	// Interval is the write interval in minutes; Fixed says the daemon's -flush flag sets it
+	// and the setting has no effect.
+	Interval  int   `json:"interval_minutes"`
+	Fixed     bool  `json:"interval_fixed,omitempty"`
+	SizeBytes int64 `json:"size_bytes"`
+	InBackup  bool  `json:"in_backup"`
 }
 
 // Health answers the store's state.
 func (s *Store) Health() Health {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	h := Health{State: "ok", Path: s.path, Location: s.loc, Pending: len(s.queue), Dropped: s.drop, Flushes: s.flushN, InBackup: s.loc.InBackup()}
+	h := Health{State: "ok", Path: s.path, Location: s.loc, Pending: len(s.queue), Dropped: s.drop, Flushes: s.flushN, InBackup: s.loc.InBackup(),
+		Interval: int(s.intervalLocked() / time.Minute), Fixed: s.fixed > 0}
 	if !s.last.IsZero() {
 		last := s.last
 		h.LastFlush = &last
@@ -287,10 +318,15 @@ func (s *Store) fail(err error) error {
 	return s.err
 }
 
-// Run flushes every interval until ctx ends, then once more; it also retries an unavailable
-// location every 30 s.
-func (s *Store) Run(ctx context.Context, interval time.Duration) {
-	t := time.NewTicker(interval)
+// Run flushes at the write interval until ctx ends, then once more; it also retries an
+// unavailable location every 30 s. fixed > 0 is the interval regardless of the setting (the
+// daemon's -flush flag); 0 follows the setting, also when it changes.
+func (s *Store) Run(ctx context.Context, fixed time.Duration) {
+	s.mu.Lock()
+	s.fixed = fixed
+	every := s.intervalLocked()
+	s.mu.Unlock()
+	t := time.NewTicker(every)
 	defer t.Stop()
 	retry := time.NewTicker(30 * time.Second)
 	defer retry.Stop()
@@ -301,10 +337,76 @@ func (s *Store) Run(ctx context.Context, interval time.Duration) {
 			return
 		case <-t.C:
 			s.Flush()
+		case <-s.reset:
+			// the new interval counts from now; what waits is written first, so a shorter
+			// interval never leaves rows older than it in RAM
+			s.Flush()
+			s.mu.Lock()
+			every = s.intervalLocked()
+			s.mu.Unlock()
+			t.Reset(every)
 		case <-retry.C:
 			s.Retry()
 		}
 	}
+}
+
+func (s *Store) intervalLocked() time.Duration {
+	if s.fixed > 0 {
+		return s.fixed
+	}
+	if s.every <= 0 {
+		return IntervalDefault
+	}
+	return s.every
+}
+
+// Interval answers the write interval in effect.
+func (s *Store) Interval() time.Duration {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.intervalLocked()
+}
+
+// SetInterval saves the write interval (minutes, one of IntervalChoices) in etc/battery.json and
+// lets Run take it at once.
+func (s *Store) SetInterval(minutes int) error {
+	if !ValidInterval(minutes) {
+		return fmt.Errorf("the write interval is one of %v minutes", IntervalChoices)
+	}
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if err := SaveSetting(s.cfg.settingsPath(), "write_interval", minutes); err != nil {
+		return err
+	}
+	s.every = time.Duration(minutes) * time.Minute
+	select {
+	case s.reset <- struct{}{}:
+	default:
+	}
+	return nil
+}
+
+// LoadInterval reads the write interval from etc/battery.json (the key write_interval, in
+// minutes); a missing file or key, or a value that is not one of IntervalChoices, is the default.
+func LoadInterval(path string, logf func(string, ...any)) time.Duration {
+	b, err := os.ReadFile(path)
+	if err != nil {
+		return IntervalDefault
+	}
+	var f struct {
+		Minutes *int `json:"write_interval"`
+	}
+	if json.Unmarshal(b, &f) != nil || f.Minutes == nil {
+		return IntervalDefault
+	}
+	if !ValidInterval(*f.Minutes) {
+		if logf != nil {
+			logf("store: write_interval %d is not one of %v minutes, using %s", *f.Minutes, IntervalChoices, IntervalDefault)
+		}
+		return IntervalDefault
+	}
+	return time.Duration(*f.Minutes) * time.Minute
 }
 
 // ---- rows ----------------------------------------------------------------------------------

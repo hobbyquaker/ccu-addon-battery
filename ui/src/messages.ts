@@ -60,9 +60,18 @@ export const MESSAGES: Catalogue = {
         en: "Before every backup of the system the addon puts a checked copy of the database into its folder, and the backup holds that copy - also when the database is on a USB stick. The system's Backup page can switch this off for this addon; the database is then in no backup.",
     },
     'storage.backup.daily': {
-        de: 'Einmal am Tag legt das Addon eine geprüfte Kopie der Datenbank in seinen Ordner (zuletzt: {when}), und die Sicherungen des Systems enthalten diese Kopie – auch wenn die Datenbank auf einem USB-Stick liegt.',
-        en: "Once a day the addon puts a checked copy of the database into its folder (last: {when}), and the system's backups hold that copy - also when the database is on a USB stick.",
+        de: 'Das Addon legt regelmäßig eine geprüfte Kopie der Datenbank in seinen Ordner (zuletzt: {when}), und die Sicherungen des Systems enthalten diese Kopie – auch wenn die Datenbank auf einem USB-Stick liegt.',
+        en: "The addon regularly puts a checked copy of the database into its folder (last: {when}), and the system's backups hold that copy - also when the database is on a USB stick.",
     },
+    'storage.backup.copy.label': {de: 'Kopie erneuern', en: 'Renew the copy'},
+    'storage.backup.copy.1': {de: 'täglich (Standard)', en: 'daily (default)'},
+    'storage.backup.copy.7': {de: 'wöchentlich', en: 'weekly'},
+    'storage.backup.copy.intro': {
+        de: 'Jede Kopie schreibt die ganze Datenbank auf die SD-Karte. Wöchentlich schont die Karte; eine Sicherung des Systems enthält dann die Werte bis zu einer Woche zurück statt bis zu einem Tag.',
+        en: "Every copy writes the whole database to the SD card. Weekly spares the card; a backup of the system then holds the readings up to a week back instead of up to a day.",
+    },
+    'storage.backup.copy.saved': {de: 'Gespeichert.', en: 'Saved.'},
+    'storage.backup.copy.failed': {de: 'Konnte nicht speichern: {error}', en: 'Could not save: {error}'},
     'storage.backup.failed': {
         de: 'Die letzte Kopie für die Sicherung ist fehlgeschlagen: {error}',
         en: 'The last copy for the backup failed: {error}',
@@ -78,6 +87,26 @@ export const MESSAGES: Catalogue = {
     'storage.degradedHint': {
         de: 'Die Datenbank kann gerade nicht geschrieben werden. Neue Werte werden im Arbeitsspeicher gesammelt und beim nächsten erfolgreichen Schreiben nachgetragen.',
         en: 'The database cannot be written right now. New values are kept in memory and written with the next successful write.',
+    },
+    'storage.interval.title': {de: 'Schreibintervall', en: 'Write interval'},
+    'storage.interval.intro': {
+        de: 'Neue Messwerte sammelt das Addon im Arbeitsspeicher und schreibt sie in diesem Abstand gesammelt in die Datenbank. Ein längerer Abstand schreibt seltener auf die SD-Karte und schont sie; bei einem Stromausfall gehen dafür die Spannungswerte von höchstens so langer Zeit verloren. Batteriewechsel, Ihre Eingaben und die Einstellungen werden immer sofort geschrieben, und die aktuellen Werte holt das Addon beim nächsten Start wieder vom System.',
+        en: 'The addon keeps new readings in memory and writes them to the database together at this interval. A longer interval writes to the SD card less often and spares it; at a power cut the voltage readings of at most that long are lost. Battery changes, your entries and the settings are always written at once, and the addon gets the current values back from the system at the next start.',
+    },
+    'storage.interval.label': {de: 'Schreiben alle', en: 'Write every'},
+    'storage.interval.minutes': {de: '{n} Minuten', en: '{n} minutes'},
+    'storage.interval.minute': {de: '1 Minute', en: '1 minute'},
+    'storage.interval.default': {de: '{label} (Standard)', en: '{label} (default)'},
+    'storage.interval.save': {de: 'Speichern', en: 'Save'},
+    'storage.interval.saved': {de: 'Das Schreibintervall ist jetzt {label}.', en: 'The write interval is now {label}.'},
+    'storage.interval.failed': {de: 'Konnte das Schreibintervall nicht speichern: {error}', en: 'Could not save the write interval: {error}'},
+    'storage.interval.fixed': {
+        de: 'Der Dienst wurde mit einem festen Intervall gestartet (Option -flush); diese Einstellung wirkt erst ohne sie.',
+        en: 'The service was started with a fixed interval (the -flush option); this setting takes effect only without it.',
+    },
+    'storage.interval.admin': {
+        de: 'Das Ändern des Schreibintervalls braucht ein Administratorkonto.',
+        en: 'Changing the write interval needs an administrator account.',
     },
     'storage.move.title': {de: 'Datenbank verschieben', en: 'Move the database'},
     'storage.move.intro': {

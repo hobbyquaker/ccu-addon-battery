@@ -89,7 +89,18 @@ type device struct {
 	hmip    bool
 	tracked bool
 	profile batteries.Profile
+	// written is when cur was last queued for the store; dirty says cur has moved on since in
+	// its timestamps alone (a report that repeated the values), which waits for CurrentRefresh
+	written int64
+	dirty   bool
 }
+
+// CurrentRefresh is how long a device's current row may lag behind in its timestamps alone
+// (voltage_ts, last_report) before it is written again. A report that changes a value, or that
+// writes a sample row, writes the row at once; the timestamps are what most reports change, and
+// they are back from the system at the next start anyway (the seed), so they need not cost a
+// write on every report. The rows still lagging are written when the recorder stops.
+const CurrentRefresh = 6 * time.Hour
 
 // New makes a recorder; Run starts it.
 func New(o Options) *Recorder {
@@ -135,6 +146,7 @@ func (r *Recorder) Run(ctx context.Context) error {
 	r.mu.Lock()
 	r.ctx = ctx
 	r.mu.Unlock()
+	defer r.Persist()
 	r.loadStore(ctx)
 	r.learn(ctx, nil)
 	r.refreshNames(ctx)
@@ -468,6 +480,19 @@ func (r *Recorder) learnDevices(ctx context.Context, only []string) (added int, 
 	return added, failed, nil
 }
 
+// Persist queues the current rows that lag behind in their timestamps (CurrentRefresh), so the
+// store's last flush takes them; Run calls it on its way out.
+func (r *Recorder) Persist() {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	for _, d := range r.devs {
+		if d.dirty {
+			r.o.Store.PutCurrent(d.cur)
+			d.written, d.dirty = d.cur.LastReport, false
+		}
+	}
+}
+
 // profileLocked asks the Observer for the device's profile and takes power and slots from it;
 // an external supply the device reports wins over the table's power. slots writes the slots.
 func (r *Recorder) profileLocked(ctx context.Context, d *device, slots bool) {
@@ -694,11 +719,17 @@ func (r *Recorder) apply(e litesource.Event, live bool) {
 	if ms > cur.LastReport {
 		cur.LastReport = ms
 	}
+	wrote := false
 	if sample && cur.Voltage != nil || sample && e.Key != "OPERATING_VOLTAGE" && e.Key != "BATTERY_STATE" && d.VoltageDP == "" {
-		r.maybeSample(key, d, ms, live)
+		wrote = r.maybeSample(key, d, ms, live)
 	}
-	if changed || sample {
+	switch {
+	case changed || wrote || d.dirty && ms-d.written >= CurrentRefresh.Milliseconds():
 		r.o.Store.PutCurrent(*cur)
+		d.written, d.dirty = ms, false
+	default:
+		// the same values again: only the timestamps moved
+		d.dirty = true
 	}
 	dev := d.Device
 	ctx := r.ctx
@@ -719,8 +750,9 @@ func statusName(e litesource.Event) string {
 	return e.String()
 }
 
-// maybeSample writes a sample row when the downsampling rule says so (the caller holds the lock).
-func (r *Recorder) maybeSample(key string, d *device, ms int64, live bool) {
+// maybeSample writes a sample row when the downsampling rule says so (the caller holds the
+// lock); true when it did.
+func (r *Recorder) maybeSample(key string, d *device, ms int64, live bool) bool {
 	last, had := r.last[key]
 	write := !had
 	if had {
@@ -735,7 +767,7 @@ func (r *Recorder) maybeSample(key string, d *device, ms int64, live bool) {
 		}
 	}
 	if !write {
-		return
+		return false
 	}
 	if had && ms <= last.TS {
 		// two reports in the same millisecond (one status multicall): one row with the newest values
@@ -748,6 +780,7 @@ func (r *Recorder) maybeSample(key string, d *device, ms int64, live bool) {
 	s := store.Sample{Interface: d.Interface, Address: d.Address, TS: ms, Voltage: copyF(d.cur.Voltage), LowBat: copyB(d.cur.LowBat), Source: src}
 	r.last[key] = s
 	r.o.Store.AddSample(s)
+	return true
 }
 
 func abs(f float64) float64 {

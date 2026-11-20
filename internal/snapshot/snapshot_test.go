@@ -218,6 +218,45 @@ func TestRunnerModes(t *testing.T) {
 	})
 }
 
+// The age of the addon's own copy is the user's: 1 day by default, 7 for a weekly copy; the
+// setting keeps the file's other keys.
+func TestCopyDays(t *testing.T) {
+	t.Setenv("INVOCATION_ID", "")
+	dir := t.TempDir()
+	if err := store.SaveLocation(settingsPath(dir), store.Location{ID: "userfs"}); err != nil {
+		t.Fatal(err)
+	}
+	r := &Runner{AddonDir: dir, Log: quiet}
+	r.Init()
+	if st := r.Status(); st.CopyDays != 1 || r.maxAge() != 24*time.Hour {
+		t.Fatalf("default: %+v %s", st, r.maxAge())
+	}
+	if err := r.SetCopyDays(3); err == nil {
+		t.Fatal("3 days accepted")
+	}
+	if err := r.SetCopyDays(7); err != nil {
+		t.Fatal(err)
+	}
+	if st := r.Status(); st.CopyDays != 7 || r.maxAge() != 7*24*time.Hour {
+		t.Fatalf("weekly: %+v %s", st, r.maxAge())
+	}
+	r2 := &Runner{AddonDir: dir, Log: quiet}
+	r2.Init()
+	if r2.Status().CopyDays != 7 {
+		t.Fatalf("after a restart: %+v", r2.Status())
+	}
+	if loc, err := store.LoadLocation(settingsPath(dir)); err != nil || loc.ID != "userfs" {
+		t.Fatalf("the location: %v %v", loc, err)
+	}
+	if (&Runner{AddonDir: dir, MaxAge: time.Hour}).maxAge() != time.Hour {
+		t.Fatal("MaxAge wins")
+	}
+	os.WriteFile(settingsPath(dir), []byte(`{"backup_copy_days": 5}`), 0o640)
+	if loadCopyDays(dir) != 1 {
+		t.Fatal("5 days is not a choice: the default")
+	}
+}
+
 func copyFile(t *testing.T, src, dst string) {
 	t.Helper()
 	b, err := os.ReadFile(src)

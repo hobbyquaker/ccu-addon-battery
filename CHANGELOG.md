@@ -1,5 +1,18 @@
 # Changelog
 
+## [Unreleased]
+
+- **Every system:** the addon writes less to the SD card. A report that only repeats a device's values writes nothing
+  any more (its time is kept in memory and written at most every six hours and at the stop), and new values are written
+  together every 30 minutes instead of every 10. The interval is a choice on the settings page (*Database*: 1, 5, 10,
+  30 or 60 minutes): a longer one writes less often, and at a power cut the voltage readings of at most that long are
+  lost; battery changes, your entries and the settings are still written at once. In a simulation of 100 battery
+  devices on a grown database this cuts the addon's writes from about 310 to 230 KB an hour and its transactions from
+  six to two an hour.
+- **CCU3, OpenCCU and openccu-lite before 1.3.0-beta.0:** the copy of the database the addon keeps for the system's
+  backup can be renewed weekly instead of daily (settings page, *Database*). Each copy writes the whole database to the
+  SD card; a weekly one spares six of seven, and a restored backup then lacks up to a week of readings instead of a day.
+
 ## [1.2.0] - 2026-11-17
 
 - **Every system:** the database is in the system's backups as a checked copy, wherever it lives - a database on a USB
