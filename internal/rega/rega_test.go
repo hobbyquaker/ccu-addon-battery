@@ -130,3 +130,30 @@ func TestParseServiceOff(t *testing.T) {
 		t.Fatal("the script reads the WebUI's switch")
 	}
 }
+
+func TestDefaultName(t *testing.T) {
+	for _, c := range []struct{ name, lang, want string }{
+		{"roomKitchen", "de", "Küche"},
+		{"roomKitchen", "en", "Kitchen"},
+		{"roomKitchen", "de-AT", "Küche"},
+		{"roomKitchen", "", "Kitchen"},
+		{"roomKitchen", "fr", "Kitchen"},
+		{"roomOffice", "de", "Büro"},
+		{"roomHWR", "en", "Utility room"},
+		{"funcLight", "de", "Licht"},
+		{"funcCentral", "en", "Central control unit"},
+		// what the user typed stays, also when it looks like a key
+		{"Küche", "en", "Küche"},
+		{"roomkitchen", "de", "roomkitchen"},
+		{"roomWorkshop", "de", "roomWorkshop"},
+		{"room", "de", "room"},
+		{"", "de", ""},
+	} {
+		if got := DefaultName(c.name, c.lang); got != c.want {
+			t.Errorf("%q in %q: %q, want %q", c.name, c.lang, got, c.want)
+		}
+	}
+	if len(defaultNames) != 21 {
+		t.Errorf("%d default names, the firmware has 11 rooms and 10 functions", len(defaultNames))
+	}
+}

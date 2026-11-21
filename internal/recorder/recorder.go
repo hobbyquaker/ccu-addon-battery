@@ -20,6 +20,7 @@ import (
 	"github.com/hobbyquaker/ccu-addon-battery/internal/batteries"
 	"github.com/hobbyquaker/ccu-addon-battery/internal/detect"
 	"github.com/hobbyquaker/ccu-addon-battery/internal/ifaces"
+	"github.com/hobbyquaker/ccu-addon-battery/internal/rega"
 	"github.com/hobbyquaker/ccu-addon-battery/internal/store"
 	"github.com/hobbyquaker/ccu-addon-kit/go/litesource"
 )
@@ -979,7 +980,8 @@ func channelLess(a, b string) bool {
 // deviceRooms answers the rooms of a device in lang: its own and those of its channels, each
 // once, in channel order. openccu-lite's metadata puts rooms on the channels (the device object
 // usually has none); a classic CCU's ReGa does the same, and ccusource adds the union to the
-// device too - the duplicates fall out here.
+// device too - the duplicates fall out here. The CCU's own default rooms come out in lang, as
+// the WebUI shows them, not as ReGa's key.
 func deviceRooms(n *litesource.Names, chans map[string][]string, iface, address, lang string) []string {
 	out := []string{}
 	if n == nil {
@@ -988,6 +990,9 @@ func deviceRooms(n *litesource.Names, chans map[string][]string, iface, address,
 	seen := map[string]bool{}
 	add := func(rooms []string) {
 		for _, room := range rooms {
+			// a room the CCU shipped with is a key in ReGa ("roomKitchen"), which the WebUI
+			// translates; a name the user typed passes as it is
+			room = rega.DefaultName(room, lang)
 			if room == "" || seen[room] {
 				continue
 			}

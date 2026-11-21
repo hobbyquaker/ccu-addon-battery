@@ -40,6 +40,14 @@ func TestDeviceRooms(t *testing.T) {
 		"D\tBidCos-RF\tJEQ02\tOhne\nC\tJEQ02:1\tOhne:1\t\n" +
 		"R\t1230\tWohnzimmer\nR\t1231\tKüche\n"))
 
+	// the rooms a CCU ships with are keys in ReGa (the R lines as the stock OpenCCU 3.89.8
+	// answers them), translated by the WebUI; "Werkstatt" and "Küche" are rooms the user made
+	defaults := litesource.NewNames(ccusource.ParseNames("D\tHmIP-RF\tDEVA\tTaster\n" +
+		"C\tDEVA:0\tTaster:0\t1020|\n" +
+		"C\tDEVA:1\tTaster:1\t1019|2001|\n" +
+		"C\tDEVA:2\tTaster:2\t2002|1027|\n" +
+		"R\t1019\troomLivingRoom\nR\t1020\troomKitchen\nR\t1027\troomHWR\nR\t2001\tWerkstatt\nR\t2002\tK\u00fcche\n"))
+
 	for _, tc := range []struct {
 		name    string
 		n       *litesource.Names
@@ -55,6 +63,8 @@ func TestDeviceRooms(t *testing.T) {
 		{"lite unknown device", lite, "HmIP-RF", "0009", "de", []string{}},
 		{"classic union deduplicated", classic, "BidCos-RF", "JEQ01", "de", []string{"Wohnzimmer", "Küche"}},
 		{"classic no rooms", classic, "BidCos-RF", "JEQ02", "de", []string{}},
+		{"classic default rooms, de", defaults, "HmIP-RF", "DEVA", "de", []string{"Küche", "Wohnzimmer", "Werkstatt", "Hauswirtschaftsraum"}},
+		{"classic default rooms, en", defaults, "HmIP-RF", "DEVA", "en", []string{"Kitchen", "Living room", "Werkstatt", "Küche", "Utility room"}},
 		{"no names", nil, "HmIP-RF", "0001", "de", []string{}},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
