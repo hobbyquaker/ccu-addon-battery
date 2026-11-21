@@ -223,6 +223,51 @@
   }
  },
  "models": {
+  "ELV-SH-BM-S": {
+   "power": "battery-or-dc",
+   "family": "HmIP-RF",
+   "confidence": "manufacturer",
+   "note": "a sensor base powered over USB-C (5 V) or by the builder's 3.0-3.3 V on the pin header; no defined slot",
+   "sources": [
+    {
+     "id": "elv-manual",
+     "url": "https://media.elv.com/file/158314_elv-sh-bm-s_um.pdf",
+     "quote": "Versorgungsspannung: 3,0-3,3 VDC"
+    }
+   ]
+  },
+  "ELV-SH-BS2": {
+   "power": "mains",
+   "family": "HmIP-RF",
+   "confidence": "manufacturer",
+   "note": "ELV's kit of the HmIP-BS2 (switch actuator for brand switches, 2 channels); reports OPERATING_VOLTAGE but no LOW_BAT",
+   "sources": [
+    {
+     "id": "elv-journal",
+     "url": "https://media.elv.com/file/252792_elv_sh_bs2.pdf",
+     "quote": "Versorgungsspannung: 230 V~/50 Hz"
+    }
+   ]
+  },
+  "ELV-SH-CAP": {
+   "power": "battery",
+   "family": "HmIP-RF",
+   "slots": [
+    {
+     "count": 1,
+     "type": "CR2032"
+    }
+   ],
+   "life_years": 2.0,
+   "confidence": "manufacturer",
+   "sources": [
+    {
+     "id": "elv-journal",
+     "url": "https://media.elv.com/file/254674_elv_smart_home_luftdrucksensor_kompakt_elv_sh_cap.pdf",
+     "quote": "Versorgungsspannung: 1x 3 V/CR2032"
+    }
+   ]
+  },
   "ELV-SH-CTH": {
    "power": "battery",
    "family": "HmIP-RF",
@@ -241,6 +286,89 @@
     {
      "id": "aiohomematic",
      "says": "1x CR2032"
+    }
+   ]
+  },
+  "ELV-SH-CTV": {
+   "power": "battery",
+   "family": "HmIP-RF",
+   "slots": [
+    {
+     "count": 1,
+     "type": "CR2032"
+    }
+   ],
+   "life_years": 2.0,
+   "confidence": "manufacturer",
+   "sources": [
+    {
+     "id": "elv-journal",
+     "url": "https://media.elv.com/file/pd0013_elv_sh_ctv.pdf",
+     "quote": "Versorgungsspannung: 1x 3 V CR2032"
+    }
+   ]
+  },
+  "ELV-SH-CWD": {
+   "power": "battery",
+   "family": "HmIP-RF",
+   "slots": [
+    {
+     "count": 1,
+     "type": "CR2032"
+    }
+   ],
+   "life_years": 2.0,
+   "confidence": "manufacturer",
+   "sources": [
+    {
+     "id": "elv-manual",
+     "url": "https://media.elv.com/file/162515_um_01.pdf",
+     "quote": "Batterie: 1x 3,0 V CR2032"
+    }
+   ]
+  },
+  "ELV-SH-DUSI": {
+   "power": "battery",
+   "family": "HmIP-RF",
+   "slots": [
+    {
+     "count": 2,
+     "type": "AA"
+    }
+   ],
+   "life_years": 3.0,
+   "confidence": "manufacturer",
+   "sources": [
+    {
+     "id": "elv-manual",
+     "url": "https://media.elv.com/file/162844_um.pdf",
+     "quote": "Batterie: 2x 1,5 V LR6/Mignon/AA"
+    }
+   ]
+  },
+  "ELV-SH-PSMCI": {
+   "power": "mains",
+   "family": "HmIP-RF",
+   "confidence": "manufacturer",
+   "note": "switch and measuring cable actuator, indoor",
+   "sources": [
+    {
+     "id": "elv-manual",
+     "url": "https://media.elv.com/file/162132_km.pdf",
+     "quote": "Spannungsversorgung: 230 V/50 Hz"
+    }
+   ]
+  },
+  "ELV-SH-SB8": {
+   "power": "mains",
+   "family": "HmIP-RF",
+   "confidence": "manufacturer",
+   "note": "status board; an external 5 V supply",
+   "sources": [
+    {
+     "id": "elv-manual",
+     "url": "https://media.elv.com/file/161075_km.pdf",
+     "quote": "Versorgungsspannung: 5 VDC"
     }
    ]
   },
@@ -297,6 +425,19 @@
     }
    ]
   },
+  "ELV-SH-WSC": {
+   "power": "mains",
+   "family": "HmIP-RF",
+   "confidence": "manufacturer",
+   "note": "servo control; an external DC supply",
+   "sources": [
+    {
+     "id": "elv-manual",
+     "url": "https://media.elv.com/file/156613_um.pdf",
+     "quote": "Versorgungsspannung: 5 bis 12 V"
+    }
+   ]
+  },
   "ELV-SH-WSM": {
    "power": "battery",
    "family": "HmIP-RF",
@@ -315,6 +456,19 @@
     {
      "id": "aiohomematic",
      "says": "2x AA"
+    }
+   ]
+  },
+  "ELV-SH-WUA": {
+   "power": "mains",
+   "family": "HmIP-RF",
+   "confidence": "manufacturer",
+   "note": "ELV's kit of the universal actuator 0-10 V",
+   "sources": [
+    {
+     "id": "elv-manual",
+     "url": "https://media.elv.com/file/154760_bda.pdf",
+     "quote": "Versorgungsspannung: 230 V~/50 Hz"
     }
    ]
   },
@@ -5780,7 +5934,7 @@
    ]
   },
   "HmIP-MP3P": {
-   "power": "battery",
+   "power": "battery-or-dc",
    "family": "HmIP-RF",
    "slots": [
     {
@@ -5795,12 +5949,12 @@
    "low_bat_limit": 3.9,
    "life_years": 2.0,
    "confidence": "manufacturer",
-   "note": "prior art disagrees with the manufacturer: aiohomematic says 2x C",
+   "note": "runs on its 3 cells or on a 5 V DC plug-in supply (then it has no battery to watch: set the device to the power supply in the addon). prior art disagrees with the manufacturer: aiohomematic says 2x C",
    "sources": [
     {
      "id": "eq3-site",
      "url": "https://homematic-ip.com/de/produkt/kombisignalgeber",
-     "quote": "3 x 1,5 V LR14/Baby/C"
+     "quote": "3 x 1,5 V LR14/Baby/C; Versorgungsspannung Steckernetzteil: 5 VDC"
     },
     {
      "id": "corpus",

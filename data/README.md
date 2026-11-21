@@ -10,13 +10,19 @@ hm-simulator or a handbook without asking.
 
 ## Coverage (2026-11-21)
 
-454 models: 200 with batteries (189 `battery`, 4 `rechargeable`, 7 `battery-or-dc`), 199 `mains`, 54 `bus`, 1
-`host`. Of the 200 battery models, **132 stand on the manufacturer** (eQ-3's product pages or manuals, ELV's kit
-documents, the supply line quoted), 32 on two agreeing prior-art tables, 36 on one. Of the mains/bus/host rows, 133
+464 models: 205 with batteries (192 `battery`, 4 `rechargeable`, 9 `battery-or-dc`), 204 `mains`, 54 `bus`, 1
+`host`. Of the 205 battery models, **137 stand on the manufacturer** (eQ-3's product pages or manuals, ELV's kit
+documents, the supply line quoted), 32 on two agreeing prior-art tables, 36 on one. Of the mains/bus/host rows, 138
 are from the manufacturer and 121 are `assumed` by model class (HM-LC-*, HMW-*, HmIPW-*).
 All 30 of the most common models are manufacturer-sourced except HM-Sec-MDIR/-2, HM-RC-4-2 and
 the first-generation HMIP-eTRV, HMIP-WTH and HmIP-SWDM (prior art agrees on all of them; their successors' manuals
 say the same). 27 models were compared with their `LOW_BAT_LIMIT` default; one does not fit (HmIP-ASIR, below).
+
+**ELV's own Homematic IP kits** (`ELV-SH-*`, reported in `TYPE` under ELV's name) have rows of their own since
+2026-11-21, from ELV's manuals and ELVjournal articles: the ELV-SH-BS2 (the kit of the 230 V HmIP-BS2), -PSMCI,
+-WUA, -WSC and -SB8 are mains or an external DC supply, the -BM-S sensor base is `battery-or-dc`, and the -CWD,
+-DUSI, -CAP and -CTV take cells. The **HmIP-MP3P** is `battery-or-dc`: 3x C or a 5 V DC plug-in supply (eQ-3). An
+`ELV-SH-*` model without a row that reports a voltage but no `LOW_BAT` is taken as mains by the addon.
 
 **No row stands on the unlicensed ioBroker script alone** (since 2026-11-21; `check.py` fails on one). The 31 rows
 that did were re-derived from eQ-3's manuals and datasheets and ELV's kit documents; HM-LC-Sw1-Pl and
