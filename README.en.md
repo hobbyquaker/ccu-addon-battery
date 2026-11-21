@@ -225,8 +225,10 @@ its settings page is `/addons/battery-config/`. Updates come from the system's A
 
 The database is one SQLite file, `battery.db`. By default it is in the addon's own directory on
 the user partition, `/usr/local/addons/battery/var/`. It can be moved to a USB stick the system has
-mounted (the settings page). Network shares are not offered: SQLite needs local file locking, which
-NFS and SMB do not give.
+mounted (the settings page) - a stick without a label too: the addon knows a stick by its label,
+without one by the UUID of its filesystem, and where the system tells neither (piVCCU), by where it
+is mounted. Network shares are not offered: SQLite needs local file locking, which NFS and SMB do
+not give.
 
 **In the system's backups** the database is a checked copy, wherever it lives - the stick
 included: before every backup the system runs the addon's snapshot (`VACUUM INTO` into
@@ -256,7 +258,8 @@ somewhere else on its own.
 
 The settings are `storage`, `write_interval` (minutes) and `backup_copy_days` in
 `/usr/local/addons/battery/etc/battery.json`
-(`{"storage": {"location": "usb:<label>", "folder": "battery"}, "write_interval": 30}`); the details are in
+(`{"storage": {"location": "usb:<label>", "folder": "battery"}, "write_interval": 30}`; a stick without a
+label is `usb-uuid:<uuid>` or `usb-path:/media/usb<N>` there); the details are in
 [docs/storage.md](docs/storage.md).
 
 ### Uninstall

@@ -153,5 +153,5 @@ itself offers an addon no channel yet; once it does, it becomes a third `channel
 | `GET shopping?days=` | the shopping list: the devices low now or due within the horizon, and per battery type what they need, the stock, and what to buy |
 | `POST notify/test` | sends a test notice over the saved channel; 502 `send-failed` when it does not take it |
 | `GET health` | the addon's state; `inbox` counts the detections in the inbox (pending, and candidates still being checked) |
-| `GET storage`, `POST storage/check`, `POST storage/move`, `PUT storage/interval` | the database's location and write interval ([storage.md](storage.md)) |
+| `GET storage`, `POST storage/check`, `POST storage/move`, `PUT storage/interval` | the database's location and write interval ([storage.md](storage.md)). `GET storage` lists the `candidates`: the user partition and every mounted stick with `id` (`usb:<label>`, `usb-uuid:<uuid>` for a stick without a label, `usb-path:<mount point>` where the system tells neither), `kind` (`label`, `uuid`, `path`), `name` (the label), `uuid`, `path`, the free space and `allowed` (`reason: read-only` otherwise). A failed check or move says why: `check` answers `{ok: false, error}`, `move` 409 with `error` `not-present` or `move-failed` and the reason as `message` |
 | `GET openapi.json` | the specification |

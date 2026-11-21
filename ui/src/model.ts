@@ -273,8 +273,13 @@ export interface BackupStatus {
 }
 
 export interface Candidate {
+    /** userfs, usb:<label>, usb-uuid:<uuid> (a stick without a label) or usb-path:<mount point> (the system tells neither). */
     id: string;
+    /** The stick's label, "" without one. */
     name: string;
+    /** What identifies a stick: label, uuid or path; absent for the user partition. */
+    kind?: 'label' | 'uuid' | 'path';
+    uuid?: string;
     path: string;
     free_bytes: number;
     total_bytes: number;
@@ -282,6 +287,19 @@ export interface Candidate {
     reason?: string;
     in_backup: boolean;
     current: boolean;
+}
+
+/** Whether a storage location id names a USB stick (anything but the user partition). */
+export function isStick(id: string): boolean {
+    return id.startsWith('usb:') || id.startsWith('usb-uuid:') || id.startsWith('usb-path:');
+}
+
+/** The message that names a storage location, and its parameters: a stick by its label, its UUID or its mount point. */
+export function locationText(id: string): {key: string; params: Record<string, string>} {
+    if (id.startsWith('usb-uuid:')) return {key: 'storage.candidate.usbUuid', params: {uuid: id.slice(9)}};
+    if (id.startsWith('usb-path:')) return {key: 'storage.candidate.usbPath', params: {path: id.slice(9)}};
+    if (id.startsWith('usb:')) return {key: 'storage.candidate.usb', params: {label: id.slice(4)}};
+    return {key: 'storage.candidate.userfs', params: {}};
 }
 
 export type Status = 'low' | 'unreach' | 'external' | 'ok' | 'unknown';

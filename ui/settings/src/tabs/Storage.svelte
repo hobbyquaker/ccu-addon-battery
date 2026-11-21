@@ -5,7 +5,7 @@
     import {Dialog} from 'occulite-ui';
     import {getKit, KitError, KitLoading, REQUEST_HEADER} from 'ccu-addon-kit/frame';
 
-    import {formatBytes, relativeTime, type BackupStatus, type Candidate, type StorageHealth} from '../../../src/model.js';
+    import {formatBytes, isStick, locationText, relativeTime, type BackupStatus, type Candidate, type StorageHealth} from '../../../src/model.js';
 
     let {active}: {active: boolean; path: string} = $props();
     const kit = getKit();
@@ -61,6 +61,8 @@
     let confirmOpen = $state(false);
     let keepOld = $state(true);
     let moving = $state(false);
+    // why the last move failed: it stays on the page until the next try, a toast alone is gone too soon
+    let moveError = $state('');
     // the write interval: 1, 5, 10, 30 (the default) or 60 minutes (the backend's IntervalChoices)
     const INTERVALS = [1, 5, 10, 30, 60];
     const INTERVAL_DEFAULT = 30;
@@ -79,7 +81,7 @@
             backup = r.backup;
             candidates = r.candidates;
             const cur = r.candidates.find((c) => c.current);
-            if (cur && cur.id !== 'usb:') target = cur.id;
+            if (cur) target = cur.id;
             if (r.health.location.folder) folder = r.health.location.folder;
             interval = r.health.interval_minutes ?? INTERVAL_DEFAULT;
             copyDays = r.backup?.copy_days ?? 1;
@@ -93,19 +95,25 @@
         if (active && !loaded && !error) void load();
     });
 
-    const sticks = $derived(candidates.filter((c) => c.id.startsWith('usb:')));
-    const isUsb = $derived(target.startsWith('usb:'));
+    const sticks = $derived(candidates.filter((c) => isStick(c.id)));
+    const isUsb = $derived(isStick(target));
+    const chosen = $derived(candidates.find((c) => c.id === target));
     const body = $derived({location: target, folder: isUsb ? folder : undefined});
     const current = $derived(candidates.find((c) => c.current)?.id === target && (!isUsb || folder === (health?.location.folder || 'battery')));
     const admin = $derived(kit.session.level === 'admin' || kit.platform.kind !== 'openccu-lite');
 
     function candidateLabel(c: Candidate): string {
-        const name = c.id === 'userfs' ? kit.t('storage.candidate.userfs') : kit.t('storage.candidate.usb', {label: c.name});
-        const parts = [name];
-        if (c.reason === 'no-label') parts.push(kit.t('storage.candidate.noLabel'));
+        // a stick without a label is named by its UUID, or by its mount point where the system
+        // tells neither - it can be chosen like any other
+        const parts = [locationName(c.id)];
         if (c.reason === 'read-only') parts.push(kit.t('storage.candidate.readOnly'));
         if (c.free_bytes) parts.push(kit.t('storage.candidate.free', {free: formatBytes(c.free_bytes)}));
         return parts.join(' – ');
+    }
+
+    function locationName(id: string): string {
+        const l = locationText(id);
+        return kit.t(l.key, l.params);
     }
 
     function intervalLabel(n: number): string {
@@ -155,6 +163,7 @@
 
     async function move(): Promise<void> {
         moving = true;
+        moveError = '';
         try {
             const r = await call<{ok: boolean; storage: StorageHealth}>('storage/move', {...body, keep_old: keepOld});
             confirmOpen = false;
@@ -163,6 +172,9 @@
             await load();
         } catch (e) {
             const msg = e instanceof ApiError && e.status === 403 ? kit.t('storage.admin') : (e as Error).message;
+            // the dialog closes and the reason stays on the page
+            confirmOpen = false;
+            moveError = msg;
             kit.notify('error', kit.t('storage.move.failed', {error: msg}));
         } finally {
             moving = false;
@@ -180,7 +192,7 @@
         <dl class="st-kv">
             <dt>{kit.t('storage.location')}</dt>
             <dd>
-                {health.location.location === 'userfs' ? kit.t('storage.candidate.userfs') : kit.t('storage.candidate.usb', {label: health.location.location.slice(4)})}
+                {locationName(health.location.location)}
                 {#if health.location.folder}<span class="st-mono"> /{health.location.folder}</span>{/if}
             </dd>
             <dt>{kit.t('storage.path')}</dt>
@@ -253,8 +265,8 @@
         <p class="kit-muted">{kit.t('storage.move.intro')}</p>
         <div class="st-form">
             <label for="st-target">{kit.t('storage.move.target')}</label>
-            <select id="st-target" class="hmm-select" bind:value={target} onchange={() => (checkResult = undefined)}>
-                {#each candidates as c (c.id)}
+            <select id="st-target" class="hmm-select" bind:value={target} onchange={() => ((checkResult = undefined), (moveError = ''))} data-testid="storage-target">
+                {#each candidates as c (c.id + ' ' + c.path)}
                     <option value={c.id} disabled={!c.allowed}>{candidateLabel(c)}</option>
                 {/each}
             </select>
@@ -265,6 +277,12 @@
         </div>
         {#if sticks.length === 0}
             <p class="kit-muted">{kit.t('storage.noSticks')}</p>
+        {/if}
+        {#if chosen?.kind === 'path'}
+            <p class="kit-muted" data-testid="storage-path-note">{kit.t('storage.candidate.pathNote', {path: chosen.path})}</p>
+        {/if}
+        {#if moveError}
+            <p class="kit-notice kit-notice-error" role="alert" data-testid="storage-move-error">{kit.t('storage.move.failedStay', {error: moveError})}</p>
         {/if}
         {#if !admin}
             <p class="kit-muted">{kit.t('storage.admin')}</p>

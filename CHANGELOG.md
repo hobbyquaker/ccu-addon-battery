@@ -12,6 +12,13 @@
   checkbox) - the devices you have already told the CCU not to bother you with. openccu-lite has no such switch per
   device, and the list says so. Nothing is hidden until you tick a box, and the browser remembers the choice.
   (#2, @thofra)
+- **Every system, piVCCU above all:** the database can be moved to a USB stick that has no name. Until now the
+  settings page listed such a stick as *no label, cannot be chosen* - and on piVCCU, where the system does not tell
+  the addon a stick's name at all, that was every stick. A stick is now known by its name, without one by the UUID of
+  its filesystem, and where the system tells neither, by where it is mounted (the page says so, and what follows from
+  it: if another stick is plugged in there later, the addon writes nothing to it and waits for the right one). A
+  database already on a named stick stays where it is. When a move fails, the reason now stays on the settings page
+  instead of only flashing by as a message. (forum: Slice)
 
 ## [1.3.0] - 2026-11-20
 

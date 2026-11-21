@@ -58,7 +58,8 @@ func serverOptions(t *testing.T) (Options, *store.Store, *fakelite.Server, strin
 	os.WriteFile(filepath.Join(www, "index.html"), []byte("<html>app</html>"), 0o644)
 	os.WriteFile(filepath.Join(www, "assets", "a.js"), []byte("js"), 0o644)
 	st, err := store.Open(store.Config{AddonDir: addon, Log: t.Logf, Mounts: func() []store.Mount {
-		return []store.Mount{{Path: filepath.Join(addon, "stick"), Label: "STICK"}}
+		// a named stick, and one without a label (the system tells its UUID)
+		return []store.Mount{{Path: filepath.Join(addon, "stick"), Label: "STICK"}, {Path: filepath.Join(addon, "stick2"), UUID: "5E7A-01FF"}}
 	}})
 	if err != nil {
 		t.Fatal(err)
@@ -133,7 +134,8 @@ func TestRoutes(t *testing.T) {
 		Health     store.Health      `json:"health"`
 		Candidates []store.Candidate `json:"candidates"`
 	}
-	if w.Code != 200 || json.Unmarshal(w.Body.Bytes(), &storage) != nil || storage.Health.State != "ok" || !storage.Health.InBackup || len(storage.Candidates) != 2 || !storage.Candidates[0].Current || storage.Candidates[1].ID != "usb:STICK" {
+	if w.Code != 200 || json.Unmarshal(w.Body.Bytes(), &storage) != nil || storage.Health.State != "ok" || !storage.Health.InBackup || len(storage.Candidates) != 3 || !storage.Candidates[0].Current || storage.Candidates[1].ID != "usb:STICK" ||
+		storage.Candidates[2].ID != "usb-uuid:5E7A-01FF" || storage.Candidates[2].Kind != "uuid" || !storage.Candidates[2].Allowed || storage.Candidates[2].Reason != "" {
 		t.Fatalf("storage: %d %s", w.Code, w.Body)
 	}
 	// writes: CSRF header, then the level
@@ -167,6 +169,26 @@ func TestRoutes(t *testing.T) {
 	}
 	if w := call(h, "GET", "/addons/battery/api/v1/storage", user, ""); !strings.Contains(w.Body.String(), `"in_backup":false`) {
 		t.Fatalf("after the move: %s", w.Body)
+	}
+	// a stick without a label can be checked and moved to, by its UUID; a failure says why
+	nameless := `{"location":"usb-uuid:5E7A-01FF","keep_old":true}`
+	if w := call(h, "POST", "/addons/battery/api/v1/storage/check", user, nameless, addonkit.HeaderRequest, "1"); w.Code != 200 || !strings.Contains(w.Body.String(), `"ok":true`) {
+		t.Fatalf("check of a stick without a label: %d %s", w.Code, w.Body)
+	}
+	if w := call(h, "POST", "/addons/battery/api/v1/storage/check", user, `{"location":"usb-path:/media/usb7"}`, addonkit.HeaderRequest, "1"); w.Code != 200 || !strings.Contains(w.Body.String(), `"ok":false`) || !strings.Contains(w.Body.String(), "no stick is mounted at /media/usb7") {
+		t.Fatalf("check of an empty mount point: %d %s", w.Code, w.Body)
+	}
+	if w := call(h, "POST", "/addons/battery/api/v1/storage/move", admin, `{"location":"usb-uuid:FFFF-0000"}`, addonkit.HeaderRequest, "1"); w.Code != 409 || !strings.Contains(w.Body.String(), "not-present") || !strings.Contains(w.Body.String(), "no stick with the UUID FFFF-0000") {
+		t.Fatalf("absent stick by UUID: %d %s", w.Code, w.Body)
+	}
+	if w := call(h, "POST", "/addons/battery/api/v1/storage/move", admin, `{"location":"usb:"}`, addonkit.HeaderRequest, "1"); w.Code != 422 || !strings.Contains(w.Body.String(), "not named") {
+		t.Fatalf("a stick id without a name: %d %s", w.Code, w.Body)
+	}
+	if w := call(h, "POST", "/addons/battery/api/v1/storage/move", admin, nameless, addonkit.HeaderRequest, "1"); w.Code != 200 || !strings.Contains(w.Body.String(), `"location":"usb-uuid:5E7A-01FF"`) {
+		t.Fatalf("move to a stick without a label: %d %s", w.Code, w.Body)
+	}
+	if _, err := os.Stat(filepath.Join(addon, "stick2", "battery", store.FileName)); err != nil {
+		t.Fatal("the file is not on the stick without a label")
 	}
 }
 

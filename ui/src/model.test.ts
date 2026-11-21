@@ -1,6 +1,6 @@
 import {describe, expect, it} from 'vitest';
 
-import {DEFAULT_DEVICE_FILTER, batteryName, checkState, compareDevices, describeSlots, evidenceSummary, filterDevices, formatBytes, formatCents, formatDays, formatRange, formatVoltage, fromLocalInput, isMains, lifeText, loadDeviceFilter, modelInitials, parsePrice, priceInput, relativeTime, saveDeviceFilter, statusOf, toLocalInput, type DeviceView} from './model.js';
+import {DEFAULT_DEVICE_FILTER, batteryName, checkState, compareDevices, describeSlots, evidenceSummary, filterDevices, formatBytes, formatCents, formatDays, formatRange, formatVoltage, fromLocalInput, isMains, isStick, lifeText, loadDeviceFilter, locationText, modelInitials, parsePrice, priceInput, relativeTime, saveDeviceFilter, statusOf, toLocalInput, type DeviceView} from './model.js';
 
 const dev = (p: Partial<DeviceView>): DeviceView => ({
     interface: 'HmIP-RF',
@@ -206,5 +206,18 @@ describe('the device list\'s filter', () => {
         };
         expect(loadDeviceFilter(refusing)).toEqual(DEFAULT_DEVICE_FILTER);
         expect(() => saveDeviceFilter(DEFAULT_DEVICE_FILTER, refusing)).not.toThrow();
+    });
+});
+
+describe('storage locations', () => {
+    it('names a stick by its label, its UUID or its mount point', () => {
+        expect(locationText('userfs')).toEqual({key: 'storage.candidate.userfs', params: {}});
+        expect(locationText('usb:MY STICK')).toEqual({key: 'storage.candidate.usb', params: {label: 'MY STICK'}});
+        expect(locationText('usb-uuid:1A2B-3C4D')).toEqual({key: 'storage.candidate.usbUuid', params: {uuid: '1A2B-3C4D'}});
+        expect(locationText('usb-path:/media/usb1')).toEqual({key: 'storage.candidate.usbPath', params: {path: '/media/usb1'}});
+    });
+    it('knows a stick from the user partition', () => {
+        expect(['usb:X', 'usb-uuid:1A2B-3C4D', 'usb-path:/media/usb1'].map(isStick)).toEqual([true, true, true]);
+        expect(isStick('userfs')).toBe(false);
     });
 });

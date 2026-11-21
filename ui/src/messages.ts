@@ -130,7 +130,16 @@ export const MESSAGES: Catalogue = {
     'storage.move.failed': {de: 'Verschieben fehlgeschlagen: {error}', en: 'Move failed: {error}'},
     'storage.candidate.userfs': {de: 'Benutzerpartition (Standard)', en: 'User partition (default)'},
     'storage.candidate.usb': {de: 'USB-Stick „{label}“', en: 'USB stick “{label}”'},
-    'storage.candidate.noLabel': {de: 'ohne Namen, nicht wählbar', en: 'no label, cannot be chosen'},
+    'storage.candidate.usbUuid': {de: 'USB-Stick ohne Namen (UUID {uuid})', en: 'USB stick without a label (UUID {uuid})'},
+    'storage.candidate.usbPath': {de: 'USB-Stick ohne Namen ({path})', en: 'USB stick without a label ({path})'},
+    'storage.candidate.pathNote': {
+        de: 'Das System nennt für diesen Stick weder Namen noch UUID; das Addon erkennt ihn deshalb an der Stelle, an der er eingebunden ist ({path}). Steckt dort später ein anderer Stick, legt das Addon auf ihm nichts an und wartet, bis der Stick mit der Datenbank zurück ist.',
+        en: 'The system tells neither a label nor a UUID for this stick, so the addon knows it by where it is mounted ({path}). If another stick is plugged in there later, the addon writes nothing to it and waits until the stick with the database is back.',
+    },
+    'storage.move.failedStay': {
+        de: 'Verschieben fehlgeschlagen: {error} – Die Datenbank liegt unverändert an ihrem bisherigen Ort.',
+        en: 'Move failed: {error} – The database is unchanged where it was.',
+    },
     'storage.candidate.readOnly': {de: 'schreibgeschützt', en: 'read-only'},
     'storage.candidate.free': {de: '{free} frei', en: '{free} free'},
     'storage.noSticks': {

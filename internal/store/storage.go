@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"regexp"
 	"strings"
@@ -14,16 +15,26 @@ import (
 	"time"
 )
 
-// Location says where the database file lives, as a stored id and a folder - never a mount
-// path, the way openccu-lite's own location picker stores a choice: "userfs" is the addon's own
-// var/ on the user partition (the default, in every system backup); "usb:<label>" is the stick
-// whose filesystem label is <label>, wherever it is mounted, with the folder under its root
-// ("battery" when empty). Network shares are not offered: SQLite's locking is not reliable on
-// NFS and SMB, the same reason the system keeps its own database off them.
+// Location says where the database file lives, as a stored id and a folder, the way
+// openccu-lite's own location picker stores a choice: "userfs" is the addon's own var/ on the
+// user partition (the default, in every system backup); a USB stick is named by what identifies
+// it best, wherever it is mounted - "usb:<label>" by its filesystem label, "usb-uuid:<uuid>" a
+// stick without a label by its filesystem's UUID, and "usb-path:<mount point>" a stick the
+// system tells neither of (a container without udev's /dev/disk, as piVCCU's) by where it is
+// mounted. The folder is under the stick's root ("battery" when empty). Network shares are not
+// offered: SQLite's locking is not reliable on NFS and SMB, the same reason the system keeps its
+// own database off them.
 type Location struct {
 	ID     string `json:"location"`
 	Folder string `json:"folder,omitempty"`
 }
+
+// The prefixes of a stick's location id.
+const (
+	prefixLabel = "usb:"
+	prefixUUID  = "usb-uuid:"
+	prefixPath  = "usb-path:"
+)
 
 // String is the location as the log names it.
 func (l Location) String() string {
@@ -36,6 +47,20 @@ func (l Location) String() string {
 	return l.ID + "/" + l.Folder
 }
 
+// Stick names the stick of the location for a message: its label, "UUID <uuid>" or its mount
+// point; "" for the user partition.
+func (l Location) Stick() string {
+	switch {
+	case strings.HasPrefix(l.ID, prefixLabel):
+		return strings.TrimPrefix(l.ID, prefixLabel)
+	case strings.HasPrefix(l.ID, prefixUUID):
+		return "UUID " + strings.TrimPrefix(l.ID, prefixUUID)
+	case strings.HasPrefix(l.ID, prefixPath):
+		return strings.TrimPrefix(l.ID, prefixPath)
+	}
+	return ""
+}
+
 // InBackup says whether the system's backups hold the file: only the user partition.
 func (l Location) InBackup() bool { return l.ID == "" || l.ID == "userfs" }
 
@@ -44,15 +69,31 @@ const DefaultFolder = "battery"
 
 var folderShape = regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9._-]*(/[A-Za-z0-9][A-Za-z0-9._-]*){0,3}$`)
 
-// Validate checks the shape: an id of userfs or usb:<label>, a folder of up to four levels of
-// letters, digits, . _ -, none hidden, no "..".
+// the shapes of a UUID and of a USB mount point in a location id (a test widens the latter to
+// its temporary directory)
+var (
+	uuidShape  = regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9-]{3,63}$`)
+	mountShape = regexp.MustCompile(`^/media/usb[0-9]$`)
+)
+
+// Validate checks the shape: an id of userfs, usb:<label>, usb-uuid:<uuid> or
+// usb-path:/media/usb<N>, a folder of up to four levels of letters, digits, . _ -, none hidden,
+// no "..".
 func (l Location) Validate() error {
 	switch {
 	case l.ID == "" || l.ID == "userfs":
 		return nil
-	case strings.HasPrefix(l.ID, "usb:"):
-		if strings.TrimPrefix(l.ID, "usb:") == "" {
-			return errors.New("a stick without a label cannot be chosen")
+	case strings.HasPrefix(l.ID, prefixLabel):
+		if strings.TrimPrefix(l.ID, prefixLabel) == "" {
+			return errors.New("the stick is not named: a label, a UUID (usb-uuid:) or a mount point (usb-path:) is needed")
+		}
+	case strings.HasPrefix(l.ID, prefixUUID):
+		if !uuidShape.MatchString(strings.TrimPrefix(l.ID, prefixUUID)) {
+			return fmt.Errorf("%q is not a filesystem UUID", strings.TrimPrefix(l.ID, prefixUUID))
+		}
+	case strings.HasPrefix(l.ID, prefixPath):
+		if !mountShape.MatchString(strings.TrimPrefix(l.ID, prefixPath)) {
+			return fmt.Errorf("%q is not a USB mount point (/media/usb<N>)", strings.TrimPrefix(l.ID, prefixPath))
 		}
 	case strings.HasPrefix(l.ID, "share:"):
 		return errors.New("a network share cannot hold the database (SQLite needs local locking)")
@@ -69,8 +110,10 @@ func (l Location) Validate() error {
 type Mount struct {
 	// Path is the mount point (/media/usb1).
 	Path string `json:"path"`
-	// Label is the filesystem label, "" when it has none (then it cannot be chosen).
+	// Label is the filesystem label, "" when it has none or the system does not tell.
 	Label string `json:"label"`
+	// UUID is the filesystem's UUID (a FAT volume id: 1A2B-3C4D), "" when the system does not tell.
+	UUID string `json:"uuid,omitempty"`
 	// Device is the block device (/dev/sda1).
 	Device string `json:"device"`
 	FSType string `json:"fstype"`
@@ -78,34 +121,132 @@ type Mount struct {
 	ReadOnly bool `json:"read_only"`
 }
 
-// ID is the location id of the mount, "usb:<label>".
-func (m Mount) ID() string { return "usb:" + m.Label }
+// Kind says what identifies the stick: "label", "uuid", or "path" when the system tells neither.
+func (m Mount) Kind() string {
+	switch {
+	case m.Label != "":
+		return "label"
+	case uuidShape.MatchString(m.UUID):
+		return "uuid"
+	}
+	return "path"
+}
 
-// DefaultMounts lists the USB sticks openccu-lite mounts at /media/usb1..8 (FAT, exFAT and NTFS
-// mounted root:usbstorage; ext4 keeps its own owners), from /proc/mounts, with the label from
-// /dev/disk/by-label. A confined addon sees them only when its manifest declares the group
+// ID is the location id of the mount: "usb:<label>", for a stick without a label
+// "usb-uuid:<uuid>", and "usb-path:<mount point>" when the system tells neither.
+func (m Mount) ID() string {
+	switch m.Kind() {
+	case "label":
+		return prefixLabel + m.Label
+	case "uuid":
+		return prefixUUID + m.UUID
+	}
+	return prefixPath + m.Path
+}
+
+// matches says whether the mount is the stick the location id names. A label id finds the stick
+// by its label and a UUID id by its UUID whatever else the stick has (a label given later does
+// not lose the database); a path id is the mount point.
+func (m Mount) matches(id string) bool {
+	switch {
+	case strings.HasPrefix(id, prefixLabel):
+		return m.Label != "" && m.Label == strings.TrimPrefix(id, prefixLabel)
+	case strings.HasPrefix(id, prefixUUID):
+		return m.UUID != "" && m.UUID == strings.TrimPrefix(id, prefixUUID)
+	case strings.HasPrefix(id, prefixPath):
+		return m.Path == strings.TrimPrefix(id, prefixPath)
+	}
+	return false
+}
+
+// DefaultMounts lists the USB sticks the system mounted at /media/usb<N> (a CCU3, OpenCCU and
+// openccu-lite: usb1..8; on openccu-lite FAT, exFAT and NTFS root:usbstorage, ext4 with its own
+// owners), from /proc/mounts, with the label and the UUID udev names in /dev/disk/by-label and
+// by-uuid. Where udev's directories are missing or do not know the device (piVCCU's container
+// has no udev), blkid is asked; a stick it cannot read either is still listed, named by its
+// mount point. A confined addon sees the sticks only when its manifest declares the group
 // usbstorage and the path /media.
-func DefaultMounts() []Mount { return mountsFrom("/proc/mounts", "/dev/disk/by-label") }
+func DefaultMounts() []Mount {
+	return mountsFrom("/proc/mounts", "/dev/disk/by-label", "/dev/disk/by-uuid", blkid)
+}
 
-func mountsFrom(procMounts, byLabel string) []Mount {
+// links reads a /dev/disk/by-* directory: device -> the name udev gave it there.
+func links(dir string) map[string]string {
+	out := map[string]string{}
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		return out
+	}
+	for _, e := range entries {
+		target, err := os.Readlink(filepath.Join(dir, e.Name()))
+		if err != nil {
+			continue
+		}
+		dev := target
+		if !filepath.IsAbs(target) {
+			dev = filepath.Join(dir, target)
+		}
+		out[filepath.Clean(dev)] = unescapeLabel(e.Name())
+	}
+	return out
+}
+
+var (
+	blkidLabel = regexp.MustCompile(`(?:^|\s)LABEL="([^"]*)"`)
+	blkidUUID  = regexp.MustCompile(`(?:^|\s)UUID="([^"]*)"`)
+)
+
+// parseBlkid reads a line of blkid (busybox and util-linux alike):
+// /dev/sda1: LABEL="STICK" UUID="1A2B-3C4D" TYPE="vfat".
+func parseBlkid(out string) (label, uuid string) {
+	if i := strings.Index(out, ": "); i >= 0 {
+		out = out[i+1:]
+	}
+	if m := blkidLabel.FindStringSubmatch(out); m != nil {
+		label = m[1]
+	}
+	if m := blkidUUID.FindStringSubmatch(out); m != nil {
+		uuid = m[1]
+	}
+	return label, uuid
+}
+
+// blkid asks the system's blkid for a device's label and UUID; "" where it cannot tell (no
+// blkid, no access to the device - a confined addon, a container).
+func blkid(device string) (label, uuid string) {
+	if !strings.HasPrefix(device, "/dev/") {
+		return "", ""
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
+	bin, err := exec.LookPath("blkid")
+	if err != nil {
+		// a service's PATH may lack sbin
+		for _, p := range []string{"/sbin/blkid", "/usr/sbin/blkid"} {
+			if _, serr := os.Stat(p); serr == nil {
+				bin, err = p, nil
+				break
+			}
+		}
+	}
+	if err != nil {
+		return "", ""
+	}
+	out, err := exec.CommandContext(ctx, bin, device).Output()
+	if err != nil {
+		return "", ""
+	}
+	return parseBlkid(string(out))
+}
+
+var mediaUSB = regexp.MustCompile(`^/media/usb[0-9]$`)
+
+func mountsFrom(procMounts, byLabel, byUUID string, probe func(device string) (label, uuid string)) []Mount {
 	b, err := os.ReadFile(procMounts)
 	if err != nil {
 		return nil
 	}
-	labels := map[string]string{}
-	if entries, err := os.ReadDir(byLabel); err == nil {
-		for _, e := range entries {
-			target, err := os.Readlink(filepath.Join(byLabel, e.Name()))
-			if err != nil {
-				continue
-			}
-			dev := target
-			if !filepath.IsAbs(target) {
-				dev = filepath.Join(byLabel, target)
-			}
-			labels[filepath.Clean(dev)] = unescapeLabel(e.Name())
-		}
-	}
+	labels, uuids := links(byLabel), links(byUUID)
 	var out []Mount
 	for _, line := range strings.Split(string(b), "\n") {
 		f := strings.Fields(line)
@@ -113,7 +254,7 @@ func mountsFrom(procMounts, byLabel string) []Mount {
 			continue
 		}
 		mp := unescapeMount(f[1])
-		if !regexp.MustCompile(`^/media/usb[1-8]$`).MatchString(mp) {
+		if !mediaUSB.MatchString(mp) {
 			continue
 		}
 		ro := false
@@ -122,7 +263,13 @@ func mountsFrom(procMounts, byLabel string) []Mount {
 				ro = true
 			}
 		}
-		out = append(out, Mount{Path: mp, Label: labels[filepath.Clean(f[0])], Device: f[0], FSType: f[2], ReadOnly: ro})
+		dev := filepath.Clean(f[0])
+		m := Mount{Path: mp, Label: labels[dev], UUID: uuids[dev], Device: f[0], FSType: f[2], ReadOnly: ro}
+		if _, known := uuids[dev]; !known && m.Label == "" && probe != nil {
+			// udev does not know the device (or is not there): ask blkid
+			m.Label, m.UUID = probe(f[0])
+		}
+		out = append(out, m)
 	}
 	return out
 }
@@ -172,9 +319,8 @@ func (l Location) Dir(addonDir string, mounts []Mount) (string, error) {
 	if l.InBackup() {
 		return filepath.Join(addonDir, "var"), nil
 	}
-	label := strings.TrimPrefix(l.ID, "usb:")
 	for _, m := range mounts {
-		if m.Label == label {
+		if m.matches(l.ID) {
 			folder := l.Folder
 			if folder == "" {
 				folder = DefaultFolder
@@ -182,7 +328,13 @@ func (l Location) Dir(addonDir string, mounts []Mount) (string, error) {
 			return filepath.Join(m.Path, filepath.FromSlash(folder)), nil
 		}
 	}
-	return "", fmt.Errorf("%w: no stick labelled %q is mounted", ErrNotPresent, label)
+	switch {
+	case strings.HasPrefix(l.ID, prefixUUID):
+		return "", fmt.Errorf("%w: no stick with the UUID %s is mounted", ErrNotPresent, strings.TrimPrefix(l.ID, prefixUUID))
+	case strings.HasPrefix(l.ID, prefixPath):
+		return "", fmt.Errorf("%w: no stick is mounted at %s", ErrNotPresent, strings.TrimPrefix(l.ID, prefixPath))
+	}
+	return "", fmt.Errorf("%w: no stick labelled %q is mounted", ErrNotPresent, strings.TrimPrefix(l.ID, prefixLabel))
 }
 
 // Resolve answers the database file's path.
@@ -267,8 +419,14 @@ func SaveSetting(path, key string, v any) error {
 
 // Candidate is one location the settings page offers.
 type Candidate struct {
-	ID         string `json:"id"`
-	Name       string `json:"name"`
+	ID string `json:"id"`
+	// Name is the stick's label, "" without one.
+	Name string `json:"name"`
+	// Kind says what identifies a stick: "label", "uuid" or "path" (its mount point, when the
+	// system tells neither label nor UUID); "" for the user partition.
+	Kind string `json:"kind,omitempty"`
+	// UUID is the stick's filesystem UUID where the system tells it.
+	UUID       string `json:"uuid,omitempty"`
 	Path       string `json:"path"`
 	FreeBytes  int64  `json:"free_bytes"`
 	TotalBytes int64  `json:"total_bytes"`
@@ -278,7 +436,12 @@ type Candidate struct {
 	Current    bool   `json:"current"`
 }
 
-// Candidates lists the user partition and every mounted stick, with whether it may be chosen.
+// Mounts lists the external media as the store sees them.
+func (s *Store) Mounts() []Mount { return s.cfg.Mounts() }
+
+// Candidates lists the user partition and every mounted stick, with whether it may be chosen. A
+// stick without a label can be chosen like any other: it is named by its UUID, or by its mount
+// point where the system tells neither.
 func (s *Store) Candidates() []Candidate {
 	s.mu.Lock()
 	cur := s.loc
@@ -289,10 +452,7 @@ func (s *Store) Candidates() []Candidate {
 		out[0].FreeBytes, out[0].TotalBytes = free, total
 	}
 	for _, m := range s.cfg.Mounts() {
-		c := Candidate{ID: m.ID(), Name: m.Label, Path: m.Path, Allowed: true, Current: cur.ID == m.ID()}
-		if m.Label == "" {
-			c.ID, c.Allowed, c.Reason = "usb:", false, "no-label"
-		}
+		c := Candidate{ID: m.ID(), Name: m.Label, Kind: m.Kind(), UUID: m.UUID, Path: m.Path, Allowed: true, Current: m.matches(cur.ID)}
 		if m.ReadOnly {
 			c.Allowed, c.Reason = false, "read-only"
 		}

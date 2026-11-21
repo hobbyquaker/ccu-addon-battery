@@ -15,6 +15,7 @@ import (
 	"os"
 	"path/filepath"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 
@@ -128,6 +129,13 @@ func (s *Store) Retry() bool {
 		return false
 	}
 	if _, err := os.Stat(path); errors.Is(err, os.ErrNotExist) {
+		if strings.HasPrefix(s.loc.ID, prefixPath) {
+			// a stick known only by where it is mounted: whatever is plugged in there would
+			// pass for it, so a stick without the database is taken for another one - the
+			// rows wait in RAM as for a stick that is away, and no new database is begun
+			s.err = fmt.Errorf("%w: the stick mounted at %s holds no database at %s - another stick?", ErrNotPresent, strings.TrimPrefix(s.loc.ID, prefixPath), path)
+			return false
+		}
 		s.logf("store: no database at %s yet, creating one", path)
 	}
 	db, err := openFile(path)

@@ -102,19 +102,31 @@ The setting is the `storage` object of `/usr/local/addons/battery/etc/battery.js
 ```json
 {"storage": {"location": "userfs"}}
 {"storage": {"location": "usb:STICK", "folder": "battery"}}
+{"storage": {"location": "usb-uuid:1A2B-3C4D", "folder": "battery"}}
 ```
 
-A location is stored as an id and a folder, never as a mount path - the way the system's own
-location picker stores a choice, so a stick that comes back at another mount point is still found:
+A location is stored as an id and a folder - the way the system's own location picker stores a
+choice, so a stick that comes back at another mount point is still found. A stick is named by what
+identifies it best: its label, without a label its filesystem's UUID, and only where the system
+tells neither, its mount point:
 
 | id | Where | In the system's backups |
 | --- | --- | --- |
 | `userfs` (the default) | `/usr/local/addons/battery/var/battery.db` | as its snapshot (below) |
 | `usb:<label>` | `<mount>/<folder>/battery.db` on the stick whose filesystem label is `<label>`, wherever the system mounted it (`/media/usb1`…`8`); `folder` defaults to `battery`, up to four levels of letters, digits, `. _ -` | as its snapshot (below) |
+| `usb-uuid:<uuid>` | the same, on the stick without a label whose filesystem has that UUID (a FAT volume id such as `1A2B-3C4D`). A stick that gets a label later is still found by its UUID | as its snapshot (below) |
+| `usb-path:/media/usb<N>` | the same, on whatever stick is mounted at that mount point - for a system that tells neither label nor UUID (piVCCU's container has no udev, so no `/dev/disk`, and `blkid` cannot read the device there). Weaker than a name: see below | as its snapshot (below) |
 | `share:<name>` | refused | SQLite's locking is not reliable on NFS and SMB; the system keeps its own database off them for the same reason |
 
-The addon learns the sticks from `/proc/mounts` (`/media/usb1`…`8`) and their labels from
-`/dev/disk/by-label`; a stick without a label cannot be chosen. The manifest declares the group
+The addon learns the sticks from `/proc/mounts` (a mount at `/media/usb0`…`9`; a CCU3, OpenCCU and
+openccu-lite mount at `usb1`…`8`), and their labels and UUIDs from udev's `/dev/disk/by-label` and
+`/dev/disk/by-uuid`. Where udev does not know a device it asks `blkid <device>`; a stick neither
+can name is still offered, by its mount point. Every mounted stick can be chosen, with or without
+a label (until 1.3.0 a stick without one could not, and on a system without `/dev/disk/by-label`
+that was every stick). A stick known only by its mount point gets one extra rule, because any stick
+plugged in there would pass for it: when the database file is missing on it, the addon takes it for
+another stick, begins no database there and waits - the store is unavailable as for a stick that is
+away - until the stick with the database is back. The manifest declares the group
 `usbstorage` and the path `/media`, which is what a confined addon needs to write a stick (the
 handbook, chapter 11); without them the sticks are read-only to the addon and the check says so.
 
@@ -196,11 +208,14 @@ A stick with the database is pulled, or a user deletes the file:
   file still accepts writes through the open handle and nothing of that would ever be read again)
   and fails; the store is **degraded**: the queue is kept, the health says why, the page shows a
   banner, the journal has one line;
-- at the next start, a location that is not present (no stick with that label) leaves the store
+- at the next start, a location that is not present (no stick with that label or UUID, nothing
+  mounted at that mount point, or - for a stick known by its mount point - a stick without the
+  database) leaves the store
   **unavailable**: reports are queued in RAM, the page says so, and every 30 s the addon looks
   again; when the stick is back the file is opened and the queue written;
 - the addon **never** creates a fresh database at another location on its own. A file missing at a
-  location that *is* present is created (that is the explicit setting), with a line in the journal.
+  location that *is* present is created (that is the explicit setting), with a line in the journal -
+  except on a stick known only by its mount point, as said above.
 
 ## Not in phase 0
 

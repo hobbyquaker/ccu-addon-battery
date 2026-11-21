@@ -244,15 +244,7 @@ func (o Options) storageCheck(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, 200, map[string]any{"ok": true, "path": filepath.Join(dir, store.FileName), "in_backup": b.InBackup()})
 }
 
-func (o Options) mounts() []store.Mount {
-	var out []store.Mount
-	for _, c := range o.Store.Candidates() {
-		if strings.HasPrefix(c.ID, "usb:") && c.Name != "" {
-			out = append(out, store.Mount{Path: c.Path, Label: c.Name})
-		}
-	}
-	return out
-}
+func (o Options) mounts() []store.Mount { return o.Store.Mounts() }
 
 func (o Options) admin(w http.ResponseWriter, r *http.Request, what string) bool {
 	if o.Session != nil || o.Wrap != nil {

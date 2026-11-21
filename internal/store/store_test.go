@@ -5,7 +5,9 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 )
@@ -100,12 +102,12 @@ func TestOpenWriteRead(t *testing.T) {
 }
 
 func TestLocation(t *testing.T) {
-	for _, l := range []Location{{ID: "userfs"}, {}, {ID: "usb:STICK"}, {ID: "usb:STICK", Folder: "a/b-c.d"}} {
+	for _, l := range []Location{{ID: "userfs"}, {}, {ID: "usb:STICK"}, {ID: "usb:STICK", Folder: "a/b-c.d"}, {ID: "usb-uuid:1A2B-3C4D"}, {ID: "usb-uuid:0b9a4d6e-63f0-4a8e-9c0e-6a1c1e0d2f11", Folder: "f"}, {ID: "usb-path:/media/usb1"}, {ID: "usb-path:/media/usb0"}} {
 		if err := l.Validate(); err != nil {
 			t.Errorf("%+v: %v", l, err)
 		}
 	}
-	for _, l := range []Location{{ID: "usb:"}, {ID: "share:nas"}, {ID: "nope"}, {ID: "usb:X", Folder: "../x"}, {ID: "usb:X", Folder: ".hidden"}, {ID: "usb:X", Folder: "a/b/c/d/e"}} {
+	for _, l := range []Location{{ID: "usb:"}, {ID: "share:nas"}, {ID: "nope"}, {ID: "usb-uuid:"}, {ID: "usb-uuid:../x"}, {ID: "usb-path:/etc"}, {ID: "usb-path:/media/usb1/../../etc"}, {ID: "usb-path:"}, {ID: "usb:X", Folder: "../x"}, {ID: "usb:X", Folder: ".hidden"}, {ID: "usb:X", Folder: "a/b/c/d/e"}} {
 		if err := l.Validate(); err == nil {
 			t.Errorf("%+v accepted", l)
 		}
@@ -158,9 +160,224 @@ func TestMounts(t *testing.T) {
 	bl := filepath.Join(dir, "by-label")
 	os.MkdirAll(bl, 0o755)
 	os.Symlink("/dev/sda1", filepath.Join(bl, "MY\\x20STICK"))
-	m := mountsFrom(pm, bl)
+	m := mountsFrom(pm, bl, filepath.Join(dir, "by-uuid"), nil)
 	if len(m) != 2 || m[0].Path != "/media/usb1" || m[0].Label != "MY STICK" || m[1].ReadOnly != true || m[1].Label != "" {
 		t.Fatalf("mounts: %+v", m)
+	}
+	if m[0].ID() != "usb:MY STICK" || m[0].Kind() != "label" {
+		t.Fatalf("id: %s %s", m[0].ID(), m[0].Kind())
+	}
+}
+
+// The mount tables of the systems the addon runs on, and what names each stick: its label, for
+// a stick without one its UUID, and its mount point where the system tells neither - the report
+// from piVCCU, whose container has no udev and so no /dev/disk/by-label: every stick looked
+// label-less there and could not be chosen.
+func TestMountsBySystem(t *testing.T) {
+	type link struct{ dir, name, dev string }
+	for _, c := range []struct {
+		name   string
+		mounts string
+		links  []link
+		blkid  map[string]string // device -> blkid's line; nil: blkid cannot read any device
+		want   []string          // id kind label uuid, per stick
+	}{
+		{
+			name: "openccu-lite and OpenCCU: udev, a labelled stick",
+			mounts: "tmpfs /media tmpfs rw,nosuid,nodev,noexec,noatime 0 0\n" +
+				"/dev/sda1 /media/usb1 vfat rw,nodev,noexec,noatime,nodiratime,gid=1001,fmask=0007,dmask=0007,utf8 0 0\n",
+			links: []link{{"by-label", "BATTERY", "/dev/sda1"}, {"by-uuid", "1A2B-3C4D", "/dev/sda1"}, {"by-label", "userfs", "/dev/mmcblk0p3"}},
+			want:  []string{"usb:BATTERY label BATTERY 1A2B-3C4D"},
+		},
+		{
+			name:   "udev, a stick without a label: named by its UUID",
+			mounts: "/dev/sda1 /media/usb1 vfat rw,noexec 0 0\n/dev/sdb1 /media/usb2 ext4 rw,noexec 0 0\n",
+			links:  []link{{"by-uuid", "5E7A-01FF", "/dev/sda1"}, {"by-uuid", "0b9a4d6e-63f0-4a8e-9c0e-6a1c1e0d2f11", "/dev/sdb1"}},
+			want:   []string{"usb-uuid:5E7A-01FF uuid  5E7A-01FF", "usb-uuid:0b9a4d6e-63f0-4a8e-9c0e-6a1c1e0d2f11 uuid  0b9a4d6e-63f0-4a8e-9c0e-6a1c1e0d2f11"},
+		},
+		{
+			name:   "a CCU3 at /media/usb1, udev without the device: blkid tells",
+			mounts: "/dev/sda1 /media/usb1 vfat rw,relatime 0 0\n/dev/sdb1 /media/usb2 vfat rw,relatime 0 0\n",
+			blkid:  map[string]string{"/dev/sda1": `/dev/sda1: LABEL="KEYS" UUID="AAAA-BBBB" TYPE="vfat"`, "/dev/sdb1": `/dev/sdb1: UUID="CCCC-DDDD" TYPE="vfat"`},
+			want:   []string{"usb:KEYS label KEYS AAAA-BBBB", "usb-uuid:CCCC-DDDD uuid  CCCC-DDDD"},
+		},
+		{
+			name:   "piVCCU's container: no /dev/disk, blkid cannot read the device - named by the mount point",
+			mounts: "/dev/sda1 /media/usb1 vfat rw,relatime,fmask=0022,dmask=0022 0 0\n",
+			want:   []string{"usb-path:/media/usb1 path  "},
+		},
+		{
+			name:   "an old RaspberryMatic at /media/usb0, read-only",
+			mounts: "/dev/sda1 /media/usb0 vfat ro,relatime 0 0\n",
+			want:   []string{"usb-path:/media/usb0 path  "},
+		},
+		{
+			name:   "nothing mounted: the empty mount points of a CCU3 are no sticks",
+			mounts: "tmpfs /media tmpfs rw 0 0\n/dev/mmcblk0p3 /usr/local ext4 rw 0 0\n",
+		},
+	} {
+		dir := t.TempDir()
+		pm := filepath.Join(dir, "mounts")
+		os.WriteFile(pm, []byte(c.mounts), 0o644)
+		for _, l := range c.links {
+			os.MkdirAll(filepath.Join(dir, l.dir), 0o755)
+			if err := os.Symlink(l.dev, filepath.Join(dir, l.dir, l.name)); err != nil {
+				t.Fatal(err)
+			}
+		}
+		probe := func(dev string) (string, string) { return parseBlkid(c.blkid[dev]) }
+		var got []string
+		for _, m := range mountsFrom(pm, filepath.Join(dir, "by-label"), filepath.Join(dir, "by-uuid"), probe) {
+			got = append(got, m.ID()+" "+m.Kind()+" "+m.Label+" "+m.UUID)
+			// what the location id names is found again among the mounts
+			if !m.matches(m.ID()) {
+				t.Errorf("%s: %s does not match itself", c.name, m.ID())
+			}
+			if err := (Location{ID: m.ID()}).Validate(); err != nil {
+				t.Errorf("%s: %s: %v", c.name, m.ID(), err)
+			}
+		}
+		if strings.Join(got, "\n") != strings.Join(c.want, "\n") {
+			t.Errorf("%s:\n got %q\nwant %q", c.name, got, c.want)
+		}
+	}
+}
+
+func TestParseBlkid(t *testing.T) {
+	for _, c := range []struct{ in, label, uuid string }{
+		{`/dev/sda1: LABEL="MY STICK" UUID="1A2B-3C4D" TYPE="vfat"`, "MY STICK", "1A2B-3C4D"},
+		{`/dev/sda1: UUID="1A2B-3C4D" TYPE="vfat"`, "", "1A2B-3C4D"},
+		// util-linux: neither the FAT boot label nor the partition's label and UUID are the filesystem's
+		{`/dev/sda1: LABEL_FATBOOT="X" UUID="9C33-6BBD" BLOCK_SIZE="512" TYPE="vfat" PARTLABEL="p" PARTUUID="6c3a2d1e-01"`, "", "9C33-6BBD"},
+		{`/dev/sdb1: LABEL="data" UUID="0b9a4d6e-63f0-4a8e-9c0e-6a1c1e0d2f11" TYPE="ext4"`, "data", "0b9a4d6e-63f0-4a8e-9c0e-6a1c1e0d2f11"},
+		{"", "", ""},
+	} {
+		if l, u := parseBlkid(c.in); l != c.label || u != c.uuid {
+			t.Errorf("%s: %q %q", c.in, l, u)
+		}
+	}
+	if l, u := blkid("not-a-device"); l != "" || u != "" {
+		t.Errorf("blkid of no device: %q %q", l, u)
+	}
+}
+
+// A stick without a label can be chosen: the candidates offer it, the database moves there and
+// is found again after a restart - by its UUID wherever it is mounted, by its mount point where
+// the system tells nothing else. A stick that got a label later is still found by its UUID.
+func TestMoveToAStickWithoutALabel(t *testing.T) {
+	for _, c := range []struct {
+		name, uuid, id string
+	}{
+		{"by UUID", "5E7A-01FF", "usb-uuid:5E7A-01FF"},
+		{"by mount point", "", "usb-path:/media/usb1"},
+	} {
+		t.Run(c.name, func(t *testing.T) {
+			stick := t.TempDir()
+			mounted := Mount{Path: stick, UUID: c.uuid, Device: "/dev/sda1", FSType: "vfat"}
+			if c.uuid == "" {
+				// the test's stick is not at /media/usb1; the id is its path, so name it
+				c.id = "usb-path:" + stick
+			}
+			var mu sync.Mutex
+			present := []Mount{mounted}
+			mounts := func() []Mount {
+				mu.Lock()
+				defer mu.Unlock()
+				return append([]Mount(nil), present...)
+			}
+			s, dir := testStore(t, mounts)
+			s.UpsertDevice(Device{Interface: "HmIP-RF", Address: "A", Model: "HmIP-WRC2", FirstSeen: 1, LastSeen: 1})
+			s.Flush()
+			var cand *Candidate
+			for _, x := range s.Candidates() {
+				if x.Path == stick {
+					x := x
+					cand = &x
+				}
+			}
+			if cand == nil || !cand.Allowed || cand.Reason != "" || cand.ID != mounted.ID() || cand.Name != "" || cand.Current {
+				t.Fatalf("candidate: %+v", cand)
+			}
+			if c.uuid != "" && (cand.ID != c.id || cand.Kind != "uuid") {
+				t.Fatalf("candidate: %+v", cand)
+			}
+			if c.uuid == "" && cand.Kind != "path" {
+				t.Fatalf("candidate: %+v", cand)
+			}
+			loc := Location{ID: cand.ID}
+			if c.uuid == "" {
+				// a real mount point passes Validate; the test's temporary directory does not,
+				// so the move is driven below the API's validation
+				if err := (Location{ID: "usb-path:/media/usb1"}).Validate(); err != nil {
+					t.Fatal(err)
+				}
+				mountShape = regexp.MustCompile(`^/`)
+				t.Cleanup(func() { mountShape = regexp.MustCompile(`^/media/usb[0-9]$`) })
+			}
+			if err := s.Move(context.Background(), loc, false, nil); err != nil {
+				t.Fatalf("move: %v", err)
+			}
+			want := filepath.Join(stick, DefaultFolder, FileName)
+			if s.Path() != want || s.Location().ID != cand.ID {
+				t.Fatalf("after the move: %s %s", s.Path(), s.Location())
+			}
+			for _, x := range s.Candidates() {
+				if x.Path == stick && !x.Current {
+					t.Fatalf("the stick is not the current candidate: %+v", x)
+				}
+			}
+			s.Close()
+
+			// a restart: found again
+			s2, err := Open(Config{AddonDir: dir, Log: t.Logf, Mounts: mounts})
+			if err != nil || s2.Path() != want || s2.Health().State != "ok" {
+				t.Fatalf("reopen: %v %s %+v", err, s2.Path(), s2.Health())
+			}
+			if d, _ := s2.Devices(context.Background()); len(d) != 1 {
+				t.Fatalf("devices after the reopen: %d", len(d))
+			}
+			s2.Close()
+
+			if c.uuid != "" {
+				// the stick got a label and another mount point: still the same stick
+				other := filepath.Join(filepath.Dir(stick), "elsewhere")
+				if err := os.Rename(stick, other); err != nil {
+					t.Fatal(err)
+				}
+				mu.Lock()
+				present = []Mount{{Path: other, UUID: c.uuid, Label: "NOWNAMED"}}
+				mu.Unlock()
+				s3, err := Open(Config{AddonDir: dir, Log: t.Logf, Mounts: mounts})
+				if err != nil || s3.Path() != filepath.Join(other, DefaultFolder, FileName) || s3.Health().State != "ok" {
+					t.Fatalf("reopen after the label: %v %s", err, s3.Path())
+				}
+				s3.Close()
+				return
+			}
+			// by mount point: another stick in the same place holds no database, and none is
+			// begun there - the store waits as for a stick that is away
+			if err := os.Rename(filepath.Join(stick, DefaultFolder), filepath.Join(stick, "moved-away")); err != nil {
+				t.Fatal(err)
+			}
+			s4, err := Open(Config{AddonDir: dir, Log: t.Logf, Mounts: mounts})
+			if err != nil {
+				t.Fatal(err)
+			}
+			defer s4.Close()
+			if h := s4.Health(); h.State == "ok" || !strings.Contains(h.Error, "another stick") {
+				t.Fatalf("another stick at the mount point: %+v", h)
+			}
+			if _, err := os.Stat(want); !errors.Is(err, os.ErrNotExist) {
+				t.Fatalf("a database was begun on the other stick: %v", err)
+			}
+			// the right stick is back
+			if err := os.Rename(filepath.Join(stick, "moved-away"), filepath.Join(stick, DefaultFolder)); err != nil {
+				t.Fatal(err)
+			}
+			if !s4.Retry() || s4.Health().State != "ok" {
+				t.Fatalf("the stick is back: %+v", s4.Health())
+			}
+		})
 	}
 }
 

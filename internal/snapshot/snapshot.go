@@ -121,7 +121,7 @@ func Restore(addonDir string, mounts func() []store.Mount, program bool, logf fu
 	case backup.Restored:
 		logf("battery: backup: the database was restored from the system backup into %s", live)
 		if fallback {
-			label := loc.ID[len("usb:"):]
+			label := loc.Stick()
 			if err := store.SaveLocation(settingsPath(addonDir), store.Location{ID: "userfs"}); err != nil {
 				return res, err
 			}

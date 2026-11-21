@@ -236,8 +236,11 @@ Oberfläche des Systems mit dessen Design und Sprache; seine Einstellungsseite i
 
 Die Datenbank ist eine SQLite-Datei, `battery.db`. Standardmäßig liegt sie im eigenen Verzeichnis
 des Addons auf der Benutzerpartition, `/usr/local/addons/battery/var/`. Sie kann auf einen vom
-System eingebundenen USB-Stick verschoben werden (die Einstellungsseite). Netzwerkfreigaben werden
-nicht angeboten: SQLite braucht lokale Dateisperren, die NFS und SMB nicht geben.
+System eingebundenen USB-Stick verschoben werden (die Einstellungsseite) – auch auf einen Stick
+ohne Namen: Das Addon erkennt einen Stick an seinem Namen, ohne Namen an der UUID seines
+Dateisystems, und wo das System beides nicht nennt (piVCCU), an der Stelle, an der er eingebunden
+ist. Netzwerkfreigaben werden nicht angeboten: SQLite braucht lokale Dateisperren, die NFS und SMB
+nicht geben.
 
 **In den Backups des Systems** ist die Datenbank eine geprüfte Kopie, wo immer sie liegt – auch auf
 dem Stick: Vor jedem Backup lässt das System das Addon eine Kopie anlegen (`VACUUM INTO` nach
@@ -270,7 +273,8 @@ sich aus anderswo eine neue Datenbank.
 
 Die Einstellungen sind `storage`, `write_interval` (Minuten) und `backup_copy_days` in
 `/usr/local/addons/battery/etc/battery.json`
-(`{"storage": {"location": "usb:<label>", "folder": "battery"}, "write_interval": 30}`); die Einzelheiten stehen in
+(`{"storage": {"location": "usb:<label>", "folder": "battery"}, "write_interval": 30}`; ein Stick ohne
+Namen steht dort als `usb-uuid:<uuid>` oder `usb-path:/media/usb<N>`); die Einzelheiten stehen in
 [docs/storage.md](docs/storage.md).
 
 ### Deinstallation
