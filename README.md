@@ -9,7 +9,7 @@ Batteriewechsel, lässt Sie eintragen, welche Batterien eingelegt wurden, und ma
 Protokoll: wie lange Batterien halten, welche Geräte Batteriefresser sind, welche Batterien am
 besten abschneiden, was bald fällig ist und was zu kaufen ist.
 
-**Stand: 1.4.1** ([Änderungen](CHANGELOG.md); die Pakete stehen auf der
+**Stand: 1.5.0** ([Änderungen](CHANGELOG.md); die Pakete stehen auf der
 [Release-Seite](https://github.com/hobbyquaker/ccu-addon-battery/releases)). Getestet auf
 openccu-lite mit echten Geräten und auf OpenCCU; Rückmeldungen von piVCCU gibt es aus dem
 Homematic-Forum, auf der CCU3-Firmware bisher ohne angelernte Batteriegeräte – Rückmeldungen sind
@@ -74,7 +74,10 @@ blendet der Haken oben ein. Zwei weitere Haken blenden Geräte aus: die gerade n
 und – auf einer CCU3, OpenCCU und piVCCU – die, deren Servicemeldungen in der CCU abgeschaltet
 sind (*Einstellungen → Geräte*, Haken *Servicemeldungen*; openccu-lite hat keinen solchen Schalter
 je Gerät). Ohne Haken zeigt die Liste alle Geräte; die Wahl merkt sich der Browser.
-*Gewechselt …* bucht einen Wechsel direkt aus der Liste.
+*Gewechselt …* bucht einen Wechsel direkt aus der Liste. *Nicht überwachen* nimmt ein Gerät aus
+der Liste, der Vorhersage, der Einkaufsliste und den Benachrichtigungen – etwa einen Taster, der
+doch am Netz hängt; seine Werte werden weiter aufgezeichnet, und *Ignorierte anzeigen* holt es
+zurück (*Wieder überwachen*).
 
 ### Ein Gerät
 
@@ -82,7 +85,10 @@ je Gerät). Ohne Haken zeigt die Liste alle Geräte; die Wahl merkt sich der Bro
 
 Ein Klick auf den Namen öffnet das Gerät: Batterien, Spannung, die Schwellen für frisch und leer,
 die Haltedauern und der Spannungsverlauf über die ganze Aufzeichnung, mit den Wechseln als Marken
-und den Batterie-leer-Phasen als Bändern. Darunter alle gebuchten Wechsel des Geräts, jeder
+und den Batterie-leer-Phasen als Bändern. Ein Modell, das mit Batterien oder an einem Netzteil
+läuft (etwa der Kombisignalgeber HmIP-MP3P), hat hier die Wahl *Stromversorgung: Batterien /
+Netzteil*; am Netzteil gibt es keine Vorhersage und keine Wechselerkennung. *Nicht überwachen*
+gibt es auch hier. Darunter alle gebuchten Wechsel des Geräts, jeder
 bearbeitbar und löschbar; hier die übernommenen mit ihrer Herkunft in der Notiz.
 
 ### Einen Wechsel buchen
@@ -181,12 +187,14 @@ Batterie-leer und Nicht-erreichbar sowie `BOOTED` bleiben als Beleg erhalten.
 
 ## Welche Batterien ein Gerät nimmt
 
-[data/batteries.json](data/README.md) ist eine Tabelle von 454 Homematic-Modellen: die
+[data/batteries.json](data/README.md) ist eine Tabelle von 464 Homematic-Modellen: die
 Stromversorgung (Batterie, Akku, Netz, Bus, …), die Batteriefächer (Anzahl und Typ), der
 Spannungs-Datenpunkt, die Batterie-leer-Schwelle des Geräts und die Quellen jeder Zeile – für die
 meisten Batteriemodelle die Produktseiten und Anleitungen von eQ-3 selbst; ein Modell, das
 weder eine Herstellerangabe noch eine frei lizenzierte Tabelle nennt, steht als *unbekannt* da
-statt geraten. Die Daten sind CC0:
+statt geraten. Ein Modell, das in der Tabelle fehlt und eine Spannung, aber keine
+Batterie-leer-Meldung kennt, gilt als netzbetrieben (so melden sich die Aktoren von Homematic IP).
+Die Daten sind CC0:
 nehmen Sie sie für jedes Projekt. Das Addon bettet sie ein, sucht Modelle ohne Rücksicht auf
 Groß- und Kleinschreibung (und über ihre Aliasse) und lässt sie je Modell oder je Gerät
 korrigieren (eine Fernbedienung im Tischaufsteller, Lithium- oder Akkuzellen). Korrekturen an der
@@ -308,7 +316,7 @@ dort bisher ohne angelernte Batteriegeräte – Rückmeldungen sind willkommen.
 go test -race ./...                      # Speicher, Aufzeichnung, Erkennung, Wechsel, Statistik, API, Paketdateien
 python3 data/check.py                    # die Batterietabelle
 (cd ui && npm ci && npm run check && npm test && npm run build)   # die Anwendung und die Einstellungsseite
-VERSION=1.4.1 scripts/build.sh           # dist/battery-<arch>-<version>.tar.gz für aarch64, x86_64, armv7l
+VERSION=1.5.0 scripts/build.sh           # dist/battery-<arch>-<version>.tar.gz für aarch64, x86_64, armv7l
 ```
 
 Ein Release ist ein Tag `v<version>` auf `main`: [release.yml](.github/workflows/release.yml) prüft,

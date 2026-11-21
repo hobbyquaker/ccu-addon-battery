@@ -1,5 +1,25 @@
 # Changelog
 
+## [1.5.0] - 2026-11-21
+
+- **Every system:** *Do not monitor* takes a single device out of the battery views. On the device page and in the
+  device list, the button takes the device out of the list, the forecast, the shopping list and the notifications,
+  and change detection stops for it; detections of it still waiting in the inbox are dropped. Its readings are still
+  recorded and the changes you booked stay. *Show ignored* in the list brings such devices back into view, and
+  *Monitor again* switches one back on. The choice is kept per device in the addon's database. The API has
+  `PUT`/`DELETE devices/{interface}/{address}/ignore`. (forum: UweS)
+- **Every system:** ELV's own Homematic IP kits have rows in the battery table. The **ELV-SH-BS2**, the kit of the
+  230 V switch actuator HmIP-BS2, was missing, so the addon listed it as a battery device with *unknown* batteries;
+  it is now mains, like the ELV-SH-PSMCI, ELV-SH-WUA, ELV-SH-WSC and ELV-SH-SB8 (mains or an external DC supply,
+  from ELV's manuals and ELVjournal articles). The ELV-SH-CWD, -CAP and -CTV take 1× CR2032 and the ELV-SH-DUSI
+  2× AA. (forum: UweS)
+- **Every system:** a model the battery table lacks that reports a voltage but no low-battery flag counts as
+  mains-powered instead of a battery device of unknown batteries - that is how Homematic IP actuators report. The
+  cell count is guessed from a voltage only when it is that of 1 to 3 cells (0.8-5.0 V).
+- **Every system:** the **HmIP-MP3P** sounder runs on 3× C or on a 5 V plug-in supply. The device page of such a
+  model now offers *Power supply: batteries / power supply unit*; on the supply it gets no forecast, no
+  shopping-list entry and no change detection from supply-voltage noise. (forum: UweS)
+
 ## [1.4.1] - 2026-11-21
 
 - **Every system:** the battery table no longer takes a battery or a mains supply from a source that is only a

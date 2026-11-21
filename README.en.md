@@ -8,7 +8,7 @@ records the battery voltage and the low-battery flag of every device, detects ba
 them, lets you say which batteries went in, and turns the record into how long batteries last, which
 devices eat batteries, which batteries do best, what is due soon and what to buy.
 
-**Status: 1.4.1** ([changelog](CHANGELOG.md); the packages are on the [releases
+**Status: 1.5.0** ([changelog](CHANGELOG.md); the packages are on the [releases
 page](https://github.com/hobbyquaker/ccu-addon-battery/releases)). Tested on openccu-lite with real
 devices and on OpenCCU; feedback from piVCCU comes from the Homematic forum, on the CCU3 firmware so
 far without paired battery devices - feedback is welcome.
@@ -70,7 +70,10 @@ the ones that are unreachable right now and - on a CCU3, OpenCCU and piVCCU - th
 service messages are switched off in the CCU (*Settings → Devices*, the *Service messages*
 checkbox; openccu-lite has no such switch per device). With no box ticked the list shows every
 device; the browser remembers the choice. *Gewechselt …* (Changed…) records a change straight from
-the list.
+the list. *Nicht überwachen* (Do not monitor) takes a device out of the list, the forecast, the
+shopping list and the notifications - a push-button that turns out to be mains-powered, say; its
+readings are still recorded, and *Ignorierte anzeigen* (Show ignored) brings it back (*Wieder
+überwachen*, Monitor again).
 
 ### A device
 
@@ -78,7 +81,10 @@ the list.
 
 A click on the name opens the device: batteries, voltage, the fresh and empty thresholds, the
 battery lives and the voltage curve over the whole record, with the changes as marks and the
-low-battery phases as bands. Below it every recorded change of the device, each editable and
+low-battery phases as bands. A model that runs on batteries or on a power supply unit (the
+HmIP-MP3P sounder, say) offers *Stromversorgung: Batterien / Netzteil* (power supply: batteries /
+power supply unit) here; on a power supply there is no forecast and no change detection. *Do not
+monitor* is here as well. Below it every recorded change of the device, each editable and
 deletable; here the imported ones, their origin in the note.
 
 ### Recording a change
@@ -173,11 +179,12 @@ see every report as it comes. The low-battery and unreachable transitions and `B
 
 ## Which batteries a device takes
 
-[data/batteries.json](data/README.md) is a table of 454 Homematic models: the power source
+[data/batteries.json](data/README.md) is a table of 464 Homematic models: the power source
 (battery, rechargeable, mains, bus, …), the battery slots (count and type), the voltage datapoint,
 the device's own low-battery threshold, and the sources every row stands on - for most battery
 models eQ-3's own product pages and manuals; a model that neither the manufacturer nor a freely licensed table
-names is shown as *unknown* instead of guessed. The data is CC0: take it for any project. The addon
+names is shown as *unknown* instead of guessed. A model missing from the table that reports a voltage but
+no low-battery flag counts as mains-powered (that is how Homematic IP actuators report). The data is CC0: take it for any project. The addon
 embeds it, looks models up case-insensitively (and by their aliases), and lets you correct it
 per model or per device (a remote in a desk stand, lithium or rechargeable cells). Corrections to
 the table are welcome as pull requests; `python3 data/check.py` checks it (CI runs it), and
@@ -289,7 +296,7 @@ firmware 3.89.11 (`armv7l`), there so far without paired battery devices - feedb
 go test -race ./...                      # the store, the recorder, the detector, the changes, the statistics, the API, the package files
 python3 data/check.py                    # the battery table
 (cd ui && npm ci && npm run check && npm test && npm run build)   # the app and the settings page
-VERSION=1.4.1 scripts/build.sh           # dist/battery-<arch>-<version>.tar.gz for aarch64, x86_64, armv7l
+VERSION=1.5.0 scripts/build.sh           # dist/battery-<arch>-<version>.tar.gz for aarch64, x86_64, armv7l
 ```
 
 A release is a tag `v<version>` on `main`: [release.yml](.github/workflows/release.yml) checks that
