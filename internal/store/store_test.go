@@ -702,3 +702,31 @@ func TestIgnored(t *testing.T) {
 		t.Fatalf("%+v", devs)
 	}
 }
+
+func TestOnSupply(t *testing.T) {
+	s, _ := testStore(t, nil)
+	ctx := context.Background()
+	s.UpsertDevice(Device{Interface: "HmIP-RF", Address: "MP3P", Model: "HmIP-MP3P", VoltageDP: "0/OPERATING_VOLTAGE", FirstSeen: 1, LastSeen: 1})
+	if err := s.SetOnSupply(ctx, "HmIP-RF", "MP3P", true, 42); err != nil {
+		t.Fatal(err)
+	}
+	if err := s.SetIgnored(ctx, "HmIP-RF", "MP3P", true, 7); err != nil {
+		t.Fatal(err)
+	}
+	// UpsertDevice leaves it alone
+	s.UpsertDevice(Device{Interface: "HmIP-RF", Address: "MP3P", Model: "HmIP-MP3P", VoltageDP: "0/OPERATING_VOLTAGE", FirstSeen: 1, LastSeen: 2})
+	s.Flush()
+	sup, err := s.OnSupply(ctx)
+	if err != nil || len(sup) != 1 || sup["HmIP-RF.MP3P"] != 42 {
+		t.Fatalf("%v %v", sup, err)
+	}
+	if devs, _ := s.Devices(ctx); len(devs) != 1 || devs[0].OnSupply != 42 || !devs[0].Ignored {
+		t.Fatalf("%+v", devs)
+	}
+	if err := s.SetOnSupply(ctx, "HmIP-RF", "MP3P", false, 0); err != nil {
+		t.Fatal(err)
+	}
+	if devs, _ := s.Devices(ctx); devs[0].OnSupply != 0 || !devs[0].Ignored {
+		t.Fatalf("%+v", devs)
+	}
+}

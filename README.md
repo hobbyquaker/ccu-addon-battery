@@ -86,8 +86,13 @@ zurück (*Wieder überwachen*).
 Ein Klick auf den Namen öffnet das Gerät: Batterien, Spannung, die Schwellen für frisch und leer,
 die Haltedauern und der Spannungsverlauf über die ganze Aufzeichnung, mit den Wechseln als Marken
 und den Batterie-leer-Phasen als Bändern. Ein Modell, das mit Batterien oder an einem Netzteil
-läuft (etwa der Kombisignalgeber HmIP-MP3P), hat hier die Wahl *Stromversorgung: Batterien /
-Netzteil*; am Netzteil gibt es keine Vorhersage und keine Wechselerkennung. *Nicht überwachen*
+läuft (etwa der Kombisignalgeber HmIP-MP3P), hat hier die Wahl *Stromversorgung: Automatisch /
+Batterien / Netzteil*; am Netzteil gibt es keine Vorhersage und keine Wechselerkennung.
+*Automatisch* (die Voreinstellung) erkennt es an der Spannung: ab 4,9 V – mehr, als die Batterien
+liefern – oder mit dem Spannungsstatus OVERFLOW, eine Stunde lang gemeldet, gilt das Gerät als am
+Netzteil, und die Seite sagt, dass es automatisch erkannt wurde; eine Stunde lang zurück im
+Bereich der Batterien gilt es wieder als batteriebetrieben. Ein einzelner Ausreißer ändert
+nichts. *Nicht überwachen*
 gibt es auch hier. Darunter alle gebuchten Wechsel des Geräts, jeder
 bearbeitbar und löschbar; hier die übernommenen mit ihrer Herkunft in der Notiz.
 

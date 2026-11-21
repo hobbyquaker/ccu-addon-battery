@@ -202,7 +202,7 @@ func (s *Service) devLocked(ctx context.Context, d store.Device) *dev {
 	if d.Model != "" {
 		x.d.Model, x.d.Firmware = d.Model, d.Firmware
 	}
-	x.d.Ignored = d.Ignored
+	x.d.Ignored, x.d.OnSupply = d.Ignored, d.OnSupply
 	if d.VoltageDP != x.d.VoltageDP || d.LowBatDP != x.d.LowBatDP {
 		x.d.VoltageDP, x.d.LowBatDP = d.VoltageDP, d.LowBatDP
 	}
@@ -225,10 +225,11 @@ func (s *Service) readDeviceOverride(ctx context.Context, iface, address string)
 	return &o
 }
 
-// seen is what the table's guess may use of a device: its highest voltage, and whether it reports
-// a voltage without any low-battery flag (a mains actuator).
+// seen is what the profile may use of a device: its highest voltage, whether it reports a
+// voltage without any low-battery flag (a mains actuator), and whether the recorder found it on
+// its power supply by its voltage (a battery-or-dc device).
 func seen(d store.Device, maxV float64) batteries.Seen {
-	return batteries.Seen{MaxV: maxV, NoLowBat: d.VoltageDP != "" && d.LowBatDP == ""}
+	return batteries.Seen{MaxV: maxV, NoLowBat: d.VoltageDP != "" && d.LowBatDP == "", OnSupply: d.OnSupply > 0}
 }
 
 func (s *Service) applyProfileLocked(x *dev) {

@@ -48,6 +48,10 @@ export interface Profile {
     outdoor?: boolean;
     life_years?: number;
     confidence?: string;
+    /** The power was detected automatically: a battery-or-dc device found on its power supply by its voltage. */
+    auto?: boolean;
+    /** The table row's power before the overrides. */
+    table_power?: string;
 }
 
 export interface Evidence {

@@ -119,16 +119,22 @@
         loadOverride();
     });
 
-    const onSupply = $derived(override?.power === 'external');
+    // the power supply choice: automatic (no power in the override: the addon tells it by the
+    // voltage), batteries or the power supply unit (the override's power, which wins)
+    type Supply = 'auto' | 'batteries' | 'external';
+    const supply = $derived<Supply>(override?.power === 'external' ? 'external' : override?.power === 'battery' ? 'batteries' : 'auto');
     // the switch is offered where the model can run either way (the table's battery-or-dc), and
-    // wherever the user set it already
-    const supplyChoice = $derived(device.profile?.power === 'battery-or-dc' || onSupply);
+    // wherever the user set it to the supply already
+    const supplyChoice = $derived(device.profile?.table_power === 'battery-or-dc' || device.profile?.power === 'battery-or-dc' || device.profile?.auto || supply === 'external');
+    // what the automatic choice found: on the supply (the profile went external by the voltage)
+    const autoOnSupply = $derived(!!device.profile?.auto);
 
-    async function setSupply(external: boolean) {
+    async function setSupply(choice: Supply) {
         busy = true;
         try {
             const next: Override = {...(override ?? {})};
-            if (external) next.power = 'external';
+            if (choice === 'external') next.power = 'external';
+            else if (choice === 'batteries') next.power = 'battery';
             else delete next.power;
             if (Object.keys(next).length === 0) await del(`${devPath}/override`);
             else await put(`${devPath}/override`, next);
@@ -208,10 +214,14 @@
             {#if supplyChoice}
                 <dt>{t('supply.label')}</dt>
                 <dd>
-                    <select data-testid="supply" title={t('supply.title')} value={onSupply ? 'external' : 'batteries'} disabled={busy} onchange={(e) => setSupply(e.currentTarget.value === 'external')}>
+                    <select data-testid="supply" title={t('supply.title')} value={supply} disabled={busy} onchange={(e) => setSupply(e.currentTarget.value as Supply)}>
+                        <option value="auto">{t(autoOnSupply ? 'supply.auto.external' : 'supply.auto.batteries')}</option>
                         <option value="batteries">{t('supply.batteries')}</option>
                         <option value="external">{t('supply.external')}</option>
                     </select>
+                    {#if supply === 'auto' && autoOnSupply}
+                        <span class="bat-muted" data-testid="supply-auto">{t('supply.detected')}</span>
+                    {/if}
                 </dd>
             {/if}
             {#if device.ignored}

@@ -363,9 +363,15 @@ export const MESSAGES: Catalogue = {
     'supply.label': {de: 'Stromversorgung', en: 'Power supply'},
     'supply.batteries': {de: 'Batterien', en: 'Batteries'},
     'supply.external': {de: 'Netzteil', en: 'Power supply unit'},
+    'supply.auto.batteries': {de: 'Automatisch (Batterien)', en: 'Automatic (batteries)'},
+    'supply.auto.external': {de: 'Automatisch (Netzteil)', en: 'Automatic (power supply unit)'},
+    'supply.detected': {
+        de: 'Netzteil automatisch erkannt: die Spannung liegt über dem, was Batterien liefern.',
+        en: 'Power supply unit detected automatically: the voltage is above what batteries give.',
+    },
     'supply.title': {
-        de: 'Dieses Modell läuft mit Batterien oder an einem Netzteil. Am Netzteil gibt es keine Batterie zu überwachen: keine Vorhersage und keine Wechselerkennung.',
-        en: 'This model runs on batteries or on a power supply unit. On a power supply there is no battery to watch: no forecast and no change detection.',
+        de: 'Dieses Modell läuft mit Batterien oder an einem Netzteil. Automatisch: eine Spannung ab 4,9 V (mehr als Batterien liefern) oder der Spannungsstatus OVERFLOW, eine Stunde lang gemeldet, gilt als Netzteil; zurück im Bereich der Batterien gilt es wieder als batteriebetrieben. Am Netzteil gibt es keine Batterie zu überwachen: keine Vorhersage und keine Wechselerkennung.',
+        en: 'This model runs on batteries or on a power supply unit. Automatic: a voltage of 4.9 V or more (more than batteries give) or the voltage status OVERFLOW, reported for an hour, counts as the power supply; back in the batteries\' range it counts as battery-powered again. On a power supply there is no battery to watch: no forecast and no change detection.',
     },
     'supply.saved': {de: 'Gespeichert.', en: 'Saved.'},
     'inbox.title': {de: 'Erkannte Batteriewechsel', en: 'Detected battery changes'},

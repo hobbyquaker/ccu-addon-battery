@@ -434,6 +434,10 @@ type Device struct {
 	// Ignored: the user switched the device's monitoring off ("do not monitor"); kept in the
 	// meta table (IgnoredKey), never written by UpsertDevice.
 	Ignored bool `json:"ignored,omitempty"`
+	// OnSupply: a device that runs on batteries or a power supply unit (battery-or-dc) was
+	// found on its supply by its voltage, since when (Unix ms; 0: on its batteries). Kept in the
+	// meta table (SupplyKey), never written by UpsertDevice.
+	OnSupply int64 `json:"on_supply,omitempty"`
 }
 
 // Current is one row of current: the last values of a device.
@@ -653,8 +657,14 @@ func (s *Store) Devices(ctx context.Context) ([]Device, error) {
 	if err != nil {
 		return nil, err
 	}
+	sup, err := s.OnSupply(ctx)
+	if err != nil {
+		return nil, err
+	}
 	for i := range out {
-		_, out[i].Ignored = ign[out[i].Interface+"."+out[i].Address]
+		k := out[i].Interface + "." + out[i].Address
+		_, out[i].Ignored = ign[k]
+		out[i].OnSupply = sup[k]
 	}
 	return out, nil
 }
@@ -667,11 +677,38 @@ func IgnoredKey(iface, address string) string { return "ignored/" + iface + "/" 
 // Ignored answers the devices the user does not monitor, by interface + "." + address, with
 // since when.
 func (s *Store) Ignored(ctx context.Context) (map[string]int64, error) {
+	return s.deviceMeta(ctx, "ignored/")
+}
+
+// SetIgnored switches a device's monitoring off (on true, since at) or back on.
+func (s *Store) SetIgnored(ctx context.Context, iface, address string, on bool, at int64) error {
+	return s.setDeviceMeta(ctx, IgnoredKey(iface, address), on, at)
+}
+
+// SupplyKey is the meta key that marks a battery-or-dc device as found on its power supply by
+// its voltage; its value is since when (Unix ms). A row in meta like IgnoredKey.
+func SupplyKey(iface, address string) string { return "supply/" + iface + "/" + address }
+
+// OnSupply answers the devices found on their power supply by their voltage, by interface + "."
+// + address, with since when.
+func (s *Store) OnSupply(ctx context.Context) (map[string]int64, error) {
+	return s.deviceMeta(ctx, "supply/")
+}
+
+// SetOnSupply records a device as found on its power supply (on true, since at) or back on its
+// batteries.
+func (s *Store) SetOnSupply(ctx context.Context, iface, address string, on bool, at int64) error {
+	return s.setDeviceMeta(ctx, SupplyKey(iface, address), on, at)
+}
+
+// deviceMeta reads the per-device meta rows under prefix ("<prefix><iface>/<address>" = Unix ms),
+// by interface + "." + address.
+func (s *Store) deviceMeta(ctx context.Context, prefix string) (map[string]int64, error) {
 	db, err := s.reader()
 	if err != nil {
 		return nil, err
 	}
-	rows, err := db.QueryContext(ctx, `SELECT key, value FROM meta WHERE key LIKE 'ignored/%'`)
+	rows, err := db.QueryContext(ctx, `SELECT key, value FROM meta WHERE key LIKE ?`, prefix+"%")
 	if err != nil {
 		return nil, err
 	}
@@ -682,7 +719,7 @@ func (s *Store) Ignored(ctx context.Context) (map[string]int64, error) {
 		if err := rows.Scan(&k, &v); err != nil {
 			return nil, err
 		}
-		iface, address, ok := strings.Cut(strings.TrimPrefix(k, "ignored/"), "/")
+		iface, address, ok := strings.Cut(strings.TrimPrefix(k, prefix), "/")
 		if !ok {
 			continue
 		}
@@ -692,14 +729,15 @@ func (s *Store) Ignored(ctx context.Context) (map[string]int64, error) {
 	return out, rows.Err()
 }
 
-// SetIgnored switches a device's monitoring off (on true, since at) or back on.
-func (s *Store) SetIgnored(ctx context.Context, iface, address string, on bool, at int64) error {
+// setDeviceMeta writes (on, since at; an existing row keeps its time) or deletes a per-device
+// meta row.
+func (s *Store) setDeviceMeta(ctx context.Context, key string, on bool, at int64) error {
 	return s.Write(ctx, func(tx *sql.Tx) error {
 		if !on {
-			_, err := tx.Exec(`DELETE FROM meta WHERE key = ?`, IgnoredKey(iface, address))
+			_, err := tx.Exec(`DELETE FROM meta WHERE key = ?`, key)
 			return err
 		}
-		_, err := tx.Exec(`INSERT INTO meta (key, value) VALUES (?, ?) ON CONFLICT(key) DO NOTHING`, IgnoredKey(iface, address), strconv.FormatInt(at, 10))
+		_, err := tx.Exec(`INSERT INTO meta (key, value) VALUES (?, ?) ON CONFLICT(key) DO NOTHING`, key, strconv.FormatInt(at, 10))
 		return err
 	})
 }

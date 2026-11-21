@@ -191,6 +191,12 @@ type Profile struct {
 	Outdoor    bool    `json:"outdoor,omitempty"`
 	LifeYears  float64 `json:"life_years,omitempty"`
 	Confidence string  `json:"confidence,omitempty"`
+	// Auto: the power was detected automatically - a battery-or-dc device found on its power
+	// supply by its voltage (Seen.OnSupply) is external.
+	Auto bool `json:"auto,omitempty"`
+	// TablePower is the table row's power, before the overrides ("" without a row): the device
+	// page offers the power supply choice for battery-or-dc.
+	TablePower string `json:"table_power,omitempty"`
 }
 
 // Detects says whether the detector runs for the device at all: not for mains, bus, host or
@@ -216,7 +222,15 @@ type Seen struct {
 	// HmIP battery device has LOW_BAT; a mains actuator (HmIP-BSM, HmIP-BS2, their ELV kits)
 	// reports OPERATING_VOLTAGE without it.
 	NoLowBat bool
+	// OnSupply: a device that runs on batteries or a power supply unit (battery-or-dc) was found
+	// on its supply by its voltage (SupplyMinV held, or OPERATING_VOLTAGE_STATUS OVERFLOW). It
+	// makes such a profile external, unless an override named the power.
+	OnSupply bool
 }
+
+// SupplyMinV is the voltage from which a battery-or-dc device is on its power supply: above what
+// its cells can give (3x C alkaline, the HmIP-MP3P, fresh at most ~4.8 V), below its 5 V supply.
+const SupplyMinV = 4.9
 
 // The voltages a guess of 1 to 3 alkaline cells accepts: a reading outside is no battery pack
 // (a supply, a meter's mains reading, a fault) and guesses nothing.
@@ -243,6 +257,7 @@ func (t *Table) ResolveSeen(model string, modelOv, devOv *Override, seen Seen) P
 	var lowLimit, fresh float64
 	if m, key, ok := t.Lookup(model); ok {
 		p.Source, p.Model, p.Power, p.Outdoor, p.LifeYears, p.Confidence = "table", key, m.Power, m.Outdoor, m.LifeYears, m.Confidence
+		p.TablePower = m.Power
 		p.Slots = append(p.Slots, m.Slots...)
 		if m.Voltage != nil {
 			lowLimit, fresh = m.Voltage.Low, m.Voltage.Fresh
@@ -282,6 +297,9 @@ func (t *Table) ResolveSeen(model string, modelOv, devOv *Override, seen Seen) P
 		if p.Power == "unknown" && len(p.Slots) > 0 {
 			p.Power = "battery"
 		}
+	}
+	if p.Power == "battery-or-dc" && seen.OnSupply {
+		p.Power, p.Auto = "external", true
 	}
 	if p.Source == "none" && seen.NoLowBat {
 		p.Source, p.Power, p.Confidence = "datapoints", "mains", "assumed"

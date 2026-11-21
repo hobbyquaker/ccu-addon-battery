@@ -82,8 +82,12 @@ readings are still recorded, and *Ignorierte anzeigen* (Show ignored) brings it 
 A click on the name opens the device: batteries, voltage, the fresh and empty thresholds, the
 battery lives and the voltage curve over the whole record, with the changes as marks and the
 low-battery phases as bands. A model that runs on batteries or on a power supply unit (the
-HmIP-MP3P sounder, say) offers *Stromversorgung: Batterien / Netzteil* (power supply: batteries /
-power supply unit) here; on a power supply there is no forecast and no change detection. *Do not
+HmIP-MP3P sounder, say) offers *Stromversorgung: Automatisch / Batterien / Netzteil* (power supply:
+automatic / batteries / power supply unit) here; on a power supply there is no forecast and no
+change detection. *Automatic* (the default) tells it by the voltage: 4.9 V or more - above what the
+cells give - or the voltage status OVERFLOW, held for an hour, is the power supply unit, and the
+page says it was detected automatically; back in the cells' range for an hour it is batteries
+again. A single outlier changes nothing. *Do not
 monitor* is here as well. Below it every recorded change of the device, each editable and
 deletable; here the imported ones, their origin in the note.
 

@@ -105,6 +105,9 @@ type device struct {
 	dirty   bool
 	// flap is the voltage change waiting for FlapHold before it is recorded (nil: none)
 	flap *flap
+	// supplySince is when the reports began to say the other power source than the one in force
+	// (SupplyHold; 0: they agree)
+	supplySince int64
 }
 
 // CurrentRefresh is how long a device's current row may lag behind in its timestamps alone
@@ -480,7 +483,7 @@ func (r *Recorder) learnDevices(ctx context.Context, only []string) (added int, 
 				ex = &device{cur: store.Current{Interface: iface.Name, Address: d.Address}}
 				r.devs[k] = ex
 			} else {
-				dev.FirstSeen, dev.Ignored = ex.FirstSeen, ex.Ignored
+				dev.FirstSeen, dev.Ignored, dev.OnSupply = ex.FirstSeen, ex.Ignored, ex.OnSupply
 				if ex.Power != "unknown" {
 					dev.Power = ex.Power
 				}
@@ -676,7 +679,7 @@ func (r *Recorder) apply(e litesource.Event, live bool) {
 	}
 	cur := &d.cur
 	changed := false
-	var sample bool
+	var sample, supply bool
 	obs := detect.Obs{TS: ms, Seed: !live}
 	switch e.Key {
 	case "OPERATING_VOLTAGE", "BATTERY_STATE":
@@ -694,10 +697,11 @@ func (r *Recorder) apply(e litesource.Event, live bool) {
 		// waits like the timestamps (CurrentRefresh)
 		vv := v
 		cur.Voltage, cur.VoltageTS = &vv, ms
-		sample = true
+		sample, supply = true, e.Key == "OPERATING_VOLTAGE"
 		ov := v
 		obs.Voltage = &ov
 	case "OPERATING_VOLTAGE_STATUS":
+		supply = true
 		s := statusName(e)
 		if s != cur.VoltageStatus {
 			cur.VoltageStatus = s
@@ -765,6 +769,9 @@ func (r *Recorder) apply(e litesource.Event, live bool) {
 	if ms > cur.LastReport {
 		cur.LastReport = ms
 	}
+	if supply {
+		r.supplyLocked(d, ms)
+	}
 	wrote := false
 	if sample && cur.Voltage != nil || sample && e.Key != "OPERATING_VOLTAGE" && e.Key != "BATTERY_STATE" && d.VoltageDP == "" {
 		wrote = r.maybeSample(key, d, ms, live)
@@ -783,6 +790,70 @@ func (r *Recorder) apply(e litesource.Event, live bool) {
 	if r.o.Observer != nil && (obs.Voltage != nil || obs.LowBat != nil || obs.Unreach != nil || obs.Booted != nil) {
 		r.o.Observer.Observe(ctx, dev, obs)
 	}
+}
+
+// Power supply detection. A device that runs on batteries or a power supply unit (the table's
+// battery-or-dc, the HmIP-MP3P) has no datapoint that says which, but on its 5 V supply it reports
+// an OPERATING_VOLTAGE no cells of it can give (batteries.SupplyMinV, 4.9 V), or the status
+// OVERFLOW. Once its reports say so for SupplyHold - the first such report and one at least that
+// long after it, none in between saying otherwise - it is on its supply (store.Device.OnSupply,
+// kept over a restart): its profile is external, so no forecast, no shopping entry and no
+// detection, as with the manual choice. Reports back in the cells' range for SupplyHold switch it
+// back. A single spike does neither. An override that names the power (the device page's
+// "Batteries" or "Power supply unit") wins: the detected state applies only while the choice is
+// automatic.
+const SupplyHold = time.Hour
+
+// supplyLocked takes one voltage or voltage-status report of a battery-or-dc device at ms (the
+// caller holds the lock).
+func (r *Recorder) supplyLocked(d *device, ms int64) {
+	// the state is followed while an override names the power too, so going back to the automatic
+	// choice finds it current
+	if d.profile.TablePower != "battery-or-dc" && d.profile.Power != "battery-or-dc" && !d.profile.Auto {
+		d.supplySince = 0
+		return
+	}
+	high := d.cur.VoltageStatus == "OVERFLOW" || d.cur.Voltage != nil && *d.cur.Voltage >= batteries.SupplyMinV-1e-9
+	if high == (d.OnSupply > 0) {
+		d.supplySince = 0
+		return
+	}
+	if d.supplySince == 0 || ms < d.supplySince {
+		d.supplySince = ms
+		return
+	}
+	if ms-d.supplySince < SupplyHold.Milliseconds() {
+		return
+	}
+	since := d.supplySince
+	if err := r.o.Store.SetOnSupply(r.ctx, d.Interface, d.Address, high, since); err != nil {
+		r.logf("recorder: %s %s: the power supply detection is not saved: %v", d.Interface, d.Address, err)
+		return
+	}
+	d.supplySince = 0
+	if high {
+		d.OnSupply = since
+		r.logf("recorder: %s %s (%s): on its power supply (voltage %s, status %s), detected automatically", d.Interface, d.Address, d.Model, voltageText(d.cur.Voltage), orDash(d.cur.VoltageStatus))
+	} else {
+		d.OnSupply = 0
+		r.logf("recorder: %s %s (%s): back on its batteries (voltage %s), detected automatically", d.Interface, d.Address, d.Model, voltageText(d.cur.Voltage))
+	}
+	r.profileLocked(r.ctx, d, false)
+	r.o.Store.UpsertDevice(d.Device)
+}
+
+func orDash(s string) string {
+	if s == "" {
+		return "-"
+	}
+	return s
+}
+
+func voltageText(v *float64) string {
+	if v == nil {
+		return "-"
+	}
+	return strconv.FormatFloat(*v, 'f', 2, 64) + " V"
 }
 
 func statusName(e litesource.Event) string {

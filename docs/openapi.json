@@ -110,6 +110,14 @@
      },
      "confidence": {
       "type": "string"
+     },
+     "auto": {
+      "type": "boolean",
+      "description": "the power was detected automatically: a battery-or-dc model found on its power supply by its voltage (OPERATING_VOLTAGE of 4.9 V or more, or OPERATING_VOLTAGE_STATUS OVERFLOW, for an hour) is external; absent otherwise. Applies only while no override names the power"
+     },
+     "table_power": {
+      "type": "string",
+      "description": "the table row's power before the overrides; absent without a row"
      }
     }
    },

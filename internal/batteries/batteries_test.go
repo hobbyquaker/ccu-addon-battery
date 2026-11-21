@@ -181,6 +181,23 @@ func TestELVTwinsAndMP3P(t *testing.T) {
 	if p := tb.Resolve("HmIP-MP3P", nil, &Override{Power: "external"}, 0); p.Detects() {
 		t.Errorf("HmIP-MP3P on its supply: %+v", p)
 	}
+	// found on its supply by its voltage: external, automatic; an override that names the
+	// power wins; a model that is not battery-or-dc ignores it
+	if p := tb.ResolveSeen("HmIP-MP3P", nil, nil, Seen{MaxV: 5, OnSupply: true}); p.Power != "external" || !p.Auto || p.Detects() || p.TablePower != "battery-or-dc" {
+		t.Errorf("HmIP-MP3P detected on its supply: %+v", p)
+	}
+	if p := tb.ResolveSeen("HmIP-MP3P", nil, &Override{Power: "battery"}, Seen{OnSupply: true}); p.Power != "battery" || p.Auto || !p.Detects() {
+		t.Errorf("HmIP-MP3P set to batteries: %+v", p)
+	}
+	if p := tb.ResolveSeen("HmIP-MP3P", nil, &Override{Power: "external"}, Seen{OnSupply: true}); p.Power != "external" || p.Auto {
+		t.Errorf("HmIP-MP3P set to its supply: %+v", p)
+	}
+	if p := tb.ResolveSeen("HmIP-MP3P", nil, &Override{Slots: []Slot{{Count: 3, Type: "C"}}}, Seen{OnSupply: true}); p.Power != "external" || !p.Auto {
+		t.Errorf("HmIP-MP3P with its slots overridden: %+v", p)
+	}
+	if p := tb.ResolveSeen("HmIP-WRC2", nil, nil, Seen{OnSupply: true}); p.Power != "battery" || p.Auto {
+		t.Errorf("HmIP-WRC2: %+v", p)
+	}
 }
 
 // A model the table lacks: a device that reports a voltage but no low-battery flag is a mains
