@@ -173,10 +173,11 @@ see every report as it comes. The low-battery and unreachable transitions and `B
 
 ## Which batteries a device takes
 
-[data/batteries.json](data/README.md) is a table of 459 Homematic models: the power source
+[data/batteries.json](data/README.md) is a table of 454 Homematic models: the power source
 (battery, rechargeable, mains, bus, …), the battery slots (count and type), the voltage datapoint,
 the device's own low-battery threshold, and the sources every row stands on - for most battery
-models eQ-3's own product pages and manuals. The data is CC0: take it for any project. The addon
+models eQ-3's own product pages and manuals; a model that neither the manufacturer nor a freely licensed table
+names is shown as *unknown* instead of guessed. The data is CC0: take it for any project. The addon
 embeds it, looks models up case-insensitively (and by their aliases), and lets you correct it
 per model or per device (a remote in a desk stand, lithium or rechargeable cells). Corrections to
 the table are welcome as pull requests; `python3 data/check.py` checks it (CI runs it), and

@@ -39,6 +39,9 @@ SOURCES = {
                    "license": "facts from the manufacturer's manual; the supply line is quoted", "kind": "manufacturer", "read": TODAY},
     "elv-manual": {"name": "eQ-3 manual or datasheet as hosted by ELV (media.elv.com)", "url": "https://de.elv.com",
                    "license": "facts from the manufacturer's manual; the supply line is quoted", "kind": "manufacturer", "read": TODAY},
+    "elv-journal": {"name": "ELVjournal construction article of the kit (ELV, media.elv.com), 'Technische Daten'", "url": "https://de.elv.com",
+                    "license": "facts from the kit's technical data; the supply line is quoted", "kind": "manufacturer", "read": "2026-11-21",
+                    "note": "ELV develops and sells eQ-3's Homematic kits; the article is the kit's construction manual"},
     "battery-notes": {"name": "Home Assistant Battery Notes, library/library.json", "url": "https://github.com/andrew-codechimp/HA-Battery-Notes/blob/main/library/library.json",
                       "license": "MIT (Copyright (c) 2023-2025 Andrew Jackson)", "kind": "prior-art", "read": TODAY, "note": "commit ef1809cc, 2026-10-26"},
     "aiohomematic": {"name": "aiohomematic, aiohomematic/model/calculated/operating_voltage_level.py (_BATTERY_DATA)", "url": "https://github.com/SukramJ/aiohomematic/blob/main/aiohomematic/model/calculated/operating_voltage_level.py",
@@ -200,7 +203,11 @@ for u, v in prior.items():
     if lic_agree >= 2 and len(counts) == 1: row["confidence"] = "prior-art"
     elif lic_agree >= 2: row["confidence"] = "prior-art"; row["note"] = "prior art disagrees: " + ", ".join(f"{c['id']} {c['says']}" for c in cites if prior_norm(c["says"]) != best)
     elif lic_agree == 1: row["confidence"] = "single-source"
-    else: row["confidence"] = "assumed"; row["note"] = "only the unlicensed ioBroker script names it; re-derive from the manual"
+    else:
+        # only the unlicensed ioBroker script names it: no row (the model is unknown to the
+        # addon) - its word is a cross-check, never a battery or mains claim of its own. A mains
+        # actuator still gets its row from the classification by name below (3b).
+        continue
     models[key_for(pnames.get(u, u).replace(" ", "_"))] = row
 
 

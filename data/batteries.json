@@ -2,7 +2,7 @@
  "$schema": "./batteries.schema.json",
  "version": 1,
  "license": "CC0-1.0",
- "updated": "2026-10-27",
+ "updated": "2026-11-21",
  "sources": {
   "eq3-site": {
    "name": "homematic-ip.com product pages (eQ-3 AG), field 'Versorgungsspannung'",
@@ -24,6 +24,14 @@
    "license": "facts from the manufacturer's manual; the supply line is quoted",
    "kind": "manufacturer",
    "read": "2026-10-27"
+  },
+  "elv-journal": {
+   "name": "ELVjournal construction article of the kit (ELV, media.elv.com), 'Technische Daten'",
+   "url": "https://de.elv.com",
+   "license": "facts from the kit's technical data; the supply line is quoted",
+   "kind": "manufacturer",
+   "read": "2026-11-21",
+   "note": "ELV develops and sells eQ-3's Homematic kits; the article is the kit's construction manual"
   },
   "battery-notes": {
    "name": "Home Assistant Battery Notes, library/library.json",
@@ -215,24 +223,6 @@
   }
  },
  "models": {
-  "ALPHA-IP-RBG": {
-   "power": "battery",
-   "family": "HmIP-RF",
-   "slots": [
-    {
-     "count": 2,
-     "type": "AAA"
-    }
-   ],
-   "confidence": "assumed",
-   "note": "only the unlicensed ioBroker script names it; re-derive from the manual",
-   "sources": [
-    {
-     "id": "iobroker-servicemeldungen",
-     "says": "2x AAA"
-    }
-   ]
-  },
   "ELV-SH-CTH": {
    "power": "battery",
    "family": "HmIP-RF",
@@ -1133,16 +1123,21 @@
   "HM-LC-RGBW-WM": {
    "power": "mains",
    "family": "BidCos-RF",
-   "confidence": "assumed",
-   "note": "only the unlicensed ioBroker script names it; re-derive from the manual",
+   "confidence": "manufacturer",
+   "note": "an external DC supply",
    "sources": [
     {
-     "id": "iobroker-servicemeldungen",
-     "says": "mains"
+     "id": "elv-manual",
+     "url": "https://media.elv.com/file/141952_rgbw_controller_um.pdf",
+     "quote": "Versorgungsspannung: 12V-24VDC"
     },
     {
      "id": "corpus",
      "says": "LOWBAT"
+    },
+    {
+     "id": "iobroker-servicemeldungen",
+     "says": "mains"
     }
    ]
   },
@@ -1166,32 +1161,41 @@
   "HM-LC-Sw1-DR": {
    "power": "mains",
    "family": "BidCos-RF",
-   "confidence": "assumed",
-   "note": "only the unlicensed ioBroker script names it; re-derive from the manual",
+   "confidence": "manufacturer",
    "sources": [
     {
-     "id": "iobroker-servicemeldungen",
-     "says": "mains"
+     "id": "eq3-manual",
+     "url": "https://www.eq-3.de/downloads/download/homematic/bda/hm-lc-sw1-dr_um_ge_eq-3_web.pdf",
+     "quote": "Supply voltage: 230 V/50 Hz"
     },
     {
      "id": "corpus",
      "says": "LOWBAT"
+    },
+    {
+     "id": "iobroker-servicemeldungen",
+     "says": "mains"
     }
    ]
   },
   "HM-LC-Sw1-FM": {
    "power": "mains",
    "family": "BidCos-RF",
-   "confidence": "assumed",
-   "note": "only the unlicensed ioBroker script names it; re-derive from the manual",
+   "confidence": "manufacturer",
+   "note": "the manual covers HM-LC-Sw1-FM and HM-LC-Sw2-FM",
    "sources": [
     {
-     "id": "iobroker-servicemeldungen",
-     "says": "mains"
+     "id": "eq3-manual",
+     "url": "https://www.eq-3.de/downloads/download/homematic/bda/HM-LC-Sw1-FM_UM_GE_eQ-3_web.pdf",
+     "quote": "Versorgungsspannung: 230 V/50 Hz"
     },
     {
      "id": "corpus",
      "says": "LOWBAT"
+    },
+    {
+     "id": "iobroker-servicemeldungen",
+     "says": "mains"
     }
    ]
   },
@@ -1220,9 +1224,14 @@
   "HM-LC-Sw1-PCB": {
    "power": "mains",
    "family": "BidCos-RF",
-   "confidence": "assumed",
-   "note": "only the unlicensed ioBroker script names it; re-derive from the manual",
+   "confidence": "manufacturer",
+   "note": "an external DC supply",
    "sources": [
+    {
+     "id": "elv-journal",
+     "url": "https://media.elv.com/file/150138_hm_lc_sw1_pcb.pdf",
+     "quote": "Versorgungsspannung: 5–25 VDC"
+    },
     {
      "id": "iobroker-servicemeldungen",
      "says": "mains"
@@ -1233,15 +1242,18 @@
    "power": "mains",
    "family": "BidCos-RF",
    "confidence": "assumed",
-   "note": "only the unlicensed ioBroker script names it; re-derive from the manual",
    "sources": [
     {
-     "id": "iobroker-servicemeldungen",
-     "says": "mains"
+     "id": "classification",
+     "says": "mains actuator by model and description: Wireless Switch Actuator 1-channel, plug-in (no manual found)"
     },
     {
      "id": "corpus",
      "says": "LOWBAT"
+    },
+    {
+     "id": "iobroker-servicemeldungen",
+     "says": "mains"
     }
    ]
   },
@@ -1249,15 +1261,18 @@
    "power": "mains",
    "family": "BidCos-RF",
    "confidence": "assumed",
-   "note": "only the unlicensed ioBroker script names it; re-derive from the manual",
    "sources": [
     {
-     "id": "iobroker-servicemeldungen",
-     "says": "mains"
+     "id": "classification",
+     "says": "mains actuator by model and description: Wireless Switch Actuator 1-channel, plug-in (no manual found)"
     },
     {
      "id": "corpus",
      "says": "LOWBAT"
+    },
+    {
+     "id": "iobroker-servicemeldungen",
+     "says": "mains"
     }
    ]
   },
@@ -1275,16 +1290,21 @@
   "HM-LC-Sw1-Pl-CT-R1": {
    "power": "mains",
    "family": "BidCos-RF",
-   "confidence": "assumed",
-   "note": "only the unlicensed ioBroker script names it; re-derive from the manual",
+   "confidence": "manufacturer",
+   "note": "the manual names the HM-LC-Sw1-Pl-CT, the type the CCU reports as HM-LC-Sw1-Pl-CT-R1",
    "sources": [
     {
-     "id": "iobroker-servicemeldungen",
-     "says": "mains"
+     "id": "elv-manual",
+     "url": "https://media.elv.com/file/141097_hm-lc-sw1-pl-ct_um_g_150506_um.pdf",
+     "quote": "Versorgungsspannung: 230 V/50 Hz"
     },
     {
      "id": "corpus",
      "says": "LOWBAT"
+    },
+    {
+     "id": "iobroker-servicemeldungen",
+     "says": "mains"
     }
    ]
   },
@@ -1335,9 +1355,13 @@
   "HM-LC-Sw1-Pl-DN-R1": {
    "power": "mains",
    "family": "BidCos-RF",
-   "confidence": "assumed",
-   "note": "only the unlicensed ioBroker script names it; re-derive from the manual",
+   "confidence": "manufacturer",
    "sources": [
+    {
+     "id": "eq3-manual",
+     "url": "https://www.eq-3.de/downloads/download/homematic/bda/hm-lc-sw1-pl-dn-r1_um_gefn_eq-3_web.pdf",
+     "quote": "Supply voltage: 230 V/50 Hz"
+    },
     {
      "id": "iobroker-servicemeldungen",
      "says": "mains"
@@ -1402,9 +1426,13 @@
   "HM-LC-Sw1-SM": {
    "power": "mains",
    "family": "BidCos-RF",
-   "confidence": "assumed",
-   "note": "only the unlicensed ioBroker script names it; re-derive from the manual",
+   "confidence": "manufacturer",
    "sources": [
+    {
+     "id": "eq3-manual",
+     "url": "https://www.eq-3.de/downloads/download/homematic/bda/hm-lc-sw1-sm_um_ge_eq-3_web.pdf",
+     "quote": "Spannungsversorgung: 230 V / 50 Hz"
+    },
     {
      "id": "iobroker-servicemeldungen",
      "says": "mains"
@@ -1436,16 +1464,20 @@
   "HM-LC-Sw1PBU-FM": {
    "power": "mains",
    "family": "BidCos-RF",
-   "confidence": "assumed",
-   "note": "only the unlicensed ioBroker script names it; re-derive from the manual",
+   "confidence": "manufacturer",
    "sources": [
     {
-     "id": "iobroker-servicemeldungen",
-     "says": "mains"
+     "id": "eq3-manual",
+     "url": "https://www.eq-3.de/downloads/download/homematic/bda/hm-lc-sw1pbu-fm_um_ge_eq-3_web.pdf",
+     "quote": "Versorgungsspannung: 230 V/50 Hz"
     },
     {
      "id": "corpus",
      "says": "LOWBAT"
+    },
+    {
+     "id": "iobroker-servicemeldungen",
+     "says": "mains"
     }
    ]
   },
@@ -1474,16 +1506,21 @@
   "HM-LC-Sw2-FM": {
    "power": "mains",
    "family": "BidCos-RF",
-   "confidence": "assumed",
-   "note": "only the unlicensed ioBroker script names it; re-derive from the manual",
+   "confidence": "manufacturer",
+   "note": "the HM-LC-Sw1-FM manual covers HM-LC-Sw2-FM",
    "sources": [
     {
-     "id": "iobroker-servicemeldungen",
-     "says": "mains"
+     "id": "eq3-manual",
+     "url": "https://www.eq-3.de/downloads/download/homematic/bda/HM-LC-Sw1-FM_UM_GE_eQ-3_web.pdf",
+     "quote": "Versorgungsspannung: 230 V/50 Hz"
     },
     {
      "id": "corpus",
      "says": "LOWBAT"
+    },
+    {
+     "id": "iobroker-servicemeldungen",
+     "says": "mains"
     }
    ]
   },
@@ -1523,9 +1560,13 @@
   "HM-LC-Sw2PBU-FM": {
    "power": "mains",
    "family": "BidCos-RF",
-   "confidence": "assumed",
-   "note": "only the unlicensed ioBroker script names it; re-derive from the manual",
+   "confidence": "manufacturer",
    "sources": [
+    {
+     "id": "elv-journal",
+     "url": "https://media.elv.com/file/143198_hm_schaltaktor.pdf",
+     "quote": "Versorgungsspannung: 230 V/50 Hz"
+    },
     {
      "id": "iobroker-servicemeldungen",
      "says": "mains"
@@ -1533,11 +1574,16 @@
    ]
   },
   "HM-LC-Sw4-Ba-PCB": {
-   "power": "mains",
+   "power": "battery-or-dc",
    "family": "BidCos-RF",
-   "confidence": "assumed",
-   "note": "only the unlicensed ioBroker script names it; re-derive from the manual",
+   "confidence": "manufacturer",
+   "note": "a board for batteries of the builder's choice (2-3 V or 4-15 V) or a DC supply; no defined slot. prior art disagrees with the manufacturer: iobroker-servicemeldungen says mains",
    "sources": [
+    {
+     "id": "elv-journal",
+     "url": "https://media.elv.com/file/130557_hm_schaltaktor.pdf",
+     "quote": "Versorgungsspannung: 4–15 VDC/2–3 VDC"
+    },
     {
      "id": "iobroker-servicemeldungen",
      "says": "mains"
@@ -1547,9 +1593,13 @@
   "HM-LC-Sw4-DR": {
    "power": "mains",
    "family": "BidCos-RF",
-   "confidence": "assumed",
-   "note": "only the unlicensed ioBroker script names it; re-derive from the manual",
+   "confidence": "manufacturer",
    "sources": [
+    {
+     "id": "eq3-manual",
+     "url": "https://www.eq-3.de/downloads/download/homematic/bda/hm-lc-sw4-dr_um_ge_eq-3_web.pdf",
+     "quote": "Versorgungsspannung: 230 V/50 Hz"
+    },
     {
      "id": "iobroker-servicemeldungen",
      "says": "mains"
@@ -1559,9 +1609,13 @@
   "HM-LC-Sw4-DR-2": {
    "power": "mains",
    "family": "BidCos-RF",
-   "confidence": "assumed",
-   "note": "only the unlicensed ioBroker script names it; re-derive from the manual",
+   "confidence": "manufacturer",
    "sources": [
+    {
+     "id": "eq3-manual",
+     "url": "https://www.eq-3.de/downloads/download/homematic/bda/HM-LC-Sw4-DR-2_UM_GE_eQ-3_161214.pdf",
+     "quote": "Versorgungsspannung: 230 V/50 Hz"
+    },
     {
      "id": "iobroker-servicemeldungen",
      "says": "mains"
@@ -1569,34 +1623,42 @@
    ]
   },
   "HM-LC-Sw4-PCB": {
-   "power": "battery",
+   "power": "mains",
    "family": "BidCos-RF",
-   "slots": [
-    {
-     "count": 1,
-     "type": "9V"
-    }
-   ],
-   "voltage": null,
-   "confidence": "assumed",
-   "note": "only the unlicensed ioBroker script names it; re-derive from the manual",
+   "confidence": "manufacturer",
+   "note": "an external DC supply (7-15 V); the battery variant is HM-LC-Sw4-Ba-PCB. prior art disagrees with the manufacturer: iobroker-servicemeldungen says 9V",
    "sources": [
     {
-     "id": "iobroker-servicemeldungen",
-     "says": "9V"
+     "id": "elv-manual",
+     "url": "https://media.elv.com/file/76450_hm-lc-sw4-pcb_ge_v1_1.pdf",
+     "quote": "Spannungsversorgung: 7 – 15VDC"
+    },
+    {
+     "id": "elv-journal",
+     "url": "https://media.elv.com/file/75639_hm_lc_sw4_pcb.pdf",
+     "quote": "Spannungsversorgung: 7–15 VDC; Stromaufnahme: Stand-by: 26 mA"
     },
     {
      "id": "corpus",
      "says": "LOWBAT"
+    },
+    {
+     "id": "iobroker-servicemeldungen",
+     "says": "9V"
     }
    ]
   },
   "HM-LC-Sw4-SM": {
    "power": "mains",
    "family": "BidCos-RF",
-   "confidence": "assumed",
-   "note": "only the unlicensed ioBroker script names it; re-derive from the manual",
+   "confidence": "manufacturer",
+   "note": "the surface-mount manual (as hosted by Conrad) covers HM-LC-Sw1-SM, HM-LC-Sw4-SM, HM-LC-Bl1-SM and HM-LC-Dim2L-SM",
    "sources": [
+    {
+     "id": "eq3-manual",
+     "url": "https://asset.conrad.com/media10/add/160267/c1/-/gl/000646390ML02/navodila-za-uporabo-646390-homematic-76795-eq-3-ag-brezzicni-preklopni-aktuator-1-kanalni-nadometna-3680-w.pdf",
+     "quote": "Power supply: 230 V / 50 Hz"
+    },
     {
      "id": "iobroker-servicemeldungen",
      "says": "mains"
@@ -1647,17 +1709,16 @@
    ]
   },
   "HM-MOD-EM-8": {
-   "power": "battery",
+   "power": "battery-or-dc",
    "family": "BidCos-RF",
-   "slots": [
-    {
-     "count": 1,
-     "type": "9V"
-    }
-   ],
-   "confidence": "assumed",
-   "note": "only the unlicensed ioBroker script names it; re-derive from the manual",
+   "confidence": "manufacturer",
+   "note": "a module powered by the builder's circuit: 2 cells (2-3.3 V) or a DC supply (3.5-12 V); no defined slot. prior art disagrees with the manufacturer: iobroker-servicemeldungen says 9V",
    "sources": [
+    {
+     "id": "elv-journal",
+     "url": "https://media.elv.com/file/132939_hm_mod_em_8.pdf",
+     "quote": "Versorgungsspannung: 3,5–12 VDC oder 2–3,3 VDC"
+    },
     {
      "id": "iobroker-servicemeldungen",
      "says": "9V"
@@ -1665,17 +1726,16 @@
    ]
   },
   "HM-MOD-Re-8": {
-   "power": "battery",
+   "power": "battery-or-dc",
    "family": "BidCos-RF",
-   "slots": [
-    {
-     "count": 1,
-     "type": "9V"
-    }
-   ],
-   "confidence": "assumed",
-   "note": "only the unlicensed ioBroker script names it; re-derive from the manual",
+   "confidence": "manufacturer",
+   "note": "a module powered by the builder's circuit: 2 cells (2-3.3 V) or a DC supply (3.5-12 V); no defined slot. prior art disagrees with the manufacturer: iobroker-servicemeldungen says 9V",
    "sources": [
+    {
+     "id": "elv-journal",
+     "url": "https://media.elv.com/file/132143_hm_mod_re_8.pdf",
+     "quote": "Versorgungsspannung: 3,5–12 VDC oder 2–3,3 VDC"
+    },
     {
      "id": "iobroker-servicemeldungen",
      "says": "9V"
@@ -1749,17 +1809,16 @@
    ]
   },
   "HM-OU-CM-PCB": {
-   "power": "battery",
+   "power": "mains",
    "family": "BidCos-RF",
-   "slots": [
-    {
-     "count": 1,
-     "type": "9V"
-    }
-   ],
-   "confidence": "assumed",
-   "note": "only the unlicensed ioBroker script names it; re-derive from the manual",
+   "confidence": "manufacturer",
+   "note": "an external DC supply; article 131480, the number eQ-3's declaration of conformity gives the HM-OU-CM-PCB. prior art disagrees with the manufacturer: iobroker-servicemeldungen says 9V",
    "sources": [
+    {
+     "id": "elv-journal",
+     "url": "https://media.elv.com/file/131480_mp3_modul.pdf",
+     "quote": "Versorgungsspannung: 8–24 VDC"
+    },
     {
      "id": "iobroker-servicemeldungen",
      "says": "9V"
@@ -2014,24 +2073,6 @@
     }
    ]
   },
-  "HM-PBI-2-FM": {
-   "power": "battery",
-   "family": "BidCos-RF",
-   "slots": [
-    {
-     "count": 2,
-     "type": "AAA"
-    }
-   ],
-   "confidence": "assumed",
-   "note": "only the unlicensed ioBroker script names it; re-derive from the manual",
-   "sources": [
-    {
-     "id": "iobroker-servicemeldungen",
-     "says": "2x AAA"
-    }
-   ]
-  },
   "HM-PBI-4-FM": {
    "power": "battery",
    "family": "BidCos-RF",
@@ -2192,29 +2233,6 @@
     {
      "id": "iobroker-servicemeldungen",
      "says": "3x AAA(NiMH)"
-    }
-   ]
-  },
-  "HM-RC-19-SW": {
-   "power": "rechargeable",
-   "family": "BidCos-RF",
-   "slots": [
-    {
-     "count": 1,
-     "type": "pack"
-    }
-   ],
-   "voltage": null,
-   "confidence": "assumed",
-   "note": "only the unlicensed ioBroker script names it; re-derive from the manual",
-   "sources": [
-    {
-     "id": "iobroker-servicemeldungen",
-     "says": "pack"
-    },
-    {
-     "id": "corpus",
-     "says": "LOWBAT"
     }
    ]
   },
@@ -2640,9 +2658,15 @@
      "type": "AAA"
     }
    ],
-   "confidence": "assumed",
-   "note": "only the unlicensed ioBroker script names it; re-derive from the manual",
+   "life_years": 3,
+   "confidence": "manufacturer",
+   "note": "eQ-3's product datasheet (article 130466A0)",
    "sources": [
+    {
+     "id": "elv-manual",
+     "url": "https://media.elv.com/file/130466_data.pdf",
+     "quote": "1x 1,5 V LR03/Micro/AAA"
+    },
     {
      "id": "iobroker-servicemeldungen",
      "says": "1x AAA"
@@ -2737,10 +2761,16 @@
      "type": "AA"
     }
    ],
+   "life_years": 0.5,
    "outdoor": true,
-   "confidence": "assumed",
-   "note": "only the unlicensed ioBroker script names it; re-derive from the manual",
+   "confidence": "manufacturer",
+   "note": "the KeyMatic manual (as hosted by Conrad) covers HM-Sec-Key, HM-Sec-Key-S and HM-Sec-Key-O",
    "sources": [
+    {
+     "id": "eq3-manual",
+     "url": "https://asset.conrad.com/media10/add/160267/c1/-/de/000713363ML01/upute-za-rukovanje-713363-homematic-151137a0-hm-sec-key-keymatic-komplet.pdf",
+     "quote": "Power supply: 3x LR6 (Mignon)"
+    },
     {
      "id": "iobroker-servicemeldungen",
      "says": "3x AA"
@@ -2917,24 +2947,6 @@
     }
    ]
   },
-  "HM-Sec-RHS-2": {
-   "power": "battery",
-   "family": "BidCos-RF",
-   "slots": [
-    {
-     "count": 1,
-     "type": "AAA"
-    }
-   ],
-   "confidence": "assumed",
-   "note": "only the unlicensed ioBroker script names it; re-derive from the manual",
-   "sources": [
-    {
-     "id": "iobroker-servicemeldungen",
-     "says": "1x AAA"
-    }
-   ]
-  },
   "HM-Sec-SC": {
    "power": "battery",
    "family": "BidCos-RF",
@@ -2998,24 +3010,6 @@
      "id": "openhab",
      "says": "2x LR44"
     },
-    {
-     "id": "iobroker-servicemeldungen",
-     "says": "2x LR44"
-    }
-   ]
-  },
-  "HM-Sec-SC2L": {
-   "power": "battery",
-   "family": "BidCos-RF",
-   "slots": [
-    {
-     "count": 2,
-     "type": "LR44"
-    }
-   ],
-   "confidence": "assumed",
-   "note": "only the unlicensed ioBroker script names it; re-derive from the manual",
-   "sources": [
     {
      "id": "iobroker-servicemeldungen",
      "says": "2x LR44"
@@ -3256,16 +3250,20 @@
     }
    ],
    "voltage": null,
-   "confidence": "assumed",
-   "note": "only the unlicensed ioBroker script names it; re-derive from the manual",
+   "confidence": "manufacturer",
    "sources": [
     {
-     "id": "iobroker-servicemeldungen",
-     "says": "2x AA"
+     "id": "elv-journal",
+     "url": "https://media.elv.com/file/83459_hm_sec_wds.pdf",
+     "quote": "Spannungsversorgung: 2 x Mignon 1,5 V"
     },
     {
      "id": "corpus",
      "says": "LOWBAT"
+    },
+    {
+     "id": "iobroker-servicemeldungen",
+     "says": "2x AA"
     }
    ]
   },
@@ -3578,26 +3576,23 @@
    ]
   },
   "HM-Sen-RD-O": {
-   "power": "battery",
+   "power": "mains",
    "family": "BidCos-RF",
-   "slots": [
-    {
-     "count": 1,
-     "type": "9V"
-    }
-   ],
-   "voltage": null,
-   "outdoor": true,
-   "confidence": "assumed",
-   "note": "only the unlicensed ioBroker script names it; re-derive from the manual",
+   "confidence": "manufacturer",
+   "note": "an external power supply (it heats the sensor). prior art disagrees with the manufacturer: iobroker-servicemeldungen says 9V",
    "sources": [
     {
-     "id": "iobroker-servicemeldungen",
-     "says": "9V"
+     "id": "eq3-manual",
+     "url": "https://www.eq-3.de/downloads/download/homematic/bda/hm-sen-rd-o_um_eq-3_ge_web.pdf",
+     "quote": "Supply voltage: 7.5 – 30 VDC"
     },
     {
      "id": "corpus",
      "says": ""
+    },
+    {
+     "id": "iobroker-servicemeldungen",
+     "says": "9V"
     }
    ]
   },
@@ -3664,9 +3659,14 @@
   "HM-Sys-sRP-Pl": {
    "power": "mains",
    "family": "BidCos-RF",
-   "confidence": "assumed",
-   "note": "only the unlicensed ioBroker script names it; re-derive from the manual",
+   "confidence": "manufacturer",
+   "note": "the ELVjournal 2/2012 article on the selective Homematic plug-in repeater (article 103443); it does not print the type name",
    "sources": [
+    {
+     "id": "elv-journal",
+     "url": "https://media.elv.com/file/103443_hm_repeater.pdf",
+     "quote": "Spannungsversorgung: 230 VAC/50 Hz"
+    },
     {
      "id": "iobroker-servicemeldungen",
      "says": "mains"
@@ -3890,9 +3890,13 @@
      "type": "AA"
     }
    ],
-   "confidence": "assumed",
-   "note": "only the unlicensed ioBroker script names it; re-derive from the manual",
+   "confidence": "manufacturer",
    "sources": [
+    {
+     "id": "eq3-manual",
+     "url": "https://www.eq-3.de/Downloads/eq3/downloads_produktkatalog/homematic/bda/HM-WDS30-OT2-SM-2_UM_GE_eQ-3_web.pdf",
+     "quote": "Supply voltage: 2x 1.5 V LR6/mignon/AA"
+    },
     {
      "id": "iobroker-servicemeldungen",
      "says": "2x AA"

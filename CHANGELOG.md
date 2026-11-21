@@ -1,5 +1,19 @@
 # Changelog
 
+## [Unreleased]
+
+- **Every system:** the battery table no longer takes a battery or a mains supply from a source that is only a
+  cross-check. 31 models stood on such a source alone; they were checked against eQ-3's manuals and datasheets and
+  ELV's kit documents, and six were wrong: the **HM-LC-Sw4-PCB** was listed as *1× 9V*, but it runs on an external
+  7–15 V DC supply (its battery sibling is the HM-LC-Sw4-Ba-PCB, which was listed as mains); the HM-MOD-EM-8, the
+  HM-MOD-Re-8 and the HM-OU-CM-PCB were listed as *1× 9V* as well and take an external DC supply or cells of the
+  builder's choice; the HM-Sen-RD-O rain sensor was listed as *1× 9V* and runs on an external 7.5–30 V supply. 24
+  rows now cite the manufacturer's document, two plug-in actuators (HM-LC-Sw1-Pl, HM-LC-Sw1-Pl-2) are mains by their
+  model class, and five models no document could be found for (ALPHA-IP-RBG, HM-PBI-2-FM, HM-RC-19-SW,
+  HM-Sec-RHS-2, HM-Sec-SC2L) are shown as *unknown* instead of a guess (a pull request with the manufacturer's
+  document is welcome). After the update a device that is not battery-powered leaves the battery views; detections of it
+  still waiting in the inbox are dropped, the changes you recorded yourself stay. (forum: Slice)
+
 ## [1.4.0] - 2026-11-21
 
 - **CCU3, OpenCCU, piVCCU:** umlauts in device and room names are shown correctly. The names come from the CCU in its

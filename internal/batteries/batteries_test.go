@@ -1,6 +1,12 @@
 package batteries
 
-import "testing"
+import (
+	"encoding/json"
+	"strings"
+	"testing"
+
+	"github.com/hobbyquaker/ccu-addon-battery/data"
+)
 
 func TestShippedLookup(t *testing.T) {
 	tb := Shipped()
@@ -76,5 +82,67 @@ func TestValidate(t *testing.T) {
 	}
 	if _, err := Parse([]byte(`{`)); err == nil {
 		t.Fatal("broken json parsed")
+	}
+}
+
+// The rows that stood on the unlicensed ioBroker script alone were re-derived from eQ-3's and
+// ELV's documents; the ones without a document are left out (unknown to the addon) rather than
+// guessed. The HM-LC-Sw4-PCB was listed as 1x 9V: it runs on an external 7-15 V supply.
+func TestRederivedRows(t *testing.T) {
+	tb := Shipped()
+	for _, c := range []struct{ model, power, desc, conf string }{
+		{"HM-LC-Sw4-PCB", "mains", "", "manufacturer"},
+		{"HM-LC-Sw4-Ba-PCB", "battery-or-dc", "", "manufacturer"},
+		{"HM-Sen-RD-O", "mains", "", "manufacturer"},
+		{"HM-OU-CM-PCB", "mains", "", "manufacturer"},
+		{"HM-MOD-Re-8", "battery-or-dc", "", "manufacturer"},
+		{"HM-RC-Sec4-3", "battery", "1× AAA", "manufacturer"},
+		{"HM-Sec-Key-O", "battery", "3× AA", "manufacturer"},
+		{"HM-WDS30-OT2-SM-2", "battery", "2× AA", "manufacturer"},
+		{"HM-LC-Sw1-Pl", "mains", "", "assumed"},
+	} {
+		m, _, ok := tb.Lookup(c.model)
+		if !ok || m.Power != c.power || Describe(m.Slots) != c.desc || m.Confidence != c.conf {
+			t.Errorf("%s: %v %+v", c.model, ok, m)
+		}
+	}
+	for _, model := range []string{"ALPHA-IP-RBG", "HM-PBI-2-FM", "HM-RC-19-SW", "HM-Sec-RHS-2", "HM-Sec-SC2L"} {
+		if _, _, ok := tb.Lookup(model); ok {
+			t.Errorf("%s: still in the table without a licensed source", model)
+		}
+		if p := tb.Resolve(model, nil, nil, 0); p.Source != "none" || p.Power != "unknown" {
+			t.Errorf("%s: %+v", model, p)
+		}
+	}
+	if p := tb.Resolve("HM-LC-Sw4-PCB", nil, nil, 0); p.Detects() || len(p.Slots) != 0 {
+		t.Errorf("HM-LC-Sw4-PCB: %+v", p)
+	}
+}
+
+// No row may stand on a source without a licence (the ioBroker script) and the corpus alone.
+func TestNoRowOnUnlicensedSourceAlone(t *testing.T) {
+	var raw struct {
+		Sources map[string]struct {
+			License string `json:"license"`
+		} `json:"sources"`
+		Models map[string]struct {
+			Sources []struct {
+				ID string `json:"id"`
+			} `json:"sources"`
+		} `json:"models"`
+	}
+	if err := json.Unmarshal(data.Batteries, &raw); err != nil {
+		t.Fatal(err)
+	}
+	for k, m := range raw.Models {
+		carried := false
+		for _, s := range m.Sources {
+			if s.ID != "corpus" && !strings.HasPrefix(raw.Sources[s.ID].License, "none") {
+				carried = true
+			}
+		}
+		if !carried {
+			t.Errorf("%s: no licensed source", k)
+		}
 	}
 }

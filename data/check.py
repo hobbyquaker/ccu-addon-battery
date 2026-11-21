@@ -141,6 +141,13 @@ def check_table(data):
                 err(f"{where}.sources[{i}]: unknown source id {c['id']!r}")
                 continue
             kinds.append(sources[c["id"]]["kind"])
+        # a source without a licence (the ioBroker script) is a cross-check only: it never carries a
+        # row on its own, battery or mains (a row stands on a manufacturer document, a licensed
+        # table or the classification by model class)
+        carrying = [c["id"] for c in m["sources"] if c["id"] in sources and c["id"] != "corpus"
+                    and not sources[c["id"]].get("license", "").startswith("none")]
+        if not carrying:
+            err(f"{where}: no source carries the row (an unlicensed source and the corpus alone do not)")
         conf = m["confidence"]
         if conf == "manufacturer" and "manufacturer" not in kinds and "lab" not in kinds:
             err(f"{where}: confidence 'manufacturer' without a manufacturer source")

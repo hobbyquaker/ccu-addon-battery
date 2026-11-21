@@ -181,10 +181,12 @@ Batterie-leer und Nicht-erreichbar sowie `BOOTED` bleiben als Beleg erhalten.
 
 ## Welche Batterien ein Gerät nimmt
 
-[data/batteries.json](data/README.md) ist eine Tabelle von 459 Homematic-Modellen: die
+[data/batteries.json](data/README.md) ist eine Tabelle von 454 Homematic-Modellen: die
 Stromversorgung (Batterie, Akku, Netz, Bus, …), die Batteriefächer (Anzahl und Typ), der
 Spannungs-Datenpunkt, die Batterie-leer-Schwelle des Geräts und die Quellen jeder Zeile – für die
-meisten Batteriemodelle die Produktseiten und Anleitungen von eQ-3 selbst. Die Daten sind CC0:
+meisten Batteriemodelle die Produktseiten und Anleitungen von eQ-3 selbst; ein Modell, das
+weder eine Herstellerangabe noch eine frei lizenzierte Tabelle nennt, steht als *unbekannt* da
+statt geraten. Die Daten sind CC0:
 nehmen Sie sie für jedes Projekt. Das Addon bettet sie ein, sucht Modelle ohne Rücksicht auf
 Groß- und Kleinschreibung (und über ihre Aliasse) und lässt sie je Modell oder je Gerät
 korrigieren (eine Fernbedienung im Tischaufsteller, Lithium- oder Akkuzellen). Korrekturen an der

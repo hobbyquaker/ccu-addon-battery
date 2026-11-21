@@ -60,6 +60,12 @@ back. A voltage device that sends no reading for a week after the trigger is off
 with low confidence and the reason `unconfirmed`. Discarded candidates stay in the database as
 evidence (`status: discarded`); they leave the inbox.
 
+A device that stops being watched because it is not battery-powered after all - the battery table
+was corrected in an update, or an override now says mains, a bus or fixed cells - takes its open
+detections along: its candidates and the detections still waiting in the inbox are discarded with
+the reason `not-battery`. Accepted, rejected, manual and imported changes stay, as do its
+readings.
+
 ## Answering while it is being checked
 
 A candidate shows in the inbox from the moment it opens, marked *still being checked until* the

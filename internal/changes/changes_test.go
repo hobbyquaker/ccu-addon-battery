@@ -563,3 +563,76 @@ func TestAnsweredWhileChecking(t *testing.T) {
 		}
 	})
 }
+
+// An existing install after the update that corrected the table: an HM-LC-Sw4-PCB was a 1x 9V
+// battery device before (the old table) and is mains now. Its open detections leave the inbox
+// (discarded, reason not-battery), the user's own record stays, nothing new is written, and a
+// battery device's detection is not touched.
+func TestDeviceNoLongerBatteryPowered(t *testing.T) {
+	s, st, c := setup(t, "")
+	ctx := context.Background()
+	pcb := store.Device{Interface: "BidCos-RF", Address: "LEQ0000042", Model: "HM-LC-Sw4-PCB", LowBatDP: "0/LOWBAT", FirstSeen: t0 - 400*day, LastSeen: t0}
+	st.UpsertDevice(pcb)
+	if err := st.Flush(); err != nil {
+		t.Fatal(err)
+	}
+	db, err := st.DB()
+	if err != nil {
+		t.Fatal(err)
+	}
+	ins := func(d store.Device, at int64, kind, status, source string) int64 {
+		t.Helper()
+		r, err := db.Exec(`INSERT INTO changes (interface, address, at, kind, rule, status, evidence, batteries, source, created_by, created_at, updated_at)
+VALUES (?, ?, ?, ?, 'C', ?, '{"low_bat_before":true}', '[]', ?, ?, ?, ?)`, d.Interface, d.Address, at, kind, status, source, source, at, at)
+		if err != nil {
+			t.Fatal(err)
+		}
+		id, _ := r.LastInsertId()
+		return id
+	}
+	// what the old version left: a manual change booked by the user, an accepted and a rejected
+	// detection, one waiting in the inbox and one still being checked
+	manual := ins(pcb, t0-200*day, KindManual, StatusAccepted, "manual")
+	accepted := ins(pcb, t0-100*day, KindDetected, StatusAccepted, "detector")
+	rejected := ins(pcb, t0-50*day, KindDetected, StatusRejected, "detector")
+	pending := ins(pcb, t0-10*day, KindDetected, StatusPending, "detector")
+	cand := ins(pcb, t0-h, KindDetected, StatusCandidate, "detector")
+	other := ins(contact, t0-10*day, KindDetected, StatusPending, "detector")
+	var before int
+	db.QueryRow(`SELECT COUNT(*) FROM changes`).Scan(&before)
+
+	c.ms = t0
+	if p := s.Profile(ctx, pcb, 0); p.Power != "mains" || p.Detects() {
+		t.Fatalf("%+v", p)
+	}
+	s.Profile(ctx, contact, 0)
+	// a report of the device after the update finds no detector
+	s.Observe(ctx, pcb, detect.Obs{TS: t0 + h, LowBat: b(true)})
+	s.Observe(ctx, pcb, detect.Obs{TS: t0 + 2*h, LowBat: b(false)})
+	c.ms = t0 + 3*day
+	s.Tick(ctx)
+	s.Profile(ctx, pcb, 0) // the next refresh: nothing more to do
+
+	want := map[int64]string{manual: StatusAccepted, accepted: StatusAccepted, rejected: StatusRejected, pending: StatusDiscarded, cand: StatusDiscarded, other: StatusPending}
+	for id, w := range want {
+		var stt, ev string
+		if err := db.QueryRow(`SELECT status, evidence FROM changes WHERE id = ?`, id).Scan(&stt, &ev); err != nil {
+			t.Fatal(err)
+		}
+		if stt != w {
+			t.Errorf("change %d: %s, want %s", id, stt, w)
+		}
+		if w == StatusDiscarded && (!strings.Contains(ev, `"reason":"not-battery"`) || !strings.Contains(ev, `"low_bat_before":true`)) {
+			t.Errorf("change %d: evidence %s", id, ev)
+		}
+	}
+	var after int
+	db.QueryRow(`SELECT COUNT(*) FROM changes`).Scan(&after)
+	if after != before {
+		t.Fatalf("%d changes, were %d", after, before)
+	}
+	inbox := list(t, s, StatusPending, StatusCandidate)
+	if len(inbox) != 1 || inbox[0].ID != other {
+		t.Fatalf("inbox %+v", inbox)
+	}
+}

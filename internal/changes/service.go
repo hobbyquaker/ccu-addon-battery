@@ -48,6 +48,7 @@ type dev struct {
 	det     *detect.Detector // nil when the device is not detected (mains, fixed cells)
 	candID  int64            // the row of the open candidate
 	maxV    float64
+	closed  bool // the detector's open rows were closed since the device stopped being detected
 }
 
 // New makes the service.
@@ -116,7 +117,67 @@ func (s *Service) Profile(ctx context.Context, d store.Device, maxV float64) bat
 		x.maxV = maxV
 	}
 	s.applyProfileLocked(x)
+	if x.det == nil && !x.closed {
+		s.closeDetectionsLocked(ctx, x)
+	}
 	return x.profile
+}
+
+// closeDetectionsLocked discards what the detector left open for a device it no longer watches:
+// the table (after an update that corrected it) or an override now says mains, a bus, the host or
+// fixed cells. Such a device never changed batteries, so its candidates and the detections still
+// waiting in the inbox go to discarded (reason "not-battery") instead of staying there; accepted,
+// rejected, manual and imported changes - the user's own record - stay as they are, as do the
+// samples and events.
+func (s *Service) closeDetectionsLocked(ctx context.Context, x *dev) {
+	var n int64
+	err := s.o.Store.Write(ctx, func(tx *sql.Tx) error {
+		rows, err := tx.Query(`SELECT id, COALESCE(evidence, '') FROM changes WHERE interface = ? AND address = ? AND kind = ? AND status IN (?, ?)`,
+			x.d.Interface, x.d.Address, KindDetected, StatusCandidate, StatusPending)
+		if err != nil {
+			return err
+		}
+		type open struct {
+			id int64
+			ev string
+		}
+		var list []open
+		for rows.Next() {
+			var o open
+			if err := rows.Scan(&o.id, &o.ev); err != nil {
+				rows.Close()
+				return err
+			}
+			list = append(list, o)
+		}
+		rows.Close()
+		if err := rows.Err(); err != nil {
+			return err
+		}
+		now := s.o.Now().UnixMilli()
+		for _, o := range list {
+			var ev detect.Evidence
+			_ = json.Unmarshal([]byte(o.ev), &ev)
+			ev.Reason = "not-battery"
+			b, _ := json.Marshal(ev)
+			r, err := tx.Exec(`UPDATE changes SET status = ?, evidence = ?, updated_at = ? WHERE id = ? AND status IN (?, ?)`,
+				StatusDiscarded, string(b), now, o.id, StatusCandidate, StatusPending)
+			if err != nil {
+				return err
+			}
+			k, _ := r.RowsAffected()
+			n += k
+		}
+		return nil
+	})
+	if err != nil {
+		s.logf("changes: %s %s: closing the detections of a device that is not battery-powered: %v", x.d.Interface, x.d.Address, err)
+		return
+	}
+	x.closed, x.candID = true, 0
+	if n > 0 {
+		s.logf("changes: %s %s (%s, %s): %d open detection(s) discarded, the device is not battery-powered", x.d.Interface, x.d.Address, x.d.Model, x.profile.Power, n)
+	}
 }
 
 // devLocked finds or makes the device's entry; a new one restores its detector from the store.
@@ -162,6 +223,7 @@ func (s *Service) applyProfileLocked(x *dev) {
 		x.det = nil
 		return
 	}
+	x.closed = false
 	lv := detect.Levels{}
 	if x.d.VoltageDP != "" {
 		lv = detect.Levels{Fresh: x.profile.Fresh, Step: x.profile.Step}

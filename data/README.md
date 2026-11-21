@@ -8,15 +8,26 @@ crawled and assembled it are in [`../tools/`](../tools/README.md).
 The data is **CC0-1.0** (public domain dedication, see *Licence* below): copy it into Home Assistant, ioBroker,
 hm-simulator or a handbook without asking.
 
-## Coverage (2026-10-27)
+## Coverage (2026-11-21)
 
-459 models: 206 with batteries (198 `battery`, 5 `rechargeable`, 3 `battery-or-dc`), 198 `mains`, 54 `bus`, 1
-`host`. Of the 206 battery models, **125 stand on the manufacturer** (eQ-3's product pages or manuals, the supply line
-quoted), 31 on two agreeing prior-art tables, 36 on one, 14 are `assumed` (only the unlicensed ioBroker script). Of
-the mains/bus/host rows, 117 are from the manufacturer and 136 are `assumed` by model class (HM-LC-*, HMW-*, HmIPW-*).
+454 models: 200 with batteries (189 `battery`, 4 `rechargeable`, 7 `battery-or-dc`), 199 `mains`, 54 `bus`, 1
+`host`. Of the 200 battery models, **132 stand on the manufacturer** (eQ-3's product pages or manuals, ELV's kit
+documents, the supply line quoted), 32 on two agreeing prior-art tables, 36 on one. Of the mains/bus/host rows, 133
+are from the manufacturer and 121 are `assumed` by model class (HM-LC-*, HMW-*, HmIPW-*).
 All 30 of the most common models are manufacturer-sourced except HM-Sec-MDIR/-2, HM-RC-4-2 and
 the first-generation HMIP-eTRV, HMIP-WTH and HmIP-SWDM (prior art agrees on all of them; their successors' manuals
 say the same). 27 models were compared with their `LOW_BAT_LIMIT` default; one does not fit (HmIP-ASIR, below).
+
+**No row stands on the unlicensed ioBroker script alone** (since 2026-11-21; `check.py` fails on one). The 31 rows
+that did were re-derived from eQ-3's manuals and datasheets and ELV's kit documents; HM-LC-Sw1-Pl and
+HM-LC-Sw1-Pl-2 (no manual found) are mains by model class, and ALPHA-IP-RBG, HM-PBI-2-FM, HM-RC-19-SW, HM-Sec-RHS-2
+and HM-Sec-SC2L, for which no manufacturer document was found, were left out: the addon shows them as *unknown*
+(no slots, no forecast, listed under *Unknown models*) until a document or a pull request names their batteries.
+Six of the 31 were wrong: **HM-LC-Sw4-PCB** (ioBroker: 9 V block; ELV: an external 7–15 V DC supply, 26 mA
+standby - the battery board is the HM-LC-Sw4-Ba-PCB), **HM-LC-Sw4-Ba-PCB** (ioBroker: mains; ELV: batteries of the
+builder's choice, 2–3 V or 4–15 V), **HM-MOD-EM-8** and **HM-MOD-Re-8** (ioBroker: 9 V block; ELV: 2 cells or
+3.5–12 V DC from the builder's circuit), **HM-OU-CM-PCB** (ioBroker: 9 V block; ELV: 8–24 V DC) and
+**HM-Sen-RD-O** (ioBroker: 9 V block; eQ-3: an external 7.5–30 V DC supply).
 
 **Mismatches found** (in the rows' `note`): prior art is wrong for HM-WDS30-T-O (openHAB: 2× AA; manual: 2× LR03),
 HmIP-FCI6 (aiohomematic: 1× AAA; eQ-3: 2×), HmIP-MP3P (aiohomematic: 2× C; eQ-3: 3×), HmIP-SLO and HmIP-SWD
@@ -36,10 +47,10 @@ value (`limit_note`; check `OPERATING_VOLTAGE` with fresh cells).
 | `check.py` | the checker (CI runs it), stdlib only: `python3 check.py [batteries.json] [--corpus <paramset-descriptions.json>] [--strict]` |
 
 `check.py` validates the schema (a small built-in subset of JSON schema, no `jsonschema` package), then the table's
-own rules: every slot type and chemistry is known, every row cites at least one source and every cited source is in
-`sources`, a `manufacturer` row has a manufacturer source with the quoted supply line, a `prior-art` row has two
-prior-art sources, no two models (or aliases) are equal case-insensitively, and a battery row's `low_bat_limit` fits
-its cell count. With `--corpus` (hm-simulator's `data/paramset-descriptions.json`) it compares each model's cell
+own rules: every slot type and chemistry is known, every row cites at least one source besides an unlicensed one
+and the corpus, every cited source is in `sources`, a `manufacturer` row has a manufacturer source with the quoted
+supply line, a `prior-art` row has two prior-art sources, no two models (or aliases) are equal case-insensitively,
+and a battery row's `low_bat_limit` fits its cell count. With `--corpus` (hm-simulator's `data/paramset-descriptions.json`) it compares each model's cell
 count with the `LOW_BAT_LIMIT` default the device itself declares and lists corpus types with a battery datapoint
 that have no row. Exit 1 on an error; warnings fail only with `--strict`.
 
@@ -88,7 +99,7 @@ that have no row. Exit 1 on an error; warnings fail only with `--strict`.
   recovery).
 - **`confidence`:** `manufacturer` (the supply line was read on eQ-3's product page, manual or datasheet and is
   quoted), `prior-art` (two licensed prior-art tables agree; not yet checked against a manual), `single-source`
-  (one licensed table), `assumed` (no licensed source, or a classification by name; check before relying on it).
+  (one licensed table), `assumed` (a classification by model class, e.g. a 230 V actuator; check before relying on it).
 - **`sources`:** `id` into the top-level `sources`, plus `url`, `quote` (the manufacturer's words) or `says` (what
   a prior-art table or the corpus says). Prior-art citations stay on manufacturer rows as a cross-check; where one
   disagrees with the manual, `note` says so.
@@ -112,10 +123,11 @@ BidCos remotes).
 | --- | --- | --- | --- |
 | homematic-ip.com product pages (eQ-3) | current HmIP, HmIP-Wired and ELV-SH products; a structured "Versorgungsspannung" field and the typical battery life | the manufacturer's facts | primary source (`eq3-site`), the supply line quoted |
 | eQ-3 manuals (`eq-3.de/…/bda/<model>_UM_GE_eQ-3_web.pdf`) and ELV-hosted manuals/datasheets (`media.elv.com/file/<article>_um.pdf`) | discontinued HmIP and BidCos models | the manufacturer's facts | primary source (`eq3-manual`, `elv-manual`), the supply line quoted |
+| ELVjournal construction articles of the kits (`media.elv.com/file/<article>_<name>.pdf`, "Technische Daten") | Homematic kits and boards (HM-LC-Sw4-Ba-PCB, HM-MOD-*, HM-OU-CM-PCB, ...) | the kit maker's facts (ELV develops and sells eQ-3's kits) | primary source (`elv-journal`), the supply line quoted |
 | [Home Assistant Battery Notes](https://github.com/andrew-codechimp/HA-Battery-Notes) `library/library.json` | ~130 Homematic models (manufacturer eQ-3) | MIT | cross-check; a row's source where no manual was found (with its citation) |
 | [aiohomematic](https://github.com/SukramJ/aiohomematic) `operating_voltage_level.py` | 85 models (prefix-matched) | MIT | cross-check; source as above |
 | [openHAB Homematic binding](https://github.com/openhab/openhab-addons/tree/main/bundles/org.openhab.binding.homematic) `batteries.properties` | ~110 models incl. Roto (ZEL STG RM) and MAX! | EPL-2.0 | cross-check; source as above |
-| [ioBroker Servicemeldungen-Homematic](https://github.com/Baenker/Servicemeldungen-Homematic) (and its copy in Uhula's MduiLogHM) | ~150 models incl. mains and 9 V | no licence stated | cross-check only — never a row's only licensed source |
+| [ioBroker Servicemeldungen-Homematic](https://github.com/Baenker/Servicemeldungen-Homematic) (and its copy in Uhula's MduiLogHM) | ~150 models incl. mains and 9 V | no licence stated | cross-check only — never a row's only source (`check.py` fails on such a row) |
 | hm-simulator's corpus | `LOW_BAT_LIMIT` defaults, which battery datapoints a type has | MIT | the consistency check and the `voltage` datapoint |
 | homematic-manager's device data (openccu-data) | the model names | names only (the data is HMSL 2.0; no text is copied) | the model list, the `classification` of mains/bus actuators |
 

@@ -3,6 +3,7 @@ S = sys.argv[1]
 EQ = "https://www.eq-3.de/Downloads/eq3/downloads_produktkatalog/homematic/bda/%s_UM_GE_eQ-3_web.pdf"
 HIP = "https://homematic-ip.com/sites/default/files/downloads/"
 ELV = "https://media.elv.com/file/"
+EQD = "https://www.eq-3.de/downloads/download/homematic/bda/"
 def b(n, t): return [{"count": n, "type": t}]
 M = {
  # BidCos-RF, eQ-3 manuals
@@ -73,6 +74,32 @@ M = {
  "HMIP-PSM":         ("mains", None, "eq3-manual", HIP + "hmip-psm-um-web.pdf", "Versorgungsspannung: 230 V/50 Hz", None, None),
  "HmIP-PSM-CH":      ("mains", None, "eq3-manual", HIP + "hmip-psm-ch_um_gefi_web.pdf", "Versorgungsspannung: 230 V/50 Hz", None, None),
  "HmIP-FSI16":       ("mains", None, "eq3-manual", HIP + "hmip-fsi16-um-web.pdf", "Versorgungsspannung: 230 V/50 Hz", None, None),
+ # 2026-11-21: the rows that stood on the unlicensed ioBroker script alone, re-derived from eQ-3's and
+ # ELV's documents (elv-journal: the kit's ELVjournal construction article, its "Technische Daten")
+ "HM-LC-Sw4-PCB":    ("mains", None, "elv-manual", ELV + "76450_hm-lc-sw4-pcb_ge_v1_1.pdf", "Spannungsversorgung: 7 – 15VDC", None, "an external DC supply (7-15 V); the battery variant is HM-LC-Sw4-Ba-PCB"),
+ "HM-LC-Sw4-Ba-PCB": ("battery-or-dc", None, "elv-journal", ELV + "130557_hm_schaltaktor.pdf", "Versorgungsspannung: 4–15 VDC/2–3 VDC", None, "a board for batteries of the builder's choice (2-3 V or 4-15 V) or a DC supply; no defined slot"),
+ "HM-MOD-EM-8":      ("battery-or-dc", None, "elv-journal", ELV + "132939_hm_mod_em_8.pdf", "Versorgungsspannung: 3,5–12 VDC oder 2–3,3 VDC", None, "a module powered by the builder's circuit: 2 cells (2-3.3 V) or a DC supply (3.5-12 V); no defined slot"),
+ "HM-MOD-Re-8":      ("battery-or-dc", None, "elv-journal", ELV + "132143_hm_mod_re_8.pdf", "Versorgungsspannung: 3,5–12 VDC oder 2–3,3 VDC", None, "a module powered by the builder's circuit: 2 cells (2-3.3 V) or a DC supply (3.5-12 V); no defined slot"),
+ "HM-OU-CM-PCB":     ("mains", None, "elv-journal", ELV + "131480_mp3_modul.pdf", "Versorgungsspannung: 8–24 VDC", None, "an external DC supply; article 131480, the number eQ-3's declaration of conformity gives the HM-OU-CM-PCB"),
+ "HM-RC-Sec4-3":     ("battery", b(1,"AAA"), "elv-manual", ELV + "130466_data.pdf", "1x 1,5 V LR03/Micro/AAA", 3, "eQ-3's product datasheet (article 130466A0)"),
+ "HM-Sec-Key-O":     ("battery", b(3,"AA"), "eq3-manual", "https://asset.conrad.com/media10/add/160267/c1/-/de/000713363ML01/upute-za-rukovanje-713363-homematic-151137a0-hm-sec-key-keymatic-komplet.pdf", "Power supply: 3x LR6 (Mignon)", 0.5, "the KeyMatic manual (as hosted by Conrad) covers HM-Sec-Key, HM-Sec-Key-S and HM-Sec-Key-O"),
+ "HM-Sec-WDS":       ("battery", b(2,"AA"), "elv-journal", ELV + "83459_hm_sec_wds.pdf", "Spannungsversorgung: 2 x Mignon 1,5 V", None, None),
+ "HM-Sen-RD-O":      ("mains", None, "eq3-manual", "https://www.eq-3.de/downloads/download/homematic/bda/hm-sen-rd-o_um_eq-3_ge_web.pdf", "Supply voltage: 7.5 – 30 VDC", None, "an external power supply (it heats the sensor)"),
+ "HM-WDS30-OT2-SM-2":("battery", b(2,"AA"), "eq3-manual", EQ % "HM-WDS30-OT2-SM-2", "Supply voltage: 2x 1.5 V LR6/mignon/AA", None, None),
+ "HM-LC-Sw1-DR":     ("mains", None, "eq3-manual", EQD + "hm-lc-sw1-dr_um_ge_eq-3_web.pdf", "Supply voltage: 230 V/50 Hz", None, None),
+ "HM-LC-Sw1-FM":     ("mains", None, "eq3-manual", EQD + "HM-LC-Sw1-FM_UM_GE_eQ-3_web.pdf", "Versorgungsspannung: 230 V/50 Hz", None, "the manual covers HM-LC-Sw1-FM and HM-LC-Sw2-FM"),
+ "HM-LC-Sw2-FM":     ("mains", None, "eq3-manual", EQD + "HM-LC-Sw1-FM_UM_GE_eQ-3_web.pdf", "Versorgungsspannung: 230 V/50 Hz", None, "the HM-LC-Sw1-FM manual covers HM-LC-Sw2-FM"),
+ "HM-LC-Sw1PBU-FM":  ("mains", None, "eq3-manual", EQD + "hm-lc-sw1pbu-fm_um_ge_eq-3_web.pdf", "Versorgungsspannung: 230 V/50 Hz", None, None),
+ "HM-LC-Sw1-Pl-DN-R1": ("mains", None, "eq3-manual", EQD + "hm-lc-sw1-pl-dn-r1_um_gefn_eq-3_web.pdf", "Supply voltage: 230 V/50 Hz", None, None),
+ "HM-LC-Sw1-SM":     ("mains", None, "eq3-manual", EQD + "hm-lc-sw1-sm_um_ge_eq-3_web.pdf", "Spannungsversorgung: 230 V / 50 Hz", None, None),
+ "HM-LC-Sw4-SM":     ("mains", None, "eq3-manual", "https://asset.conrad.com/media10/add/160267/c1/-/gl/000646390ML02/navodila-za-uporabo-646390-homematic-76795-eq-3-ag-brezzicni-preklopni-aktuator-1-kanalni-nadometna-3680-w.pdf", "Power supply: 230 V / 50 Hz", None, "the surface-mount manual (as hosted by Conrad) covers HM-LC-Sw1-SM, HM-LC-Sw4-SM, HM-LC-Bl1-SM and HM-LC-Dim2L-SM"),
+ "HM-LC-Sw4-DR":     ("mains", None, "eq3-manual", EQD + "hm-lc-sw4-dr_um_ge_eq-3_web.pdf", "Versorgungsspannung: 230 V/50 Hz", None, None),
+ "HM-LC-Sw4-DR-2":   ("mains", None, "eq3-manual", EQD + "HM-LC-Sw4-DR-2_UM_GE_eQ-3_161214.pdf", "Versorgungsspannung: 230 V/50 Hz", None, None),
+ "HM-LC-Sw2PBU-FM":  ("mains", None, "elv-journal", ELV + "143198_hm_schaltaktor.pdf", "Versorgungsspannung: 230 V/50 Hz", None, None),
+ "HM-LC-Sw1-Pl-CT-R1": ("mains", None, "elv-manual", ELV + "141097_hm-lc-sw1-pl-ct_um_g_150506_um.pdf", "Versorgungsspannung: 230 V/50 Hz", None, "the manual names the HM-LC-Sw1-Pl-CT, the type the CCU reports as HM-LC-Sw1-Pl-CT-R1"),
+ "HM-LC-RGBW-WM":    ("mains", None, "elv-manual", ELV + "141952_rgbw_controller_um.pdf", "Versorgungsspannung: 12V-24VDC", None, "an external DC supply"),
+ "HM-LC-Sw1-PCB":    ("mains", None, "elv-journal", ELV + "150138_hm_lc_sw1_pcb.pdf", "Versorgungsspannung: 5–25 VDC", None, "an external DC supply"),
+ "HM-Sys-sRP-Pl":    ("mains", None, "elv-journal", ELV + "103443_hm_repeater.pdf", "Spannungsversorgung: 230 VAC/50 Hz", None, "the ELVjournal 2/2012 article on the selective Homematic plug-in repeater (article 103443); it does not print the type name"),
 }
 out = {}
 for k, (p, sl, src, url, q, life, note) in M.items():

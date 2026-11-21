@@ -67,7 +67,7 @@ imported entry said the same), `manual` or `import`. Its `status`:
 | `pending` | in the inbox, the check passed, waiting for the user |
 | `accepted` | a change: confirmed by the user, or recorded by hand or by an import |
 | `rejected` | the user said no |
-| `discarded` | the detector's own no (a boot, a recovery); kept as evidence |
+| `discarded` | the detector's own no (a boot, a recovery; `not-battery` when the device turned out not to be battery-powered); kept as evidence |
 
 | Route | Does |
 | --- | --- |
