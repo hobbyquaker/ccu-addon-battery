@@ -3,15 +3,15 @@
 [:de: Deutsche README](README.md)
 
 Battery change detection and statistics for Homematic devices: an addon for
-[openccu-lite](https://github.com/hobbyquaker/openccu-lite), the classic CCU3 and OpenCCU. It
+[openccu-lite](https://github.com/openccu-lite/openccu-lite), the classic CCU3, OpenCCU and piVCCU. It
 records the battery voltage and the low-battery flag of every device, detects battery changes from
 them, lets you say which batteries went in, and turns the record into how long batteries last, which
 devices eat batteries, which batteries do best, what is due soon and what to buy.
 
-**Status: 1.0.2** ([changelog](CHANGELOG.md); the packages are on the [releases
+**Status: 1.4.0** ([changelog](CHANGELOG.md); the packages are on the [releases
 page](https://github.com/hobbyquaker/ccu-addon-battery/releases)). Tested on openccu-lite with real
-devices and on OpenCCU; on the CCU3 firmware so far without paired battery devices - feedback is
-welcome.
+devices and on OpenCCU; feedback from piVCCU comes from the Homematic forum, on the CCU3 firmware so
+far without paired battery devices - feedback is welcome.
 
 ## The pages
 
@@ -216,7 +216,8 @@ specifies it.
 
 ## On openccu-lite
 
-Install the package from the Addons page (or, once listed, from the catalogue). The addon runs
+Install the addon from the catalogue (*Addons*), or the package from the releases page through the
+Addons page. The addon runs
 confined as its own user, reads the system's APIs with its own token (`rpc:read`, `meta:read`) and
 serves its page at `/addons/battery/`, embedded in the system's shell with its theme and language;
 its settings page is `/addons/battery-config/`. Updates come from the system's Addons page.

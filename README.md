@@ -3,16 +3,17 @@
 [:uk: English README](README.en.md)
 
 Batteriewechsel erkennen und Batterien auswerten, für Homematic-Geräte: ein Addon für
-[openccu-lite](https://github.com/hobbyquaker/openccu-lite), die klassische CCU3 und OpenCCU. Es
+[openccu-lite](https://github.com/openccu-lite/openccu-lite), die klassische CCU3, OpenCCU und piVCCU. Es
 zeichnet die Batteriespannung und die Batterie-leer-Meldung jedes Geräts auf, erkennt daraus
 Batteriewechsel, lässt Sie eintragen, welche Batterien eingelegt wurden, und macht aus dem
 Protokoll: wie lange Batterien halten, welche Geräte Batteriefresser sind, welche Batterien am
 besten abschneiden, was bald fällig ist und was zu kaufen ist.
 
-**Stand: 1.0.2** ([Änderungen](CHANGELOG.md); die Pakete stehen auf der
+**Stand: 1.4.0** ([Änderungen](CHANGELOG.md); die Pakete stehen auf der
 [Release-Seite](https://github.com/hobbyquaker/ccu-addon-battery/releases)). Getestet auf
-openccu-lite mit echten Geräten und auf OpenCCU; auf der CCU3-Firmware bisher ohne angelernte
-Batteriegeräte – Rückmeldungen sind willkommen.
+openccu-lite mit echten Geräten und auf OpenCCU; Rückmeldungen von piVCCU gibt es aus dem
+Homematic-Forum, auf der CCU3-Firmware bisher ohne angelernte Batteriegeräte – Rückmeldungen sind
+willkommen.
 
 ## Die Seiten
 
@@ -226,7 +227,7 @@ Exporte. [docs/api.md](docs/api.md) erklärt sie mit einem curl-Rezept;
 
 ## Auf openccu-lite
 
-Installieren Sie das Paket über die Addons-Seite (oder, sobald es gelistet ist, aus dem Katalog).
+Installieren Sie das Addon aus dem Katalog (*Addons*), oder das Paket von der Release-Seite über die Addons-Seite.
 Das Addon läuft eingeschränkt als eigener Benutzer, liest die APIs des Systems mit seinem eigenen
 Token (`rpc:read`, `meta:read`) und liefert seine Seite unter `/addons/battery/`, eingebettet in die
 Oberfläche des Systems mit dessen Design und Sprache; seine Einstellungsseite ist
