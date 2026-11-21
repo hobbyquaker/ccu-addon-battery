@@ -1,6 +1,6 @@
 # Changelog
 
-## [Unreleased]
+## [1.4.0] - 2026-11-21
 
 - **CCU3, OpenCCU, piVCCU:** umlauts in device and room names are shown correctly. The names come from the CCU in its
   own character set (ISO-8859-1), which the addon took for UTF-8, so *Türe Geräteschuppen* appeared as
