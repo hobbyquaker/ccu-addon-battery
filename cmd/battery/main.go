@@ -23,6 +23,7 @@ import (
 	"github.com/hobbyquaker/ccu-addon-battery/internal/httpapi"
 	"github.com/hobbyquaker/ccu-addon-battery/internal/notify"
 	"github.com/hobbyquaker/ccu-addon-battery/internal/recorder"
+	"github.com/hobbyquaker/ccu-addon-battery/internal/rega"
 	"github.com/hobbyquaker/ccu-addon-battery/internal/settings"
 	"github.com/hobbyquaker/ccu-addon-battery/internal/snapshot"
 	"github.com/hobbyquaker/ccu-addon-battery/internal/store"
@@ -125,7 +126,7 @@ func run(addonDir, id string, port int, base, basePath, www, tokenFile string, f
 			wrap = c.Handler
 		}
 	} else {
-		ccu := ccusource.New(ccusource.Options{ID: id, CallbackPort: callbackPort, Log: log.Printf})
+		ccu := ccusource.New(ccuOptions(id, callbackPort))
 		for {
 			if err := ccu.Probe(ctx); err == nil {
 				break
@@ -200,6 +201,13 @@ func run(addonDir, id string, port int, base, basePath, www, tokenFile string, f
 	}
 	os.Stdout.Sync()
 	return nil
+}
+
+// ccuOptions are the classic CCU's source: the interface processes and ReGa, whose answers
+// (ISO-8859-1, as the WebUI stored the names) the transport turns into UTF-8.
+func ccuOptions(id string, callbackPort int) ccusource.Options {
+	return ccusource.Options{ID: id, CallbackPort: callbackPort, Log: log.Printf,
+		Client: &http.Client{Timeout: 60 * time.Second, Transport: rega.Transport{}}}
 }
 
 // backupCommand runs the manifest's backup programs (bin/backup-snapshot, bin/backup-restore, and

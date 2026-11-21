@@ -1,7 +1,9 @@
 package recorder
 
 import (
+	"encoding/json"
 	"reflect"
+	"strings"
 	"testing"
 
 	"github.com/hobbyquaker/ccu-addon-kit/go/ccusource"
@@ -61,5 +63,21 @@ func TestDeviceRooms(t *testing.T) {
 				t.Fatalf("got %q, want %q", got, tc.want)
 			}
 		})
+	}
+}
+
+// openccu-lite's metadata is UTF-8 JSON: a name with every umlaut comes through as it is, in
+// the device list and in its JSON.
+func TestLiteNamesKeepUmlauts(t *testing.T) {
+	s := system(t)
+	s.SetName("BidCos-RF.SC", "Türe Geräteschuppen ä ö ü ß Ä Ö Ü", "room/kueche")
+	r, _, _ := start(t, s)
+	sc := find(r.Devices("de"), "SC")
+	if sc == nil || sc.Name != "Türe Geräteschuppen ä ö ü ß Ä Ö Ü" {
+		t.Fatalf("name: %+v", sc)
+	}
+	b, err := json.Marshal(sc)
+	if err != nil || strings.ContainsRune(string(b), '�') || !strings.Contains(string(b), "Türe Geräteschuppen ä ö ü ß Ä Ö Ü") {
+		t.Fatalf("json: %s %v", b, err)
 	}
 }

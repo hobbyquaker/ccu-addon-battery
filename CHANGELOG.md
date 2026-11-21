@@ -1,5 +1,12 @@
 # Changelog
 
+## [Unreleased]
+
+- **CCU3, OpenCCU, piVCCU:** umlauts in device and room names are shown correctly. The names come from the CCU in its
+  own character set (ISO-8859-1), which the addon took for UTF-8, so *Türe Geräteschuppen* appeared as
+  *T�re Ger�teschuppen* everywhere - in the lists, the notifications and the exports. Nothing was stored wrongly: the
+  names are right as soon as the update is installed. (#1, @thofra; forum: Slice)
+
 ## [1.3.0] - 2026-11-20
 
 - **Every system:** the addon writes less to the SD card. A report that only repeats a device's values writes nothing

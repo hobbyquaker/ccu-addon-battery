@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net"
 	"net/http"
+	"net/http/httptest"
 	"os"
 	"path/filepath"
 	"strings"
@@ -13,6 +14,7 @@ import (
 	"time"
 
 	"github.com/hobbyquaker/ccu-addon-kit/go/addonkit"
+	"github.com/hobbyquaker/ccu-addon-kit/go/ccusource"
 	"github.com/hobbyquaker/ccu-addon-kit/go/litesource/fakelite"
 )
 
@@ -113,5 +115,27 @@ func TestRunEndsOnACCU(t *testing.T) {
 		}
 	case <-ctx.Done():
 		t.Fatal("run did not end on a CCU's 404")
+	}
+}
+
+// A classic CCU's names with umlauts, read with the options the daemon uses: ReGa answers
+// ISO-8859-1 and the names must come out as UTF-8, not with U+FFFD in the umlauts' place.
+func TestCCUNamesKeepUmlauts(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// "Türe Geräteschuppen" and "ä ö ü ß Ä Ö Ü", one byte per character
+		w.Write([]byte("D\tBidCos-RF\tJEQ01\tT\xfcre Ger\xe4teschuppen\nC\tJEQ01:1\t\xe4 \xf6 \xfc \xdf \xc4 \xd6 \xdc\t\n<xml><exec>/rega.exe</exec></xml>"))
+	}))
+	defer srv.Close()
+	o := ccuOptions("battery", 0)
+	o.Rega = srv.URL + "/rega.exe"
+	n, err := ccusource.New(o).Names(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := n.Name("BidCos-RF", "JEQ01"); got != "Türe Geräteschuppen" {
+		t.Errorf("device name %q", got)
+	}
+	if got := n.Name("BidCos-RF", "JEQ01:1"); got != "ä ö ü ß Ä Ö Ü" {
+		t.Errorf("channel name %q", got)
 	}
 }
