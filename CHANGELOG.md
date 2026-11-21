@@ -1,6 +1,6 @@
 # Changelog
 
-## [Unreleased]
+## [1.4.1] - 2026-11-21
 
 - **Every system:** the battery table no longer takes a battery or a mains supply from a source that is only a
   cross-check. 31 models stood on such a source alone; they were checked against eQ-3's manuals and datasheets and
