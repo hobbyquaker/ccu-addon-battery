@@ -89,3 +89,30 @@ func (t Transport) RoundTrip(req *http.Request) (*http.Response, error) {
 	res.Header.Set("Content-Length", strconv.Itoa(len(b)))
 	return res, nil
 }
+
+// ServiceOffScript lists every device whose service messages the user switched off in the
+// WebUI (Settings > Devices, the device's "Service messages" checkbox - the JSON API's
+// Device.setEnabledServiceMsg): the device object's metadata "enabledServiceMsg", which is
+// absent (null) until it was switched off once and a boolean afterwards. One line per device:
+// S <address> <true|false|null>. Channels have no such switch.
+const ServiceOffScript = `string sDevId;
+foreach(sDevId, root.Devices().EnumUsedIDs()) {
+  object oDev = dom.GetObject(sDevId);
+  if (oDev) {
+    WriteLine("S\t" # oDev.Address() # "\t" # oDev.MetaData("enabledServiceMsg"));
+  }
+}
+`
+
+// ParseServiceOff answers the addresses of the devices whose service messages are off, from
+// the script's lines; everything that is not exactly "false" is on, as the WebUI reads it.
+func ParseServiceOff(out string) map[string]bool {
+	off := map[string]bool{}
+	for _, line := range strings.Split(out, "\n") {
+		f := strings.Split(strings.TrimRight(line, "\r"), "\t")
+		if len(f) >= 3 && f[0] == "S" && f[1] != "" && f[2] == "false" {
+			off[f[1]] = true
+		}
+	}
+	return off
+}

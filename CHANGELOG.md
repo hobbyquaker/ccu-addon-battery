@@ -6,6 +6,12 @@
   own character set (ISO-8859-1), which the addon took for UTF-8, so *Türe Geräteschuppen* appeared as
   *T�re Ger�teschuppen* everywhere - in the lists, the notifications and the exports. Nothing was stored wrongly: the
   names are right as soon as the update is installed. (#1, @thofra; forum: Slice)
+- **Every system:** the device list can hide devices. *Hide unreachable devices* leaves out the ones that are
+  unreachable right now; on a **CCU3, OpenCCU and piVCCU**, *Hide devices with service messages switched off* leaves
+  out the ones whose service messages you switched off in the CCU (*Settings → Devices*, the *Service messages*
+  checkbox) - the devices you have already told the CCU not to bother you with. openccu-lite has no such switch per
+  device, and the list says so. Nothing is hidden until you tick a box, and the browser remembers the choice.
+  (#2, @thofra)
 
 ## [1.3.0] - 2026-11-20
 

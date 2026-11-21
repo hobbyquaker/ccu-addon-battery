@@ -187,7 +187,7 @@ func (o Options) devices(w http.ResponseWriter, r *http.Request) {
 		}
 		out = append(out, d)
 	}
-	writeJSON(w, 200, map[string]any{"devices": out})
+	writeJSON(w, 200, map[string]any{"devices": out, "filters": o.Recorder.Filters()})
 }
 
 func (o Options) storage(w http.ResponseWriter, r *http.Request) {

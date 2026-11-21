@@ -20,6 +20,8 @@ export interface DeviceView {
     unreach_since?: number;
     last_report?: number;
     first_seen: number;
+    /** The user switched the device's service messages off in the CCU; never set on openccu-lite. */
+    service_messages_off?: boolean;
     profile?: Profile;
     /** The platform's picture of the model (/config/img/devices/250/...), absent without one. */
     image?: string;
@@ -411,6 +413,61 @@ export function compareDevices(a: DeviceView, b: DeviceView): number {
 /** Powered from outside: the battery statistics leave such a device out. */
 export function isMains(power: string | undefined): boolean {
     return power === 'external' || power === 'mains' || power === 'bus' || power === 'host';
+}
+
+/** Which filters of the device list the system can serve (GET devices' `filters`). */
+export interface DeviceFilterCaps {
+    /** The system has a per-device switch for service messages (a CCU3, OpenCCU, piVCCU; not openccu-lite). */
+    service_messages: boolean;
+}
+
+/** The device list's filter, as the user set it; everything off shows what the list always showed. */
+export interface DeviceFilter {
+    /** Show mains, bus and externally powered devices too. */
+    showMains: boolean;
+    /** Hide the devices that are unreachable now (UNREACH). */
+    hideUnreach: boolean;
+    /** Hide the devices whose service messages are switched off in the CCU. */
+    hideServiceOff: boolean;
+}
+
+export const DEFAULT_DEVICE_FILTER: DeviceFilter = {showMains: false, hideUnreach: false, hideServiceOff: false};
+
+/** The devices the filter leaves; a filter the system cannot serve hides nothing. */
+export function filterDevices(devices: DeviceView[], f: DeviceFilter, caps: DeviceFilterCaps): DeviceView[] {
+    return devices.filter((d) => (f.showMains || !isMains(d.power)) && !(f.hideUnreach && d.unreach === true) && !(f.hideServiceOff && caps.service_messages && d.service_messages_off === true));
+}
+
+const DEVICE_FILTER_KEY = 'battery.devices.filter';
+
+type FilterStorage = Pick<Storage, 'getItem' | 'setItem'>;
+
+function browserStorage(): FilterStorage | undefined {
+    try {
+        return globalThis.localStorage;
+    } catch {
+        return undefined; // storage switched off in the browser
+    }
+}
+
+/** The remembered filter of this browser; the default when there is none or it cannot be read. */
+export function loadDeviceFilter(storage: FilterStorage | undefined = browserStorage()): DeviceFilter {
+    try {
+        const v = JSON.parse(storage?.getItem(DEVICE_FILTER_KEY) ?? 'null') as Partial<DeviceFilter> | null;
+        if (!v || typeof v !== 'object') return {...DEFAULT_DEVICE_FILTER};
+        return {showMains: v.showMains === true, hideUnreach: v.hideUnreach === true, hideServiceOff: v.hideServiceOff === true};
+    } catch {
+        return {...DEFAULT_DEVICE_FILTER};
+    }
+}
+
+/** Remembers the filter in this browser; without storage the choice lasts until the page is left. */
+export function saveDeviceFilter(f: DeviceFilter, storage: FilterStorage | undefined = browserStorage()): void {
+    try {
+        storage?.setItem(DEVICE_FILTER_KEY, JSON.stringify(f));
+    } catch {
+        /* full or refused */
+    }
 }
 
 /** "2× AAA", "1× CR2032 + 2× AA"; "" for none. */

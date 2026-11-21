@@ -1,6 +1,6 @@
 import {describe, expect, it} from 'vitest';
 
-import {batteryName, checkState, compareDevices, describeSlots, evidenceSummary, formatBytes, formatCents, formatDays, formatRange, formatVoltage, fromLocalInput, isMains, lifeText, modelInitials, parsePrice, priceInput, relativeTime, statusOf, toLocalInput, type DeviceView} from './model.js';
+import {DEFAULT_DEVICE_FILTER, batteryName, checkState, compareDevices, describeSlots, evidenceSummary, filterDevices, formatBytes, formatCents, formatDays, formatRange, formatVoltage, fromLocalInput, isMains, lifeText, loadDeviceFilter, modelInitials, parsePrice, priceInput, relativeTime, saveDeviceFilter, statusOf, toLocalInput, type DeviceView} from './model.js';
 
 const dev = (p: Partial<DeviceView>): DeviceView => ({
     interface: 'HmIP-RF',
@@ -158,5 +158,53 @@ describe('checkState', () => {
         expect(checkState({status: 'candidate'}, 1000)).toBeUndefined();
         expect(checkState({status: 'pending', check_until: 2000}, 1000)).toBeUndefined();
         expect(checkState({status: 'accepted'}, 1000)).toBeUndefined();
+    });
+});
+
+describe('the device list\'s filter', () => {
+    const list = [
+        dev({address: 'OK', low_bat: false}),
+        dev({address: 'GONE', unreach: true}),
+        dev({address: 'MUTED', low_bat: false, service_messages_off: true}),
+        dev({address: 'BOTH', unreach: true, service_messages_off: true}),
+        dev({address: 'MAINS', power: 'mains', unreach: true}),
+    ];
+    const ids = (l: DeviceView[]) => l.map((d) => d.address).join(',');
+    const ccu = {service_messages: true};
+    const lite = {service_messages: false};
+
+    it('shows what the list always showed by default', () => {
+        expect(ids(filterDevices(list, DEFAULT_DEVICE_FILTER, ccu))).toBe('OK,GONE,MUTED,BOTH');
+        expect(ids(filterDevices(list, {...DEFAULT_DEVICE_FILTER, showMains: true}, ccu))).toBe('OK,GONE,MUTED,BOTH,MAINS');
+    });
+    it('hides unreachable devices, and devices with service messages off', () => {
+        expect(ids(filterDevices(list, {...DEFAULT_DEVICE_FILTER, hideUnreach: true}, ccu))).toBe('OK,MUTED');
+        expect(ids(filterDevices(list, {...DEFAULT_DEVICE_FILTER, hideServiceOff: true}, ccu))).toBe('OK,GONE');
+        expect(ids(filterDevices(list, {showMains: true, hideUnreach: true, hideServiceOff: true}, ccu))).toBe('OK');
+    });
+    it('hides nothing by a switch the system does not have', () => {
+        expect(ids(filterDevices(list, {...DEFAULT_DEVICE_FILTER, hideServiceOff: true}, lite))).toBe('OK,GONE,MUTED,BOTH');
+    });
+    it('remembers the choice, and falls back to the default', () => {
+        const mem = new Map<string, string>();
+        const storage = {getItem: (k: string) => mem.get(k) ?? null, setItem: (k: string, v: string) => void mem.set(k, v)};
+        expect(loadDeviceFilter(storage)).toEqual(DEFAULT_DEVICE_FILTER);
+        saveDeviceFilter({showMains: false, hideUnreach: true, hideServiceOff: true}, storage);
+        expect(loadDeviceFilter(storage)).toEqual({showMains: false, hideUnreach: true, hideServiceOff: true});
+        mem.set('battery.devices.filter', '{broken');
+        expect(loadDeviceFilter(storage)).toEqual(DEFAULT_DEVICE_FILTER);
+        mem.set('battery.devices.filter', '{"hideUnreach":"yes","x":1}');
+        expect(loadDeviceFilter(storage)).toEqual(DEFAULT_DEVICE_FILTER);
+        expect(loadDeviceFilter(undefined)).toEqual(DEFAULT_DEVICE_FILTER);
+        const refusing = {
+            getItem: () => {
+                throw new Error('denied');
+            },
+            setItem: () => {
+                throw new Error('denied');
+            },
+        };
+        expect(loadDeviceFilter(refusing)).toEqual(DEFAULT_DEVICE_FILTER);
+        expect(() => saveDeviceFilter(DEFAULT_DEVICE_FILTER, refusing)).not.toThrow();
     });
 });

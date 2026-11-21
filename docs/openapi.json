@@ -206,6 +206,10 @@
      "first_seen": {
       "type": "integer"
      },
+     "service_messages_off": {
+      "type": "boolean",
+      "description": "true when the user switched the device's service messages off in the CCU (ReGa's per-device switch); absent otherwise, and always on openccu-lite"
+     },
      "profile": {
       "$ref": "#/components/schemas/Profile"
      },

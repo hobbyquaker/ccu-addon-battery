@@ -69,7 +69,11 @@ Jedes Batteriegerät mit Bild, Status (nicht erreichbar, Batterie leer, OK), den
 aus der Batterietabelle, der letzten Spannung, der bisherigen Haltedauer seiner Batterien, wie
 lange die aktuellen schon drin sind, wann der nächste Wechsel fällig ist und wann es sich zuletzt
 gemeldet hat. Jede Spalte lässt sich sortieren und filtern; Geräte mit Netz- oder Busversorgung
-blendet der Haken oben ein. *Gewechselt …* bucht einen Wechsel direkt aus der Liste.
+blendet der Haken oben ein. Zwei weitere Haken blenden Geräte aus: die gerade nicht erreichbaren
+und – auf einer CCU3, OpenCCU und piVCCU – die, deren Servicemeldungen in der CCU abgeschaltet
+sind (*Einstellungen → Geräte*, Haken *Servicemeldungen*; openccu-lite hat keinen solchen Schalter
+je Gerät). Ohne Haken zeigt die Liste alle Geräte; die Wahl merkt sich der Browser.
+*Gewechselt …* bucht einen Wechsel direkt aus der Liste.
 
 ### Ein Gerät
 

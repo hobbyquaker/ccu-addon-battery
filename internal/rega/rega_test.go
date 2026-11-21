@@ -116,3 +116,17 @@ func TestTransportLeavesOthersAlone(t *testing.T) {
 		}
 	}
 }
+
+func TestParseServiceOff(t *testing.T) {
+	out := "S\tJEQ01\tnull\r\nS\tJEQ02\tfalse\r\nS\tJEQ03\ttrue\r\nS\t\tfalse\r\njunk\nS\t000A1\tfalse\n<xml><exec>/rega.exe</exec></xml>"
+	got := ParseServiceOff(out)
+	if len(got) != 2 || !got["JEQ02"] || !got["000A1"] {
+		t.Fatalf("off: %v", got)
+	}
+	if len(ParseServiceOff("")) != 0 {
+		t.Fatal("empty")
+	}
+	if !strings.Contains(ServiceOffScript, `MetaData("enabledServiceMsg")`) {
+		t.Fatal("the script reads the WebUI's switch")
+	}
+}

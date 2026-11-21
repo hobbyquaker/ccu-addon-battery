@@ -211,7 +211,8 @@ body,
 
 .bat-toolbar {
     display: flex;
-    gap: 12px;
+    flex-wrap: wrap;
+    gap: 4px 16px;
     align-items: center;
     margin: 0 0 6px;
 }

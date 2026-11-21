@@ -98,6 +98,8 @@ func run(addonDir, id string, port int, base, basePath, www, tokenFile string, f
 
 	// the system: openccu-lite's APIs, or on a classic CCU the interface processes and ReGa
 	var src litesource.Source
+	// serviceOff: a classic CCU's per-device switch of the service messages; nil on openccu-lite
+	var serviceOff func(context.Context) (map[string]bool, error)
 	wrap := func(h http.Handler) http.Handler { return h }
 	if kind == addonkit.OpenccuLite {
 		var token addonkit.TokenSource
@@ -139,6 +141,13 @@ func run(addonDir, id string, port int, base, basePath, www, tokenFile string, f
 			}
 		}
 		src = ccu
+		serviceOff = func(ctx context.Context) (map[string]bool, error) {
+			out, err := ccu.Rega(ctx, rega.ServiceOffScript)
+			if err != nil {
+				return nil, err
+			}
+			return rega.ParseServiceOff(out), nil
+		}
 		if !noSession {
 			c := ccuauth.New(id, ccuauth.Options{Need: addonkit.LevelUser, OnRefused: func(r *http.Request, reason string) {
 				log.Printf("battery: refused %s %s: %s", r.Method, r.URL.Path, reason)
@@ -153,7 +162,7 @@ func run(addonDir, id string, port int, base, basePath, www, tokenFile string, f
 	go chg.Run(ctx)
 	log.Printf("battery: detection window %s, merge window %s", params.Window, merge)
 
-	rec := recorder.New(recorder.Options{Source: src, Store: st, Observer: chg, Log: log.Printf})
+	rec := recorder.New(recorder.Options{Source: src, Store: st, Observer: chg, Log: log.Printf, ServiceOff: serviceOff})
 	// recDone: the recorder (and its source) returned - on a classic CCU the source unregisters
 	// its callback from the interface processes on the way out, so the stop waits for it
 	recDone := make(chan struct{})

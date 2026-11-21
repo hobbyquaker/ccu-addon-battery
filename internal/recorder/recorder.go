@@ -57,6 +57,12 @@ type Options struct {
 	// not answer (hmipserver still starting at boot): 5 s, doubling, then every 60 s; a test
 	// shortens them.
 	LearnRetry, LearnRetryMax time.Duration
+	// ServiceOff answers the addresses of the devices whose service messages the user switched
+	// off in the system - a classic CCU's per-device switch in ReGa. nil: the system has no
+	// such switch (openccu-lite), and the device list offers no filter by it.
+	ServiceOff func(context.Context) (map[string]bool, error)
+	// ServiceOffEvery is how often ServiceOff is asked; 10 min by default.
+	ServiceOffEvery time.Duration
 }
 
 // Recorder is the running recorder.
@@ -67,9 +73,11 @@ type Recorder struct {
 	devs  map[string]*device // by interface + "." + address
 	names *litesource.Names
 	chans map[string][]string // the channel addresses of every named device, by interface + "." + address
-	state string              // starting | seeding | live | degraded
-	last  map[string]store.Sample
-	ctx   context.Context
+	// serviceOff are the addresses of the devices whose service messages are off (Options.ServiceOff)
+	serviceOff map[string]bool
+	state      string // starting | seeding | live | degraded
+	last       map[string]store.Sample
+	ctx        context.Context
 	// unlearned are the interfaces whose devices could not be learned yet, by name; "" is the
 	// interface list itself. Only the Run loop touches it.
 	unlearned map[string]*unlearned
@@ -121,6 +129,9 @@ func New(o Options) *Recorder {
 	if o.LearnRetryMax == 0 {
 		o.LearnRetryMax = time.Minute
 	}
+	if o.ServiceOffEvery == 0 {
+		o.ServiceOffEvery = 10 * time.Minute
+	}
 	r := &Recorder{o: o, logf: o.Log, devs: map[string]*device{}, state: "starting", last: map[string]store.Sample{}, ctx: context.Background(),
 		unlearned: map[string]*unlearned{}}
 	return r
@@ -153,6 +164,7 @@ func (r *Recorder) Run(ctx context.Context) error {
 	r.learn(ctx, nil)
 	r.refreshNames(ctx)
 	go r.followNames(ctx)
+	go r.followServiceOff(ctx)
 	snap, err := r.seed(ctx)
 	since := ""
 	if err != nil {
@@ -893,6 +905,46 @@ func (r *Recorder) refreshNames(ctx context.Context) {
 	r.mu.Unlock()
 }
 
+// followServiceOff keeps the set of devices whose service messages are off: read at the start
+// and every ServiceOffEvery - a switch in the WebUI changes no name, so nothing announces it. A
+// failed read keeps the last answer.
+func (r *Recorder) followServiceOff(ctx context.Context) {
+	if r.o.ServiceOff == nil {
+		return
+	}
+	failed := false
+	for {
+		off, err := r.o.ServiceOff(ctx)
+		if err != nil {
+			if !failed && ctx.Err() == nil {
+				r.logf("recorder: the devices' service message switches: %v", err)
+			}
+			failed = true
+		} else {
+			failed = false
+			r.mu.Lock()
+			r.serviceOff = off
+			r.mu.Unlock()
+		}
+		select {
+		case <-ctx.Done():
+			return
+		case <-time.After(r.o.ServiceOffEvery):
+		}
+	}
+}
+
+// Filters says which filters of the device list the system can serve: service_messages only
+// where it has a per-device switch for them.
+type Filters struct {
+	ServiceMessages bool `json:"service_messages"`
+}
+
+// Filters answers the filters the system can serve.
+func (r *Recorder) Filters() Filters {
+	return Filters{ServiceMessages: r.o.ServiceOff != nil}
+}
+
 // channelIndex lists the channel addresses of every device the names know, in channel order.
 func channelIndex(n *litesource.Names) map[string][]string {
 	if n == nil {
@@ -989,6 +1041,9 @@ type View struct {
 	UnreachSince  int64    `json:"unreach_since,omitempty"`
 	LastReport    int64    `json:"last_report,omitempty"`
 	FirstSeen     int64    `json:"first_seen"`
+	// ServiceMessagesOff: the user switched the device's service messages off in the system
+	// (a classic CCU; never set on openccu-lite, which has no such switch).
+	ServiceMessagesOff bool `json:"service_messages_off,omitempty"`
 	// Profile is the battery profile: slots, levels, where it came from.
 	Profile batteries.Profile `json:"profile"`
 }
@@ -1008,6 +1063,7 @@ func (r *Recorder) Devices(lang string) []View {
 		if v.Profile.Slots == nil {
 			v.Profile.Slots = []batteries.Slot{}
 		}
+		v.ServiceMessagesOff = r.serviceOff[d.Address]
 		if r.names != nil {
 			v.Name = r.names.Name(d.Interface, d.Address)
 			v.Rooms = deviceRooms(r.names, r.chans, d.Interface, d.Address, lang)

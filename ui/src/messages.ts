@@ -304,6 +304,27 @@ export const MESSAGES: Catalogue = {
         de: {one: 'Auch Geräte mit Netz- oder Busversorgung zeigen ({count})', other: 'Auch Geräte mit Netz- oder Busversorgung zeigen ({count})'},
         en: {one: 'Show mains and bus powered devices too ({count})', other: 'Show mains and bus powered devices too ({count})'},
     },
+    'devices.hideUnreach': {
+        de: {one: 'Nicht erreichbare Geräte ausblenden ({count})', other: 'Nicht erreichbare Geräte ausblenden ({count})'},
+        en: {one: 'Hide unreachable devices ({count})', other: 'Hide unreachable devices ({count})'},
+    },
+    'devices.hideServiceOff': {
+        de: {one: 'Geräte mit abgeschalteten Servicemeldungen ausblenden ({count})', other: 'Geräte mit abgeschalteten Servicemeldungen ausblenden ({count})'},
+        en: {one: 'Hide devices with service messages switched off ({count})', other: 'Hide devices with service messages switched off ({count})'},
+    },
+    'devices.hideServiceOff.title': {
+        de: 'Geräte, deren Servicemeldungen in der CCU abgeschaltet sind (Einstellungen > Geräte, Haken „Servicemeldungen“). Die Einstellung wird alle zehn Minuten aus der CCU gelesen.',
+        en: 'Devices whose service messages are switched off in the CCU (Settings > Devices, the “Service messages” checkbox). The setting is read from the CCU every ten minutes.',
+    },
+    'devices.hideServiceOff.unavailable': {
+        de: 'Geräte mit abgeschalteten Servicemeldungen ausblenden (nur auf CCU3, OpenCCU und piVCCU)',
+        en: 'Hide devices with service messages switched off (only on a CCU3, OpenCCU and piVCCU)',
+    },
+    'devices.hideServiceOff.unavailable.title': {
+        de: 'openccu-lite hat keinen Schalter, der die Servicemeldungen eines einzelnen Geräts abschaltet; diesen Filter gibt es deshalb nur auf einer CCU3, OpenCCU und piVCCU.',
+        en: 'openccu-lite has no switch that turns off the service messages of a single device, so this filter exists only on a CCU3, OpenCCU and piVCCU.',
+    },
+    'devices.filtered.empty': {de: 'Der Filter blendet alle Geräte aus.', en: 'The filter hides every device.'},
     'inbox.title': {de: 'Erkannte Batteriewechsel', en: 'Detected battery changes'},
     'inbox.intro': {
         de: 'Sieht es so aus, als wären die Batterien eines Geräts gewechselt worden, erscheint der Wechsel sofort hier. Einen Tag lang wird noch geprüft, ob die Spannung hält; antworten können Sie schon vorher, und Ihre Antwort gilt. Gebucht wird ein Wechsel erst, wenn Sie ihn bestätigen.',

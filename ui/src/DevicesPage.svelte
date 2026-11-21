@@ -10,7 +10,7 @@
     import ChangeDialog, {type EditorResult} from './ChangeDialog.svelte';
     import DevicePicture from './DevicePicture.svelte';
     import {get, post} from './api.js';
-    import {compareDevices, describeSlots, dueText, formatDateTime, formatDays, formatVoltage, isMains, lifeText, relativeTime, statusOf, type DeviceForecast, type DeviceView, type Forecast} from './model.js';
+    import {DEFAULT_DEVICE_FILTER, compareDevices, describeSlots, dueText, formatDateTime, formatDays, filterDevices, formatVoltage, isMains, lifeText, loadDeviceFilter, relativeTime, saveDeviceFilter, statusOf, type DeviceFilter, type DeviceFilterCaps, type DeviceForecast, type DeviceView, type Forecast} from './model.js';
 
     let {
         notices,
@@ -20,9 +20,17 @@
         onchanged,
     }: {notices: NoticesStore; inbox?: number; onshowinbox?: () => void; onopen?: (d: DeviceView) => void; onchanged?: () => void} = $props();
 
-    // mains, bus and externally powered devices carry a low-battery flag too; they are left out
-    // unless asked for
-    let showMains = $state(false);
+    // The filter: mains, bus and externally powered devices carry a low-battery flag too and are
+    // left out unless asked for; unreachable devices and - where the system has such a switch, a
+    // classic CCU - devices whose service messages are switched off can be hidden. Everything
+    // off is the list as it always was; the choice is remembered in the browser.
+    let filter = $state<DeviceFilter>(loadDeviceFilter());
+    let caps = $state<DeviceFilterCaps>({service_messages: false});
+
+    function setFilter(key: keyof DeviceFilter, on: boolean) {
+        filter = {...DEFAULT_DEVICE_FILTER, ...filter, [key]: on};
+        saveDeviceFilter(filter);
+    }
     let recordFor = $state<DeviceView | undefined>();
     let recordOpen = $state(false);
     let saving = $state(false);
@@ -52,8 +60,9 @@
 
     async function load() {
         try {
-            const [r, f] = await Promise.all([get<{devices: DeviceView[]}>(`api/v1/devices?lang=${i18n.language}`), get<{devices: DeviceForecast[]}>(`api/v1/forecast?lang=${i18n.language}`)]);
+            const [r, f] = await Promise.all([get<{devices: DeviceView[]; filters?: DeviceFilterCaps}>(`api/v1/devices?lang=${i18n.language}`), get<{devices: DeviceForecast[]}>(`api/v1/forecast?lang=${i18n.language}`)]);
             devices = r.devices.sort(compareDevices);
+            caps = r.filters ?? {service_messages: false};
             const map: Record<string, Forecast> = {};
             for (const d of f.devices) map[`${d.interface}.${d.address}`] = d.forecast;
             forecasts = map;
@@ -74,8 +83,12 @@
     });
 
     const lang = $derived(i18n.language);
-    const shown = $derived(showMains ? devices : devices.filter((d) => !isMains(d.power)));
-    const hiddenMains = $derived(devices.length - devices.filter((d) => !isMains(d.power)).length);
+    const shown = $derived(filterDevices(devices, filter, caps));
+    // the counts say what each filter is about, among the devices the mains choice leaves
+    const pool = $derived(filter.showMains ? devices : devices.filter((d) => !isMains(d.power)));
+    const hiddenMains = $derived(devices.filter((d) => isMains(d.power)).length);
+    const unreachCount = $derived(pool.filter((d) => d.unreach === true).length);
+    const serviceOffCount = $derived(pool.filter((d) => d.service_messages_off === true).length);
     const columns = $derived<DataTableColumn<DeviceView>[]>([
         {key: 'image', label: '', width: 32, fixed: true, sortable: false, filterable: false, align: 'center'},
         {key: 'name', label: t('Name'), width: 190, copy: 'name'},
@@ -135,7 +148,16 @@
     <p class="bat-empty">{t('Loading…')}</p>
 {:else}
     <div class="bat-toolbar">
-        <label><input type="checkbox" bind:checked={showMains} /> {t('devices.showMains', {count: hiddenMains})}</label>
+        <label><input type="checkbox" data-testid="filter-mains" checked={filter.showMains} onchange={(e) => setFilter('showMains', e.currentTarget.checked)} /> {t('devices.showMains', {count: hiddenMains})}</label>
+        <label><input type="checkbox" data-testid="filter-unreach" checked={filter.hideUnreach} onchange={(e) => setFilter('hideUnreach', e.currentTarget.checked)} /> {t('devices.hideUnreach', {count: unreachCount})}</label>
+        {#if caps.service_messages}
+            <label title={t('devices.hideServiceOff.title')}
+                ><input type="checkbox" data-testid="filter-service-off" checked={filter.hideServiceOff} onchange={(e) => setFilter('hideServiceOff', e.currentTarget.checked)} />
+                {t('devices.hideServiceOff', {count: serviceOffCount})}</label
+            >
+        {:else}
+            <label class="bat-muted" title={t('devices.hideServiceOff.unavailable.title')}><input type="checkbox" data-testid="filter-service-off" disabled /> {t('devices.hideServiceOff.unavailable')}</label>
+        {/if}
     </div>
     <div class="bat-table">
         <DataTable
@@ -144,7 +166,7 @@
             getId={(d) => `${d.interface}.${d.address}`}
             columnFilterRow={true}
             caption={t('Devices')}
-            emptyText={t('No battery devices found yet.')}
+            emptyText={pool.length > 0 ? t('devices.filtered.empty') : t('No battery devices found yet.')}
             countText={t('{count} devices', {count: shown.length}, shown.length)}
             showingText={(shown, total) => t('Showing {shown} of {total}', {shown, total})}
             tableId="battery-devices"

@@ -65,8 +65,12 @@ browser shows the one that matches its setting.
 Every battery device with its picture, status (unreachable, low battery, OK), the batteries from
 the battery table, the last voltage, how long its batteries lasted so far, how long the current
 ones have been in, when the next change is due and when it last reported. Every column sorts and
-filters; the box at the top adds the mains- and bus-powered devices. *Gewechselt …* (Changed…)
-records a change straight from the list.
+filters; the box at the top adds the mains- and bus-powered devices. Two more boxes hide devices:
+the ones that are unreachable right now and - on a CCU3, OpenCCU and piVCCU - the ones whose
+service messages are switched off in the CCU (*Settings → Devices*, the *Service messages*
+checkbox; openccu-lite has no such switch per device). With no box ticked the list shows every
+device; the browser remembers the choice. *Gewechselt …* (Changed…) records a change straight from
+the list.
 
 ### A device
 

@@ -122,7 +122,7 @@ func TestRoutes(t *testing.T) {
 	if w.Code != 200 || json.Unmarshal(w.Body.Bytes(), &health) != nil || health["ok"] != true || health["version"] != "test" {
 		t.Fatalf("health: %d %s", w.Code, w.Body)
 	}
-	if w := call(h, "GET", "/addons/battery/api/v1/devices?lang=en", user, ""); w.Code != 200 || !strings.Contains(w.Body.String(), `"devices":[]`) {
+	if w := call(h, "GET", "/addons/battery/api/v1/devices?lang=en", user, ""); w.Code != 200 || !strings.Contains(w.Body.String(), `"devices":[]`) || !strings.Contains(w.Body.String(), `"filters":{"service_messages":false}`) {
 		t.Fatalf("devices: %d %s", w.Code, w.Body)
 	}
 	if w := call(h, "GET", "/addons/battery/api/v1/nope", user, ""); w.Code != 404 {
