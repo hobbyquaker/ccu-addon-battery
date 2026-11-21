@@ -1,5 +1,16 @@
 # Changelog
 
+## [1.5.1] - 2026-11-21
+
+- **Every system:** a model that runs on batteries or on a power supply unit, the **HmIP-MP3P** sounder, is now
+  recognised on its supply by its voltage, since it has no datapoint that says so: an operating voltage of 4.9 V or
+  more - above what its 3× C cells give - or the voltage status OVERFLOW, reported for an hour, puts it on the power
+  supply unit (no forecast, no shopping-list entry, no change detection); back in the cells' range for an hour, it
+  is battery-powered again. A single outlier changes nothing. The device page's *Power supply* now offers
+  *Automatic* (the default), *Batteries* and *Power supply unit*; the manual choice wins, and the page says when the
+  supply was detected automatically. The API's profile carries `auto` and `table_power`. Not yet checked against a
+  real MP3P on its supply - readings are welcome. (forum: UweS)
+
 ## [1.5.0] - 2026-11-21
 
 - **Every system:** *Do not monitor* takes a single device out of the battery views. On the device page and in the
