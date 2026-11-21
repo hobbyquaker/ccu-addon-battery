@@ -430,11 +430,15 @@ func (s *Service) Detect(ctx context.Context, address string, from, to int64, dr
 	modelOv := s.modelOv
 	s.mu.Unlock()
 	params := detect.New(s.o.Params, detect.Levels{}).P
+	ignored, _ := s.o.Store.Ignored(ctx)
 	var found []Found
 	for _, d := range devs {
+		if _, off := ignored[d.iface+"."+d.addr]; off {
+			continue // not monitored: the user asked for no detections
+		}
 		devOv := s.readDeviceOverride(ctx, d.iface, d.addr)
 		obs, maxV := loadObs(ctx, db, d.iface, d.addr, from-params.MaxSpan.Milliseconds(), to+params.Expire.Milliseconds(), false)
-		prof := s.o.Table.Resolve(d.model, modelOv[strings.ToLower(d.model)], devOv, maxV)
+		prof := s.o.Table.ResolveSeen(d.model, modelOv[strings.ToLower(d.model)], devOv, seen(store.Device{VoltageDP: d.vdp, LowBatDP: d.ldp}, maxV))
 		if !prof.Detects() {
 			continue
 		}

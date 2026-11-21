@@ -9,7 +9,7 @@
 
     import ChangeDialog, {type EditorResult} from './ChangeDialog.svelte';
     import DevicePicture from './DevicePicture.svelte';
-    import {get, post} from './api.js';
+    import {del, get, post, put} from './api.js';
     import {DEFAULT_DEVICE_FILTER, compareDevices, describeSlots, dueText, formatDateTime, formatDays, filterDevices, formatVoltage, isMains, lifeText, loadDeviceFilter, relativeTime, saveDeviceFilter, statusOf, type DeviceFilter, type DeviceFilterCaps, type DeviceForecast, type DeviceView, type Forecast} from './model.js';
 
     let {
@@ -31,6 +31,26 @@
         filter = {...DEFAULT_DEVICE_FILTER, ...filter, [key]: on};
         saveDeviceFilter(filter);
     }
+    // "Do not monitor": the device leaves the list (unless "Show ignored"), the forecast, the
+    // shopping list and the notices; switched back the same way.
+    let ignoring = $state<string | undefined>();
+    async function setIgnored(d: DeviceView, on: boolean) {
+        const k = `${d.interface}.${d.address}`;
+        ignoring = k;
+        try {
+            const path = `api/v1/devices/${encodeURIComponent(d.interface)}/${encodeURIComponent(d.address)}/ignore`;
+            if (on) await put(path, undefined);
+            else await del(path);
+            notices.push('info', t(on ? 'ignore.done' : 'ignore.undone', {name: d.name || d.address}));
+            await load();
+            onchanged?.();
+        } catch (e) {
+            notices.push('error', t('ignore.failed', {error: (e as Error).message}));
+        } finally {
+            ignoring = undefined;
+        }
+    }
+
     let recordFor = $state<DeviceView | undefined>();
     let recordOpen = $state(false);
     let saving = $state(false);
@@ -84,9 +104,11 @@
 
     const lang = $derived(i18n.language);
     const shown = $derived(filterDevices(devices, filter, caps));
-    // the counts say what each filter is about, among the devices the mains choice leaves
-    const pool = $derived(filter.showMains ? devices : devices.filter((d) => !isMains(d.power)));
-    const hiddenMains = $derived(devices.filter((d) => isMains(d.power)).length);
+    // the counts say what each filter is about, among the devices the ignore and mains choices leave
+    const ignoredCount = $derived(devices.filter((d) => d.ignored === true).length);
+    const watched = $derived(filter.showIgnored ? devices : devices.filter((d) => d.ignored !== true));
+    const pool = $derived(filter.showMains ? watched : watched.filter((d) => !isMains(d.power)));
+    const hiddenMains = $derived(watched.filter((d) => isMains(d.power)).length);
     const unreachCount = $derived(pool.filter((d) => d.unreach === true).length);
     const serviceOffCount = $derived(pool.filter((d) => d.service_messages_off === true).length);
     const columns = $derived<DataTableColumn<DeviceView>[]>([
@@ -103,7 +125,7 @@
         // sortable by the days left; the low ones first, the unknown last
         {key: 'due', label: t('forecast.column'), width: 136, fixed: true, value: (d) => dueSort(forecasts[`${d.interface}.${d.address}`]), filterable: false, align: 'center'},
         {key: 'last_report', label: t('Last report'), width: 100, value: (d) => relativeTime(d.last_report, now, lang)},
-        {key: 'actions', label: '', width: 140, fixed: true, minWidth: 140, keepMinWidth: true, sortable: false, filterable: false},
+        {key: 'actions', label: '', width: 290, fixed: true, minWidth: 290, keepMinWidth: true, sortable: false, filterable: false},
     ]);
 
     function dueSort(f: Forecast | undefined): number | undefined {
@@ -150,6 +172,10 @@
     <div class="bat-toolbar">
         <label><input type="checkbox" data-testid="filter-mains" checked={filter.showMains} onchange={(e) => setFilter('showMains', e.currentTarget.checked)} /> {t('devices.showMains', {count: hiddenMains})}</label>
         <label><input type="checkbox" data-testid="filter-unreach" checked={filter.hideUnreach} onchange={(e) => setFilter('hideUnreach', e.currentTarget.checked)} /> {t('devices.hideUnreach', {count: unreachCount})}</label>
+        <label title={t('devices.showIgnored.title')}
+            ><input type="checkbox" data-testid="filter-ignored" checked={filter.showIgnored} onchange={(e) => setFilter('showIgnored', e.currentTarget.checked)} />
+            {t('devices.showIgnored', {count: ignoredCount})}</label
+        >
         {#if caps.service_messages}
             <label title={t('devices.hideServiceOff.title')}
                 ><input type="checkbox" data-testid="filter-service-off" checked={filter.hideServiceOff} onchange={(e) => setFilter('hideServiceOff', e.currentTarget.checked)} />
@@ -181,9 +207,19 @@
                     {@const s = statusOf(row)}
                     <span class="bat-pill {s}" title={t('status.' + s)}>{t('status.' + s)}</span>
                 {:else if column.key === 'actions'}
-                    {#if !isMains(row.power)}
-                        <button type="button" class="bat-cell-button" title={t('change.record.title')} onclick={() => ((recordFor = row), (recordOpen = true))}>{t('change.record.button')}</button>
-                    {/if}
+                    <span class="bat-row-actions">
+                        {#if !isMains(row.power) && !row.ignored}
+                            <button type="button" class="bat-cell-button" title={t('change.record.title')} onclick={() => ((recordFor = row), (recordOpen = true))}>{t('change.record.button')}</button>
+                        {/if}
+                        <button
+                            type="button"
+                            class="bat-cell-button bat-ignore-button"
+                            data-testid="ignore-toggle"
+                            title={row.ignored ? t('ignore.undo') : t('ignore.title')}
+                            disabled={ignoring === `${row.interface}.${row.address}`}
+                            onclick={() => setIgnored(row, !row.ignored)}>{row.ignored ? t('ignore.undo') : t('ignore.button')}</button
+                        >
+                    </span>
                 {:else if column.key === 'batteries'}
                     <span class={row.profile?.source === 'none' ? 'bat-muted' : ''} title={row.profile ? t('profile.' + row.profile.source) : ''}>{column.value?.(row)}</span>
                 {:else if column.key === 'voltage'}

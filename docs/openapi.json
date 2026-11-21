@@ -64,8 +64,10 @@
        "table",
        "override",
        "guess",
+       "datapoints",
        "none"
-      ]
+      ],
+      "description": "where the profile came from: the table, an override, a guess of the cell count from the voltage (a model the table lacks; only for 0.8-5.0 V), datapoints (a model the table lacks that reports a voltage but no low-battery flag: mains), none"
      },
      "model": {
       "type": "string",
@@ -220,6 +222,10 @@
      "life": {
       "$ref": "#/components/schemas/DeviceLife",
       "description": "the device's battery lives; absent without an accepted change"
+     },
+     "ignored": {
+      "type": "boolean",
+      "description": "the user does not monitor the device (PUT devices/{iface}/{address}/ignore); absent otherwise"
      }
     }
    },
@@ -1456,6 +1462,166 @@
      },
      "422": {
       "description": "invalid input (error code in the body)",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Error"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/devices/{iface}/{address}/ignore": {
+   "put": {
+    "summary": "do not monitor the device: it keeps being recorded, but leaves the device list's default view, the forecast, the shopping list and the notifications, and its open detections are discarded (reason ignored)",
+    "parameters": [
+     {
+      "name": "X-CCU-Addon-Request",
+      "in": "header",
+      "required": true,
+      "description": "the CSRF header every writing request carries (any value)",
+      "schema": {
+       "type": "string",
+       "example": "1"
+      }
+     },
+     {
+      "name": "iface",
+      "in": "path",
+      "required": true,
+      "description": "the interface",
+      "schema": {
+       "type": "string"
+      }
+     },
+     {
+      "name": "address",
+      "in": "path",
+      "required": true,
+      "description": "the device address",
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "OK",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "object",
+         "properties": {
+          "ok": {
+           "type": "boolean"
+          },
+          "interface": {
+           "type": "string"
+          },
+          "address": {
+           "type": "string"
+          },
+          "ignored": {
+           "type": "boolean"
+          }
+         }
+        }
+       }
+      }
+     },
+     "403": {
+      "description": "no CSRF header, or the level does not suffice",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Error"
+        }
+       }
+      }
+     },
+     "404": {
+      "description": "no such device (unknown-device)",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Error"
+        }
+       }
+      }
+     }
+    }
+   },
+   "delete": {
+    "summary": "monitor the device again",
+    "parameters": [
+     {
+      "name": "X-CCU-Addon-Request",
+      "in": "header",
+      "required": true,
+      "description": "the CSRF header every writing request carries (any value)",
+      "schema": {
+       "type": "string",
+       "example": "1"
+      }
+     },
+     {
+      "name": "iface",
+      "in": "path",
+      "required": true,
+      "description": "the interface",
+      "schema": {
+       "type": "string"
+      }
+     },
+     {
+      "name": "address",
+      "in": "path",
+      "required": true,
+      "description": "the device address",
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "OK",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "object",
+         "properties": {
+          "ok": {
+           "type": "boolean"
+          },
+          "interface": {
+           "type": "string"
+          },
+          "address": {
+           "type": "string"
+          },
+          "ignored": {
+           "type": "boolean"
+          }
+         }
+        }
+       }
+      }
+     },
+     "403": {
+      "description": "no CSRF header, or the level does not suffice",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Error"
+        }
+       }
+      }
+     },
+     "404": {
+      "description": "no such device (unknown-device)",
       "content": {
        "application/json": {
         "schema": {

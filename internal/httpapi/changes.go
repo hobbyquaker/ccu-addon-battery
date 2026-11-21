@@ -20,6 +20,7 @@ import (
 	"github.com/hobbyquaker/ccu-addon-battery/docs"
 	"github.com/hobbyquaker/ccu-addon-battery/internal/batteries"
 	"github.com/hobbyquaker/ccu-addon-battery/internal/changes"
+	"github.com/hobbyquaker/ccu-addon-battery/internal/recorder"
 	"github.com/hobbyquaker/ccu-addon-battery/internal/stats"
 	"github.com/hobbyquaker/ccu-addon-battery/internal/store"
 	"github.com/hobbyquaker/ccu-addon-kit/go/addonkit"
@@ -54,6 +55,8 @@ func (o Options) routesChanges(api *http.ServeMux) {
 	handle(api, "GET /api/v1/devices/{iface}/{address}/override", o.getDeviceOverride)
 	handle(api, "PUT /api/v1/devices/{iface}/{address}/override", o.putDeviceOverride)
 	handle(api, "DELETE /api/v1/devices/{iface}/{address}/override", o.deleteDeviceOverride)
+	handle(api, "PUT /api/v1/devices/{iface}/{address}/ignore", o.putIgnore)
+	handle(api, "DELETE /api/v1/devices/{iface}/{address}/ignore", o.deleteIgnore)
 	handle(api, "GET /api/v1/settings", o.settings)
 	handle(api, "PUT /api/v1/settings", o.putSettings)
 	handle(api, "GET /api/v1/forecast", o.forecastList)
@@ -586,6 +589,24 @@ func (o Options) deleteDeviceOverride(w http.ResponseWriter, r *http.Request) {
 	}
 	o.Recorder.Reprofile(r.Context())
 	w.WriteHeader(http.StatusNoContent)
+}
+
+// putIgnore switches a device's monitoring off ("do not monitor"); deleteIgnore back on.
+func (o Options) putIgnore(w http.ResponseWriter, r *http.Request)    { o.setIgnore(w, r, true) }
+func (o Options) deleteIgnore(w http.ResponseWriter, r *http.Request) { o.setIgnore(w, r, false) }
+
+func (o Options) setIgnore(w http.ResponseWriter, r *http.Request, on bool) {
+	iface, address := r.PathValue("iface"), r.PathValue("address")
+	err := o.Recorder.SetIgnored(r.Context(), iface, address, on)
+	if errors.Is(err, recorder.ErrNoDevice) {
+		addonkit.WriteError(w, http.StatusNotFound, "unknown-device", "no device "+iface+" "+address)
+		return
+	}
+	if err != nil {
+		writeErr(w, err)
+		return
+	}
+	writeJSON(w, 200, map[string]any{"ok": true, "interface": iface, "address": address, "ignored": on})
 }
 
 func (o Options) settings(w http.ResponseWriter, r *http.Request) {

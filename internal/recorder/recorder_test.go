@@ -546,3 +546,67 @@ func TestBackoff(t *testing.T) {
 		t.Fatal("nothing unlearned: no retry")
 	}
 }
+
+// "do not monitor" - the flag is kept per device across a restart and a re-learn, the view
+// carries it, the detector stops for the device, and it can be switched back.
+func TestIgnoredDevice(t *testing.T) {
+	s := system(t)
+	st, err := store.Open(store.Config{AddonDir: t.TempDir(), Log: t.Logf})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer st.Close()
+	run := func() (*Recorder, *changes.Service, context.CancelFunc) {
+		chg := changes.New(changes.Options{Store: st, Log: t.Logf})
+		c := litesource.New(s.URL, addonkit.StaticToken("olt_test"))
+		c.Reconnect.Min, c.Reconnect.Max = 10*time.Millisecond, 50*time.Millisecond
+		r := New(Options{Source: c, Store: st, Observer: chg, Log: t.Logf, ReadPause: time.Millisecond})
+		ctx, cancel := context.WithCancel(context.Background())
+		go r.Run(ctx)
+		waitFor(t, func() bool { return r.State() == "live" && s.Streams() > 0 })
+		return r, chg, cancel
+	}
+	r, chg, cancel := run()
+	ctx := context.Background()
+	if err := r.SetIgnored(ctx, "HmIP-RF", "NOPE", true); !errors.Is(err, ErrNoDevice) {
+		t.Fatalf("unknown device: %v", err)
+	}
+	if err := r.SetIgnored(ctx, "HmIP-RF", "WRC2", true); err != nil {
+		t.Fatal(err)
+	}
+	if v := find(r.Devices("en"), "WRC2"); v == nil || !v.Ignored || v.Power != "battery" {
+		t.Fatalf("%+v", v)
+	}
+	// a re-seat of an ignored device opens nothing
+	s.PushEvent("HmIP-RF", "WRC2:0", "BOOTED", true)
+	time.Sleep(3 * time.Millisecond)
+	s.PushEvent("HmIP-RF", "WRC2:0", "OPERATING_VOLTAGE", 3.2)
+	waitFor(t, func() bool { v := find(r.Devices("en"), "WRC2"); return v.Voltage != nil && *v.Voltage == 3.2 })
+	if l, _ := chg.List(ctx, changes.Filter{Statuses: []string{changes.StatusCandidate, changes.StatusPending}}); len(l) != 0 {
+		t.Fatalf("detected while ignored: %+v", l)
+	}
+	// still recorded
+	st.Flush()
+	if rows, _ := st.Samples(ctx, "HmIP-RF", "WRC2", 0, 0); len(rows) < 2 {
+		t.Fatalf("samples: %+v", rows)
+	}
+	cancel()
+	// a restart (and its re-learn) keeps the flag
+	r2, _, cancel2 := run()
+	defer cancel2()
+	if v := find(r2.Devices("en"), "WRC2"); v == nil || !v.Ignored {
+		t.Fatalf("after the restart: %+v", v)
+	}
+	if v := find(r2.Devices("en"), "BBL"); v == nil || v.Ignored {
+		t.Fatalf("another device: %+v", v)
+	}
+	if err := r2.SetIgnored(ctx, "HmIP-RF", "WRC2", false); err != nil {
+		t.Fatal(err)
+	}
+	if v := find(r2.Devices("en"), "WRC2"); v.Ignored {
+		t.Fatalf("switched back: %+v", v)
+	}
+	if ign, _ := st.Ignored(ctx); len(ign) != 0 {
+		t.Fatalf("store: %v", ign)
+	}
+}

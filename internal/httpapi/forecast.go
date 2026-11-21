@@ -55,6 +55,9 @@ func (o Options) forecasts(ctx context.Context, lang string, soonDays float64) (
 	now := time.Now()
 	out := []DeviceForecast{}
 	for _, v := range o.Recorder.Devices(lang) {
+		if v.Ignored {
+			continue // the user does not monitor it: no forecast, no shopping, no notification
+		}
 		if !v.Profile.Detects() && v.Profile.Power != "battery" && v.Profile.Power != "rechargeable" && v.Profile.Power != "unknown" {
 			continue
 		}

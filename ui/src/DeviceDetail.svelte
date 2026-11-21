@@ -9,7 +9,7 @@
     import ChangeDialog, {type EditorResult} from './ChangeDialog.svelte';
     import DevicePicture from './DevicePicture.svelte';
     import VoltageChart, {type SamplePoint} from './VoltageChart.svelte';
-    import {del, get, patch, post} from './api.js';
+    import {del, get, patch, post, put} from './api.js';
     import {batteryName, describeSlots, formatCents, formatDateTime, formatDays, formatVoltage, lifeText, relativeTime, statusOf, type Change, type DeviceView} from './model.js';
 
     let {device, notices, onback, onchanged}: {device: DeviceView; notices: NoticesStore; onback: () => void; onchanged?: () => void} = $props();
@@ -100,6 +100,62 @@
 
     let confirmDelete = $state<Change | undefined>();
 
+    // the device's own override (GET devices/{iface}/{address}/override): the power supply switch
+    // of a model that runs on batteries or a power supply unit writes its power
+    type Override = {power?: string; [k: string]: unknown};
+    let override = $state<Override | null>(null);
+    const devPath = $derived(`api/v1/devices/${encodeURIComponent(device.interface)}/${encodeURIComponent(device.address)}`);
+
+    async function loadOverride() {
+        try {
+            override = (await get<{override: Override | null}>(`${devPath}/override`)).override;
+        } catch {
+            override = null;
+        }
+    }
+
+    $effect(() => {
+        void key;
+        loadOverride();
+    });
+
+    const onSupply = $derived(override?.power === 'external');
+    // the switch is offered where the model can run either way (the table's battery-or-dc), and
+    // wherever the user set it already
+    const supplyChoice = $derived(device.profile?.power === 'battery-or-dc' || onSupply);
+
+    async function setSupply(external: boolean) {
+        busy = true;
+        try {
+            const next: Override = {...(override ?? {})};
+            if (external) next.power = 'external';
+            else delete next.power;
+            if (Object.keys(next).length === 0) await del(`${devPath}/override`);
+            else await put(`${devPath}/override`, next);
+            override = Object.keys(next).length ? next : null;
+            notices.push('info', t('supply.saved'));
+            onchanged?.();
+        } catch (e) {
+            notices.push('error', t('ignore.failed', {error: (e as Error).message}));
+        } finally {
+            busy = false;
+        }
+    }
+
+    async function setIgnored(on: boolean) {
+        busy = true;
+        try {
+            if (on) await put(`${devPath}/ignore`, undefined);
+            else await del(`${devPath}/ignore`);
+            notices.push('info', t(on ? 'ignore.done' : 'ignore.undone', {name: device.name || device.address}));
+            onchanged?.();
+        } catch (e) {
+            notices.push('error', t('ignore.failed', {error: (e as Error).message}));
+        } finally {
+            busy = false;
+        }
+    }
+
     const accepted = $derived(changes.filter((c) => c.status === 'accepted').sort((a, b) => b.at - a.at));
     const status = $derived(statusOf(device));
 
@@ -149,9 +205,25 @@
                 <dt></dt>
                 <dd class="bat-muted">{t('detail.noVoltageModel')}</dd>
             {/if}
+            {#if supplyChoice}
+                <dt>{t('supply.label')}</dt>
+                <dd>
+                    <select data-testid="supply" title={t('supply.title')} value={onSupply ? 'external' : 'batteries'} disabled={busy} onchange={(e) => setSupply(e.currentTarget.value === 'external')}>
+                        <option value="batteries">{t('supply.batteries')}</option>
+                        <option value="external">{t('supply.external')}</option>
+                    </select>
+                </dd>
+            {/if}
+            {#if device.ignored}
+                <dt></dt>
+                <dd class="bat-muted" data-testid="ignored-note">{t('ignore.detail')}</dd>
+            {/if}
         </dl>
         <div class="bat-actions">
             <button type="button" class="primary" onclick={openRecord} disabled={busy}>{t('change.record.button')}</button>
+            <button type="button" data-testid="ignore-toggle" title={device.ignored ? t('ignore.undo') : t('ignore.title')} onclick={() => setIgnored(!device.ignored)} disabled={busy}
+                >{device.ignored ? t('ignore.undo') : t('ignore.button')}</button
+            >
         </div>
     </section>
 

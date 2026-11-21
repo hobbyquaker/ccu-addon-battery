@@ -44,13 +44,21 @@ fields are refused, so a typo does not pass silently), 404, 422 with a code (`in
 
 | Route | Does |
 | --- | --- |
-| `GET devices` | every tracked device: interface, address, the name and rooms from the system, the model, the current voltage and flags, `profile` - power source, slots, the levels the detector uses, and where they came from (`table`, `override`, `guess`, `none`) -, `image` (the platform's picture of the model, `/config/img/devices/250/…`, as the WebUI's `DEVDB.tcl` names it; absent without one) and `life` (the device's battery lives: `count`, `min_days`, `max_days`, `avg_days`, `median_days` of the completed ones, `running_since`/`running_days` of the current one, `hint: short` for a low battery well before the device's usual life; absent without an accepted change) and `service_messages_off: true` for a device whose service messages the user switched off in the CCU (the WebUI's per-device checkbox, read from ReGa every ten minutes; absent otherwise). Beside `devices` the answer carries `filters`: `{service_messages}` - whether the system has that switch at all (a CCU3, OpenCCU, piVCCU: true; openccu-lite: false), so a client knows whether a filter by it means anything |
+| `GET devices` | every tracked device: interface, address, the name and rooms from the system, the model, the current voltage and flags, `profile` - power source, slots, the levels the detector uses, and where they came from (`table`, `override`, `guess` - the cell count from a voltage of 0.8-5.0 V -, `datapoints` - mains: the model is not in the table and reports a voltage but no low-battery flag -, `none`) -, `ignored: true` for a device the user does not monitor (absent otherwise), `image` (the platform's picture of the model, `/config/img/devices/250/…`, as the WebUI's `DEVDB.tcl` names it; absent without one) and `life` (the device's battery lives: `count`, `min_days`, `max_days`, `avg_days`, `median_days` of the completed ones, `running_since`/`running_days` of the current one, `hint: short` for a low battery well before the device's usual life; absent without an accepted change) and `service_messages_off: true` for a device whose service messages the user switched off in the CCU (the WebUI's per-device checkbox, read from ReGa every ten minutes; absent otherwise). Beside `devices` the answer carries `filters`: `{service_messages}` - whether the system has that switch at all (a CCU3, OpenCCU, piVCCU: true; openccu-lite: false), so a client knows whether a filter by it means anything |
 | `GET models` | the models of this installation with their table rows; `?unknown=true` lists the ones the table lacks |
 | `GET models/{model}` | one model's row, override and profile; the lookup ignores case and knows the aliases |
 | `PUT`/`DELETE models/{model}/override` | fix the table for a model locally: `{"slots": [{"count": 2, "type": "AA"}], "power": "battery"}` |
-| `GET`/`PUT`/`DELETE devices/{interface}/{address}/override` | one device: `{"rechargeable": true}`, `{"chemistry": "lithium-aa"}`, `{"slots": [...]}` (a remote in a desk stand), `{"power": "external"}`, `{"outdoor": true}` |
+| `GET`/`PUT`/`DELETE devices/{interface}/{address}/override` | one device: `{"rechargeable": true}`, `{"chemistry": "lithium-aa"}`, `{"slots": [...]}` (a remote in a desk stand), `{"power": "external"}` (a model that runs on batteries or a power supply unit, the HmIP-MP3P on its 5 V supply), `{"outdoor": true}` |
+| `PUT`/`DELETE devices/{interface}/{address}/ignore` | do not monitor the device / monitor it again; no body. Answers `{"ok": true, "interface", "address", "ignored"}`, 404 `unknown-device` |
 
 A device override wins over a model override, which wins over the table.
+
+**Do not monitor.** An ignored device is still recorded - its samples, events and changes stay, and a change can
+still be recorded for it - but `GET forecast` and `GET shopping` leave it out, so it gets no notification either,
+the detector stops watching it (its open detections go to `discarded` with `evidence.reason` `ignored`) and
+`POST detect` skips it. `GET devices` lists it with `ignored: true`; the device list hides it unless *Show ignored*
+is ticked. The flag is kept per device (interface and address) in the database and survives an update; switched
+back, the device is watched again from its next report.
 
 ## Changes
 

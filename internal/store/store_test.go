@@ -671,3 +671,34 @@ func TestRunInterval(t *testing.T) {
 		t.Fatalf("fixed: %s", s.Interval())
 	}
 }
+
+// "do not monitor" is a meta row per device: Devices carries it, an upsert keeps it, and it
+// is switched back by deleting the row.
+func TestIgnored(t *testing.T) {
+	s, _ := testStore(t, nil)
+	ctx := context.Background()
+	s.UpsertDevice(Device{Interface: "HmIP-RF", Address: "DEVA", Model: "HmIP-WRC2", LowBatDP: "0/LOW_BAT", FirstSeen: 1, LastSeen: 1})
+	s.UpsertDevice(Device{Interface: "HmIP-RF", Address: "DEVB", Model: "HmIP-WRC2", LowBatDP: "0/LOW_BAT", FirstSeen: 1, LastSeen: 1})
+	if err := s.SetIgnored(ctx, "HmIP-RF", "DEVA", true, 42); err != nil {
+		t.Fatal(err)
+	}
+	if err := s.SetIgnored(ctx, "HmIP-RF", "DEVA", true, 99); err != nil { // again: since stays
+		t.Fatal(err)
+	}
+	s.UpsertDevice(Device{Interface: "HmIP-RF", Address: "DEVA", Model: "HmIP-WRC2", LowBatDP: "0/LOW_BAT", FirstSeen: 1, LastSeen: 2})
+	s.Flush()
+	ign, err := s.Ignored(ctx)
+	if err != nil || len(ign) != 1 || ign["HmIP-RF.DEVA"] != 42 {
+		t.Fatalf("%v %v", ign, err)
+	}
+	devs, _ := s.Devices(ctx)
+	if len(devs) != 2 || !devs[0].Ignored || devs[1].Ignored {
+		t.Fatalf("%+v", devs)
+	}
+	if err := s.SetIgnored(ctx, "HmIP-RF", "DEVA", false, 0); err != nil {
+		t.Fatal(err)
+	}
+	if devs, _ = s.Devices(ctx); devs[0].Ignored {
+		t.Fatalf("%+v", devs)
+	}
+}

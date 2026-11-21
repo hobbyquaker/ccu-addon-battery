@@ -22,6 +22,8 @@ export interface DeviceView {
     first_seen: number;
     /** The user switched the device's service messages off in the CCU; never set on openccu-lite. */
     service_messages_off?: boolean;
+    /** The user does not monitor the device ("do not monitor"): out of the default list, the forecast, the shopping list and the notices. */
+    ignored?: boolean;
     profile?: Profile;
     /** The platform's picture of the model (/config/img/devices/250/...), absent without one. */
     image?: string;
@@ -36,7 +38,7 @@ export interface Slot {
 }
 
 export interface Profile {
-    source: 'table' | 'override' | 'guess' | 'none';
+    source: 'table' | 'override' | 'guess' | 'datapoints' | 'none';
     model?: string;
     power: string;
     slots: Slot[];
@@ -302,7 +304,7 @@ export function locationText(id: string): {key: string; params: Record<string, s
     return {key: 'storage.candidate.userfs', params: {}};
 }
 
-export type Status = 'low' | 'unreach' | 'external' | 'ok' | 'unknown';
+export type Status = 'ignored' | 'low' | 'unreach' | 'external' | 'ok' | 'unknown';
 
 const UNIT: Record<string, {y: string; mo: string; d: string}> = {
     de: {y: 'J.', mo: 'Mon.', d: 'T.'},
@@ -384,7 +386,8 @@ export function batteryName(b: {vendor?: string; product?: string; type?: string
 
 
 /** The one word the status pill says, worst first: unreachable, low, externally powered, ok. */
-export function statusOf(d: Pick<DeviceView, 'low_bat' | 'unreach' | 'voltage_status' | 'power' | 'voltage'>): Status {
+export function statusOf(d: Pick<DeviceView, 'low_bat' | 'unreach' | 'voltage_status' | 'power' | 'voltage'> & {ignored?: boolean}): Status {
+    if (d.ignored === true) return 'ignored';
     if (d.unreach === true) return 'unreach';
     if (d.low_bat === true) return 'low';
     if (d.voltage_status === 'EXTERNAL' || isMains(d.power)) return 'external';
@@ -422,7 +425,7 @@ export function formatBytes(n: number): string {
 
 /** The sort of the device list: by status (worst first), then by name. */
 export function compareDevices(a: DeviceView, b: DeviceView): number {
-    const rank: Record<Status, number> = {unreach: 0, low: 1, unknown: 2, ok: 3, external: 4};
+    const rank: Record<Status, number> = {unreach: 0, low: 1, unknown: 2, ok: 3, external: 4, ignored: 5};
     const d = rank[statusOf(a)] - rank[statusOf(b)];
     if (d !== 0) return d;
     return (a.name || a.address).localeCompare(b.name || b.address);
@@ -447,13 +450,21 @@ export interface DeviceFilter {
     hideUnreach: boolean;
     /** Hide the devices whose service messages are switched off in the CCU. */
     hideServiceOff: boolean;
+    /** Show the devices the user does not monitor too. */
+    showIgnored: boolean;
 }
 
-export const DEFAULT_DEVICE_FILTER: DeviceFilter = {showMains: false, hideUnreach: false, hideServiceOff: false};
+export const DEFAULT_DEVICE_FILTER: DeviceFilter = {showMains: false, hideUnreach: false, hideServiceOff: false, showIgnored: false};
 
 /** The devices the filter leaves; a filter the system cannot serve hides nothing. */
 export function filterDevices(devices: DeviceView[], f: DeviceFilter, caps: DeviceFilterCaps): DeviceView[] {
-    return devices.filter((d) => (f.showMains || !isMains(d.power)) && !(f.hideUnreach && d.unreach === true) && !(f.hideServiceOff && caps.service_messages && d.service_messages_off === true));
+    return devices.filter(
+        (d) =>
+            (f.showIgnored || d.ignored !== true) &&
+            (f.showMains || !isMains(d.power)) &&
+            !(f.hideUnreach && d.unreach === true) &&
+            !(f.hideServiceOff && caps.service_messages && d.service_messages_off === true),
+    );
 }
 
 const DEVICE_FILTER_KEY = 'battery.devices.filter';
@@ -473,7 +484,7 @@ export function loadDeviceFilter(storage: FilterStorage | undefined = browserSto
     try {
         const v = JSON.parse(storage?.getItem(DEVICE_FILTER_KEY) ?? 'null') as Partial<DeviceFilter> | null;
         if (!v || typeof v !== 'object') return {...DEFAULT_DEVICE_FILTER};
-        return {showMains: v.showMains === true, hideUnreach: v.hideUnreach === true, hideServiceOff: v.hideServiceOff === true};
+        return {showMains: v.showMains === true, hideUnreach: v.hideUnreach === true, hideServiceOff: v.hideServiceOff === true, showIgnored: v.showIgnored === true};
     } catch {
         return {...DEFAULT_DEVICE_FILTER};
     }

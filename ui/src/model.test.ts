@@ -26,6 +26,10 @@ describe('statusOf', () => {
         expect(statusOf(dev({voltage: 2.9}))).toBe('ok');
         expect(statusOf(dev({}))).toBe('unknown');
     });
+    it('says ignored first for a device the user does not monitor', () => {
+        expect(statusOf(dev({ignored: true, low_bat: true, unreach: true}))).toBe('ignored');
+        expect(statusOf(dev({ignored: false, low_bat: true}))).toBe('low');
+    });
 });
 
 describe('formatting', () => {
@@ -180,7 +184,13 @@ describe('the device list\'s filter', () => {
     it('hides unreachable devices, and devices with service messages off', () => {
         expect(ids(filterDevices(list, {...DEFAULT_DEVICE_FILTER, hideUnreach: true}, ccu))).toBe('OK,MUTED');
         expect(ids(filterDevices(list, {...DEFAULT_DEVICE_FILTER, hideServiceOff: true}, ccu))).toBe('OK,GONE');
-        expect(ids(filterDevices(list, {showMains: true, hideUnreach: true, hideServiceOff: true}, ccu))).toBe('OK');
+        expect(ids(filterDevices(list, {showMains: true, hideUnreach: true, hideServiceOff: true, showIgnored: false}, ccu))).toBe('OK');
+    });
+    it('hides the ignored devices unless asked for (1.5.0)', () => {
+        const withIgnored = [...list, dev({address: 'IGN', low_bat: true, ignored: true}), dev({address: 'IGNM', power: 'mains', ignored: true})];
+        expect(ids(filterDevices(withIgnored, DEFAULT_DEVICE_FILTER, ccu))).toBe('OK,GONE,MUTED,BOTH');
+        expect(ids(filterDevices(withIgnored, {...DEFAULT_DEVICE_FILTER, showIgnored: true}, ccu))).toBe('OK,GONE,MUTED,BOTH,IGN');
+        expect(ids(filterDevices(withIgnored, {...DEFAULT_DEVICE_FILTER, showIgnored: true, showMains: true}, ccu))).toBe('OK,GONE,MUTED,BOTH,MAINS,IGN,IGNM');
     });
     it('hides nothing by a switch the system does not have', () => {
         expect(ids(filterDevices(list, {...DEFAULT_DEVICE_FILTER, hideServiceOff: true}, lite))).toBe('OK,GONE,MUTED,BOTH');
@@ -189,8 +199,11 @@ describe('the device list\'s filter', () => {
         const mem = new Map<string, string>();
         const storage = {getItem: (k: string) => mem.get(k) ?? null, setItem: (k: string, v: string) => void mem.set(k, v)};
         expect(loadDeviceFilter(storage)).toEqual(DEFAULT_DEVICE_FILTER);
-        saveDeviceFilter({showMains: false, hideUnreach: true, hideServiceOff: true}, storage);
-        expect(loadDeviceFilter(storage)).toEqual({showMains: false, hideUnreach: true, hideServiceOff: true});
+        saveDeviceFilter({showMains: false, hideUnreach: true, hideServiceOff: true, showIgnored: true}, storage);
+        expect(loadDeviceFilter(storage)).toEqual({showMains: false, hideUnreach: true, hideServiceOff: true, showIgnored: true});
+        // a choice saved by 1.4 (no showIgnored) hides the ignored ones
+        mem.set('battery.devices.filter', '{"showMains":true}');
+        expect(loadDeviceFilter(storage)).toEqual({...DEFAULT_DEVICE_FILTER, showMains: true});
         mem.set('battery.devices.filter', '{broken');
         expect(loadDeviceFilter(storage)).toEqual(DEFAULT_DEVICE_FILTER);
         mem.set('battery.devices.filter', '{"hideUnreach":"yes","x":1}');

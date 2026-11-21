@@ -21,6 +21,7 @@ export const MESSAGES: Catalogue = {
     'status.unreach': {de: 'Nicht erreichbar', en: 'Unreachable'},
     'status.external': {de: 'Netzbetrieb', en: 'External power'},
     'status.unknown': {de: 'Unbekannt', en: 'Unknown'},
+    'status.ignored': {de: 'Ignoriert', en: 'Ignored'},
     '{count} devices': {
         de: {one: '{count} Gerät', other: '{count} Geräte'},
         en: {one: '{count} device', other: '{count} devices'},
@@ -308,6 +309,10 @@ export const MESSAGES: Catalogue = {
     'profile.override': {de: 'eigene Angabe', en: 'your own setting'},
     'profile.guess': {de: 'geschätzt: das Modell fehlt in der Batterietabelle', en: 'guessed: the model is missing from the battery table'},
     'profile.none': {de: 'Das Modell fehlt in der Batterietabelle.', en: 'The model is missing from the battery table.'},
+    'profile.datapoints': {
+        de: 'Netzbetrieb angenommen: das Modell fehlt in der Batterietabelle und meldet keinen Batteriezustand',
+        en: 'mains assumed: the model is missing from the battery table and reports no battery state',
+    },
     'profile.unknown': {de: 'unbekannt', en: 'unknown'},
     'devices.showMains': {
         de: {one: 'Auch Geräte mit Netz- oder Busversorgung zeigen ({count})', other: 'Auch Geräte mit Netz- oder Busversorgung zeigen ({count})'},
@@ -334,6 +339,35 @@ export const MESSAGES: Catalogue = {
         en: 'openccu-lite has no switch that turns off the service messages of a single device, so this filter exists only on a CCU3, OpenCCU and piVCCU.',
     },
     'devices.filtered.empty': {de: 'Der Filter blendet alle Geräte aus.', en: 'The filter hides every device.'},
+    'devices.showIgnored': {
+        de: {one: 'Ignorierte anzeigen ({count})', other: 'Ignorierte anzeigen ({count})'},
+        en: {one: 'Show ignored ({count})', other: 'Show ignored ({count})'},
+    },
+    'devices.showIgnored.title': {
+        de: 'Geräte, die Sie mit „Nicht überwachen“ ausgenommen haben. Sie werden weiter aufgezeichnet, erscheinen aber nicht in der Vorhersage, der Einkaufsliste und den Benachrichtigungen.',
+        en: 'Devices you excluded with “Do not monitor”. They are still recorded but do not appear in the forecast, the shopping list or the notifications.',
+    },
+    'ignore.button': {de: 'Nicht überwachen', en: 'Do not monitor'},
+    'ignore.undo': {de: 'Wieder überwachen', en: 'Monitor again'},
+    'ignore.title': {
+        de: 'Das Gerät aus der Liste, der Vorhersage, der Einkaufsliste und den Benachrichtigungen nehmen. Die aufgezeichneten Werte und Wechsel bleiben; „Ignorierte anzeigen“ holt es zurück.',
+        en: 'Take the device out of the list, the forecast, the shopping list and the notifications. Its recorded readings and changes stay; “Show ignored” brings it back.',
+    },
+    'ignore.done': {de: '{name} wird nicht mehr überwacht.', en: '{name} is no longer monitored.'},
+    'ignore.undone': {de: '{name} wird wieder überwacht.', en: '{name} is monitored again.'},
+    'ignore.failed': {de: 'Konnte nicht speichern: {error}', en: 'Could not save: {error}'},
+    'ignore.detail': {
+        de: 'Dieses Gerät wird nicht überwacht: keine Vorhersage, keine Einkaufsliste, keine Benachrichtigung, keine Wechselerkennung. Die Werte werden weiter aufgezeichnet.',
+        en: 'This device is not monitored: no forecast, no shopping list, no notification, no change detection. Its readings are still recorded.',
+    },
+    'supply.label': {de: 'Stromversorgung', en: 'Power supply'},
+    'supply.batteries': {de: 'Batterien', en: 'Batteries'},
+    'supply.external': {de: 'Netzteil', en: 'Power supply unit'},
+    'supply.title': {
+        de: 'Dieses Modell läuft mit Batterien oder an einem Netzteil. Am Netzteil gibt es keine Batterie zu überwachen: keine Vorhersage und keine Wechselerkennung.',
+        en: 'This model runs on batteries or on a power supply unit. On a power supply there is no battery to watch: no forecast and no change detection.',
+    },
+    'supply.saved': {de: 'Gespeichert.', en: 'Saved.'},
     'inbox.title': {de: 'Erkannte Batteriewechsel', en: 'Detected battery changes'},
     'inbox.intro': {
         de: 'Sieht es so aus, als wären die Batterien eines Geräts gewechselt worden, erscheint der Wechsel sofort hier. Einen Tag lang wird noch geprüft, ob die Spannung hält; antworten können Sie schon vorher, und Ihre Antwort gilt. Gebucht wird ein Wechsel erst, wenn Sie ihn bestätigen.',

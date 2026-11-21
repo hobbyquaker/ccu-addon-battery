@@ -599,3 +599,63 @@ VALUES ('HmIP-RF', 'WRC2', ?, 'detected', 'A+B', 'high', 'pending', ?, '[]', 'de
 		t.Fatalf("inbox notices for a pending detection: %d", n)
 	}
 }
+
+// PUT/DELETE devices/{iface}/{address}/ignore; an ignored device is flagged in GET devices
+// and left out of the forecast (and with it the shopping list and the notices). A model the
+// table lacks that reports a voltage without LOW_BAT is mains.
+func TestIgnoreAPI(t *testing.T) {
+	o, _, s, _ := serverOptions(t)
+	s.Interfaces = []string{"HmIP-RF"}
+	s.Devices["HmIP-RF"] = []map[string]any{
+		{"ADDRESS": "WRC2", "TYPE": "HmIP-WRC2", "FIRMWARE": "1.2", "VERSION": 1, "CHILDREN": []string{"WRC2:0"}},
+		{"ADDRESS": "WRC2:0", "TYPE": "MAINTENANCE", "PARENT": "WRC2"},
+		{"ADDRESS": "ACT", "TYPE": "ELV-SH-NEW", "FIRMWARE": "1.0", "VERSION": 1, "CHILDREN": []string{"ACT:0"}},
+		{"ADDRESS": "ACT:0", "TYPE": "MAINTENANCE", "PARENT": "ACT"},
+	}
+	s.Paramsets["HmIP-RF/HmIP-WRC2/1.2/1/MAINTENANCE/VALUES"] = map[string]any{"OPERATING_VOLTAGE": map[string]any{"TYPE": "FLOAT"}, "LOW_BAT": map[string]any{"TYPE": "BOOL"}, "UNREACH": map[string]any{"TYPE": "BOOL"}}
+	s.Paramsets["HmIP-RF/ELV-SH-NEW/1.0/1/MAINTENANCE/VALUES"] = map[string]any{"OPERATING_VOLTAGE": map[string]any{"TYPE": "FLOAT"}, "UNREACH": map[string]any{"TYPE": "BOOL"}}
+	s.Values["HmIP-RF/WRC2:0/VALUES"] = map[string]any{"OPERATING_VOLTAGE": 2.9, "LOW_BAT": false, "UNREACH": false}
+	s.Values["HmIP-RF/ACT:0/VALUES"] = map[string]any{"OPERATING_VOLTAGE": 3.1, "UNREACH": false}
+	h := New(o)
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	go o.Recorder.Run(ctx)
+	deadline := time.Now().Add(5 * time.Second)
+	for len(o.Recorder.Devices("en")) < 2 {
+		if time.Now().After(deadline) {
+			t.Fatalf("recorder: %s", o.Recorder.State())
+		}
+		time.Sleep(5 * time.Millisecond)
+	}
+	if w := call(h, "GET", "/addons/battery/api/v1/devices", user, ""); w.Code != 200 || strings.Contains(w.Body.String(), `"ignored"`) ||
+		!strings.Contains(w.Body.String(), `"model":"ELV-SH-NEW","firmware":"1.0","power":"mains"`) {
+		t.Fatalf("devices: %d %s", w.Code, w.Body)
+	}
+	if w := call(h, "GET", "/addons/battery/api/v1/forecast", user, ""); !strings.Contains(w.Body.String(), `"address":"WRC2"`) || strings.Contains(w.Body.String(), `"address":"ACT"`) {
+		t.Fatalf("forecast: %s", w.Body)
+	}
+	csrf := []string{addonkit.HeaderRequest, "1"}
+	if w := call(h, "PUT", "/addons/battery/api/v1/devices/HmIP-RF/WRC2/ignore", user, ""); w.Code != 403 {
+		t.Fatalf("no CSRF: %d", w.Code)
+	}
+	if w := call(h, "PUT", "/addons/battery/api/v1/devices/HmIP-RF/NOPE/ignore", user, "", csrf...); w.Code != 404 || !strings.Contains(w.Body.String(), "unknown-device") {
+		t.Fatalf("unknown: %d %s", w.Code, w.Body)
+	}
+	if w := call(h, "PUT", "/addons/battery/api/v1/devices/HmIP-RF/WRC2/ignore", user, "", csrf...); w.Code != 200 || !strings.Contains(w.Body.String(), `"ignored":true`) {
+		t.Fatalf("ignore: %d %s", w.Code, w.Body)
+	}
+	if w := call(h, "GET", "/addons/battery/api/v1/devices", user, ""); !strings.Contains(w.Body.String(), `"ignored":true`) {
+		t.Fatalf("devices: %s", w.Body)
+	}
+	for _, p := range []string{"forecast", "shopping"} {
+		if w := call(h, "GET", "/addons/battery/api/v1/"+p, user, ""); w.Code != 200 || strings.Contains(w.Body.String(), `"address":"WRC2"`) {
+			t.Fatalf("%s: %s", p, w.Body)
+		}
+	}
+	if w := call(h, "DELETE", "/addons/battery/api/v1/devices/HmIP-RF/WRC2/ignore", user, "", csrf...); w.Code != 200 || !strings.Contains(w.Body.String(), `"ignored":false`) {
+		t.Fatalf("back on: %d %s", w.Code, w.Body)
+	}
+	if w := call(h, "GET", "/addons/battery/api/v1/forecast", user, ""); !strings.Contains(w.Body.String(), `"address":"WRC2"`) {
+		t.Fatalf("forecast: %s", w.Body)
+	}
+}

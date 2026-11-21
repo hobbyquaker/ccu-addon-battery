@@ -431,6 +431,9 @@ type Device struct {
 	FirstSeen int64  `json:"first_seen"`
 	LastSeen  int64  `json:"last_seen"`
 	RetiredAt int64  `json:"retired_at,omitempty"`
+	// Ignored: the user switched the device's monitoring off ("do not monitor"); kept in the
+	// meta table (IgnoredKey), never written by UpsertDevice.
+	Ignored bool `json:"ignored,omitempty"`
 }
 
 // Current is one row of current: the last values of a device.
@@ -643,7 +646,62 @@ func (s *Store) Devices(ctx context.Context) ([]Device, error) {
 		}
 		out = append(out, d)
 	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	ign, err := s.Ignored(ctx)
+	if err != nil {
+		return nil, err
+	}
+	for i := range out {
+		_, out[i].Ignored = ign[out[i].Interface+"."+out[i].Address]
+	}
+	return out, nil
+}
+
+// IgnoredKey is the meta key that marks a device as not monitored; its value is when the user
+// switched it off (Unix ms). A row in meta, not a column: no migration, and an older version
+// that does not know it reads the database as before.
+func IgnoredKey(iface, address string) string { return "ignored/" + iface + "/" + address }
+
+// Ignored answers the devices the user does not monitor, by interface + "." + address, with
+// since when.
+func (s *Store) Ignored(ctx context.Context) (map[string]int64, error) {
+	db, err := s.reader()
+	if err != nil {
+		return nil, err
+	}
+	rows, err := db.QueryContext(ctx, `SELECT key, value FROM meta WHERE key LIKE 'ignored/%'`)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	out := map[string]int64{}
+	for rows.Next() {
+		var k, v string
+		if err := rows.Scan(&k, &v); err != nil {
+			return nil, err
+		}
+		iface, address, ok := strings.Cut(strings.TrimPrefix(k, "ignored/"), "/")
+		if !ok {
+			continue
+		}
+		at, _ := strconv.ParseInt(v, 10, 64)
+		out[iface+"."+address] = at
+	}
 	return out, rows.Err()
+}
+
+// SetIgnored switches a device's monitoring off (on true, since at) or back on.
+func (s *Store) SetIgnored(ctx context.Context, iface, address string, on bool, at int64) error {
+	return s.Write(ctx, func(tx *sql.Tx) error {
+		if !on {
+			_, err := tx.Exec(`DELETE FROM meta WHERE key = ?`, IgnoredKey(iface, address))
+			return err
+		}
+		_, err := tx.Exec(`INSERT INTO meta (key, value) VALUES (?, ?) ON CONFLICT(key) DO NOTHING`, IgnoredKey(iface, address), strconv.FormatInt(at, 10))
+		return err
+	})
 }
 
 // Currents reads every current row.

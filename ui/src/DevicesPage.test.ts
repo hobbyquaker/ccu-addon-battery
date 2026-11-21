@@ -104,6 +104,39 @@ describe('DevicesPage: the filter', () => {
         await waitFor(() => expect(names()).toBe('Türe Waschkeller,Taster Gartenhaus'));
     });
 
+    it('hides an ignored device until "Show ignored", and switches a device off and back on (1.5.0)', async () => {
+        const list = [dev({address: 'A1', name: 'Türe Waschkeller'}), dev({address: 'A4', name: 'Taster Bad', model: 'ELV-SH-BS2', ignored: true})];
+        const calls: string[] = [];
+        vi.stubGlobal(
+            'fetch',
+            vi.fn(async (url: string, init?: RequestInit) => {
+                const u = String(url);
+                if (init?.method === 'PUT' || init?.method === 'DELETE') {
+                    calls.push(`${init.method} ${u.slice(u.indexOf('api/v1/'))}`);
+                    const a = list.find((d) => u.includes(`/${d.address}/`));
+                    if (a) a.ignored = init.method === 'PUT';
+                    return new Response(JSON.stringify({ok: true}), {status: 200, headers: {'Content-Type': 'application/json'}});
+                }
+                const body = u.includes('api/v1/devices') ? {devices: list.map((d) => ({...d})), filters: {service_messages: false}} : {devices: []};
+                return new Response(JSON.stringify(body), {status: 200, headers: {'Content-Type': 'application/json'}});
+            }),
+        );
+        render(DevicesPage, {notices});
+        await screen.findByText('Türe Waschkeller');
+        expect(screen.queryByText('Taster Bad')).toBeNull();
+        expect(screen.getByText('Show ignored (1)')).toBeTruthy();
+        await fireEvent.click(screen.getByTestId('filter-ignored'));
+        await screen.findByText('Taster Bad');
+        expect(screen.getByText('Ignored')).toBeTruthy();
+        // back on, then the other one off
+        await fireEvent.click(screen.getByText('Monitor again'));
+        await waitFor(() => expect(calls).toEqual(['DELETE api/v1/devices/HmIP-RF/A4/ignore']));
+        await waitFor(() => expect(screen.getAllByText('Do not monitor').length).toBe(2));
+        await fireEvent.click(screen.getAllByText('Do not monitor')[0]);
+        await waitFor(() => expect(calls.length).toBe(2));
+        expect(calls[1]).toMatch(/^PUT api\/v1\/devices\/HmIP-RF\/A[14]\/ignore$/);
+    });
+
     it('works against a backend that names no filters (an older one)', async () => {
         serve(undefined);
         render(DevicesPage, {notices});

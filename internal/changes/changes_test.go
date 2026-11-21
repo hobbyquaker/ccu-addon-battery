@@ -636,3 +636,87 @@ VALUES (?, ?, ?, ?, 'C', ?, '{"low_bat_before":true}', '[]', ?, ?, ?, ?)`, d.Int
 		t.Fatalf("inbox %+v", inbox)
 	}
 }
+
+// A device the user does not monitor: its open detections are discarded (reason
+// "ignored"), it gets no new ones, and switched back on it is watched again; its accepted
+// changes stay.
+func TestIgnoredDevice(t *testing.T) {
+	s, st, c := setup(t, "")
+	ctx := context.Background()
+	s.Profile(ctx, wrc2, 0)
+	for i := int64(0); i < 10; i++ {
+		feed(s, c, wrc2, t0-10*day+i*day, 2.8, false)
+	}
+	feed(s, c, wrc2, t0, 3.1, true)
+	if l := list(t, s, StatusCandidate); len(l) != 1 {
+		t.Fatalf("candidate: %+v", l)
+	}
+	if _, err := s.Create(ctx, Input{Device: wrc2.Address, At: Time(t0 - 300*day), Batteries: []Battery{{Count: 2, Type: "AAA"}}}, "alice", false); err != nil {
+		t.Fatal(err)
+	}
+	if r, err := s.Detect(ctx, wrc2.Address, t0-20*day, t0+20*day, true); err != nil || r.Devices != 1 {
+		t.Fatalf("backfill before: %+v %v", r, err)
+	}
+	off := wrc2
+	off.Ignored = true
+	if err := st.SetIgnored(ctx, off.Interface, off.Address, true, t0); err != nil {
+		t.Fatal(err)
+	}
+	if p := s.Profile(ctx, off, 0); p.Power != "battery" {
+		t.Fatalf("the profile stays the table's: %+v", p)
+	}
+	l := list(t, s, StatusDiscarded)
+	if len(l) != 1 || !strings.Contains(string(l[0].Evidence), `"reason":"ignored"`) {
+		t.Fatalf("discarded: %+v", l)
+	}
+	// no detection while ignored
+	for i := int64(1); i < 6; i++ {
+		feed(s, c, off, t0+i*day, 2.7, false)
+	}
+	feed(s, c, off, t0+7*day, 3.2, true)
+	c.ms = t0 + 10*day
+	s.Tick(ctx)
+	if l := list(t, s, StatusCandidate, StatusPending); len(l) != 0 {
+		t.Fatalf("an ignored device was detected: %+v", l)
+	}
+	if l := list(t, s, StatusAccepted); len(l) != 1 {
+		t.Fatalf("the user's change: %+v", l)
+	}
+	// the backfill detection leaves it out as well
+	if r, err := s.Detect(ctx, wrc2.Address, t0-20*day, t0+20*day, true); err != nil || r.Devices != 0 || len(r.Found) != 0 {
+		t.Fatalf("backfill: %+v %v", r, err)
+	}
+	// back on: watched again
+	if err := st.SetIgnored(ctx, wrc2.Interface, wrc2.Address, false, 0); err != nil {
+		t.Fatal(err)
+	}
+	s.Profile(ctx, wrc2, 0)
+	for i := int64(11); i < 20; i++ {
+		feed(s, c, wrc2, t0+i*day, 2.75, false)
+	}
+	feed(s, c, wrc2, t0+21*day, 3.2, true)
+	if l := list(t, s, StatusCandidate); len(l) != 1 {
+		t.Fatalf("not watched again: %+v", l)
+	}
+}
+
+// A model the table lacks that reports a voltage but no low-battery flag (the ELV-SH-BS2
+// before its row) is mains by its datapoints: not detected, never in the inbox.
+func TestUnknownWithoutLowBatIsMains(t *testing.T) {
+	s, _, c := setup(t, "")
+	ctx := context.Background()
+	act := store.Device{Interface: "HmIP-RF", Address: "0029A0000000AA", Model: "ELV-SH-NEW", VoltageDP: "0/OPERATING_VOLTAGE"}
+	if p := s.Profile(ctx, act, 0); p.Source != "datapoints" || p.Power != "mains" || p.Detects() {
+		t.Fatalf("%+v", p)
+	}
+	for i := int64(0); i < 10; i++ {
+		feed(s, c, act, t0+i*day, 2.8, false)
+	}
+	feed(s, c, act, t0+11*day, 3.2, true)
+	if p := s.Profile(ctx, act, 3.2); p.Source != "datapoints" {
+		t.Fatalf("a voltage turned it into %+v", p)
+	}
+	if l := list(t, s, StatusCandidate, StatusPending); len(l) != 0 {
+		t.Fatalf("%+v", l)
+	}
+}

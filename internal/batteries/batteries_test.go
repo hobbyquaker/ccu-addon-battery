@@ -146,3 +146,72 @@ func TestNoRowOnUnlicensedSourceAlone(t *testing.T) {
 		}
 	}
 }
+
+// Reported in the forum after 1.4.1: the ELV-SH-BS2 - the ELV kit of the 230 V HmIP-BS2 - had no row and was
+// listed as a battery device of unknown batteries; the HmIP-MP3P runs on its cells or a 5 V
+// supply.
+func TestELVTwinsAndMP3P(t *testing.T) {
+	tb := Shipped()
+	for _, c := range []struct{ model, power, desc string }{
+		{"ELV-SH-BS2", "mains", ""},
+		{"elv-sh-bs2", "mains", ""},
+		{"ELV-SH-PSMCI", "mains", ""},
+		{"ELV-SH-WUA", "mains", ""},
+		{"ELV-SH-WSC", "mains", ""},
+		{"ELV-SH-SB8", "mains", ""},
+		{"ELV-SH-BM-S", "battery-or-dc", ""},
+		{"ELV-SH-CWD", "battery", "1× CR2032"},
+		{"ELV-SH-DUSI", "battery", "2× AA"},
+		{"ELV-SH-CAP", "battery", "1× CR2032"},
+		{"ELV-SH-CTV", "battery", "1× CR2032"},
+		{"HmIP-MP3P", "battery-or-dc", "3× C"},
+	} {
+		m, _, ok := tb.Lookup(c.model)
+		if !ok || m.Power != c.power || Describe(m.Slots) != c.desc || m.Confidence != "manufacturer" {
+			t.Errorf("%s: %v %+v", c.model, ok, m)
+		}
+	}
+	if p := tb.Resolve("ELV-SH-BS2", nil, nil, 0); p.Detects() {
+		t.Errorf("ELV-SH-BS2: %+v", p)
+	}
+	// the MP3P on its cells is watched; set to its supply it is not
+	if p := tb.Resolve("HmIP-MP3P", nil, nil, 0); !p.Detects() || p.Fresh == 0 {
+		t.Errorf("HmIP-MP3P: %+v", p)
+	}
+	if p := tb.Resolve("HmIP-MP3P", nil, &Override{Power: "external"}, 0); p.Detects() {
+		t.Errorf("HmIP-MP3P on its supply: %+v", p)
+	}
+}
+
+// A model the table lacks: a device that reports a voltage but no low-battery flag is a mains
+// actuator (every HmIP battery device has LOW_BAT); a voltage outside a pack of 1 to 3 alkaline
+// cells guesses nothing.
+func TestResolveSeen(t *testing.T) {
+	tb := Shipped()
+	for _, c := range []struct {
+		name          string
+		seen          Seen
+		source, power string
+		detects       bool
+	}{
+		{"voltage, no LOW_BAT: mains", Seen{MaxV: 0, NoLowBat: true}, "datapoints", "mains", false},
+		{"no LOW_BAT wins over a voltage that looks like cells", Seen{MaxV: 3.0, NoLowBat: true}, "datapoints", "mains", false},
+		{"LOW_BAT and 3.0 V: two cells", Seen{MaxV: 3.0}, "guess", "battery", true},
+		{"LOW_BAT and 4.6 V: three cells", Seen{MaxV: 4.6}, "guess", "battery", true},
+		{"12 V is no battery pack", Seen{MaxV: 12}, "none", "unknown", true},
+		{"230 V is no battery pack", Seen{MaxV: 230}, "none", "unknown", true},
+		{"0.3 V is no reading of a pack", Seen{MaxV: 0.3}, "none", "unknown", true},
+	} {
+		p := tb.ResolveSeen("NEW-THING", nil, nil, c.seen)
+		if p.Source != c.source || p.Power != c.power || p.Detects() != c.detects {
+			t.Errorf("%s: %+v", c.name, p)
+		}
+	}
+	// a row or an override always wins over what was seen
+	if p := tb.ResolveSeen("HmIP-WRC2", nil, nil, Seen{NoLowBat: true}); p.Source != "table" || p.Power != "battery" {
+		t.Errorf("row: %+v", p)
+	}
+	if p := tb.ResolveSeen("NEW-THING", nil, &Override{Slots: []Slot{{Count: 2, Type: "AA"}}}, Seen{NoLowBat: true}); p.Source != "override" || p.Power != "battery" {
+		t.Errorf("override: %+v", p)
+	}
+}

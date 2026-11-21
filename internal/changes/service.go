@@ -128,8 +128,13 @@ func (s *Service) Profile(ctx context.Context, d store.Device, maxV float64) bat
 // fixed cells. Such a device never changed batteries, so its candidates and the detections still
 // waiting in the inbox go to discarded (reason "not-battery") instead of staying there; accepted,
 // rejected, manual and imported changes - the user's own record - stay as they are, as do the
-// samples and events.
+// samples and events. A device the user does not monitor any more (store.Device.Ignored) is
+// closed the same way, with the reason "ignored".
 func (s *Service) closeDetectionsLocked(ctx context.Context, x *dev) {
+	reason := "not-battery"
+	if x.d.Ignored {
+		reason = "ignored"
+	}
 	var n int64
 	err := s.o.Store.Write(ctx, func(tx *sql.Tx) error {
 		rows, err := tx.Query(`SELECT id, COALESCE(evidence, '') FROM changes WHERE interface = ? AND address = ? AND kind = ? AND status IN (?, ?)`,
@@ -158,7 +163,7 @@ func (s *Service) closeDetectionsLocked(ctx context.Context, x *dev) {
 		for _, o := range list {
 			var ev detect.Evidence
 			_ = json.Unmarshal([]byte(o.ev), &ev)
-			ev.Reason = "not-battery"
+			ev.Reason = reason
 			b, _ := json.Marshal(ev)
 			r, err := tx.Exec(`UPDATE changes SET status = ?, evidence = ?, updated_at = ? WHERE id = ? AND status IN (?, ?)`,
 				StatusDiscarded, string(b), now, o.id, StatusCandidate, StatusPending)
@@ -175,7 +180,9 @@ func (s *Service) closeDetectionsLocked(ctx context.Context, x *dev) {
 		return
 	}
 	x.closed, x.candID = true, 0
-	if n > 0 {
+	if n > 0 && x.d.Ignored {
+		s.logf("changes: %s %s (%s): %d open detection(s) discarded, the device is not monitored", x.d.Interface, x.d.Address, x.d.Model, n)
+	} else if n > 0 {
 		s.logf("changes: %s %s (%s, %s): %d open detection(s) discarded, the device is not battery-powered", x.d.Interface, x.d.Address, x.d.Model, x.profile.Power, n)
 	}
 }
@@ -195,6 +202,7 @@ func (s *Service) devLocked(ctx context.Context, d store.Device) *dev {
 	if d.Model != "" {
 		x.d.Model, x.d.Firmware = d.Model, d.Firmware
 	}
+	x.d.Ignored = d.Ignored
 	if d.VoltageDP != x.d.VoltageDP || d.LowBatDP != x.d.LowBatDP {
 		x.d.VoltageDP, x.d.LowBatDP = d.VoltageDP, d.LowBatDP
 	}
@@ -217,9 +225,15 @@ func (s *Service) readDeviceOverride(ctx context.Context, iface, address string)
 	return &o
 }
 
+// seen is what the table's guess may use of a device: its highest voltage, and whether it reports
+// a voltage without any low-battery flag (a mains actuator).
+func seen(d store.Device, maxV float64) batteries.Seen {
+	return batteries.Seen{MaxV: maxV, NoLowBat: d.VoltageDP != "" && d.LowBatDP == ""}
+}
+
 func (s *Service) applyProfileLocked(x *dev) {
-	x.profile = s.o.Table.Resolve(x.d.Model, s.modelOv[strings.ToLower(x.d.Model)], x.devOv, x.maxV)
-	if !x.profile.Detects() {
+	x.profile = s.o.Table.ResolveSeen(x.d.Model, s.modelOv[strings.ToLower(x.d.Model)], x.devOv, seen(x.d, x.maxV))
+	if !x.profile.Detects() || x.d.Ignored {
 		x.det = nil
 		return
 	}

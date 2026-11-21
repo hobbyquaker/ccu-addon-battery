@@ -179,7 +179,8 @@ func contains(l []string, s string) bool {
 // the pack levels the detector uses (0 when the device has no voltage to compare).
 type Profile struct {
 	// Source is table, override (a model or device override changed something), guess (no row:
-	// the cell count guessed from the voltage) or none.
+	// the cell count guessed from the voltage), datapoints (no row: mains, the device declares
+	// no low-battery flag) or none.
 	Source     string  `json:"source"`
 	Model      string  `json:"model,omitempty"` // the table's spelling
 	Power      string  `json:"power"`
@@ -207,11 +208,37 @@ func (p Profile) Detects() bool {
 	return true
 }
 
+// Seen is what the addon saw of a device itself, for a model the table lacks.
+type Seen struct {
+	// MaxV is the highest voltage seen (0: none).
+	MaxV float64
+	// NoLowBat: the device declares no low-battery flag (LOW_BAT, LOWBAT) - only a voltage. Every
+	// HmIP battery device has LOW_BAT; a mains actuator (HmIP-BSM, HmIP-BS2, their ELV kits)
+	// reports OPERATING_VOLTAGE without it.
+	NoLowBat bool
+}
+
+// The voltages a guess of 1 to 3 alkaline cells accepts: a reading outside is no battery pack
+// (a supply, a meter's mains reading, a fault) and guesses nothing.
+const (
+	guessMinV = 0.8
+	guessMaxV = 5.0
+)
+
 // Resolve builds the profile of a device of model from the table and the overrides (model, then
 // device; either may be nil). maxV, when > 0, is the highest voltage seen on the device: for a
 // model without a row it guesses the cell count (1 to 3 cells of alkaline), so the detector has
 // levels at all.
 func (t *Table) Resolve(model string, modelOv, devOv *Override, maxV float64) Profile {
+	return t.ResolveSeen(model, modelOv, devOv, Seen{MaxV: maxV})
+}
+
+// ResolveSeen is Resolve with what was seen of the device. For a model without a row: a device
+// that declares no low-battery flag is mains by its datapoints (source "datapoints"); otherwise a
+// voltage of a plausible battery pack (0.8-5.0 V) guesses the cell count (source "guess"), and
+// anything else stays unknown.
+func (t *Table) ResolveSeen(model string, modelOv, devOv *Override, seen Seen) Profile {
+	maxV := seen.MaxV
 	p := Profile{Source: "none", Power: "unknown", Slots: []Slot{}}
 	var lowLimit, fresh float64
 	if m, key, ok := t.Lookup(model); ok {
@@ -256,7 +283,10 @@ func (t *Table) Resolve(model string, modelOv, devOv *Override, maxV float64) Pr
 			p.Power = "battery"
 		}
 	}
-	if p.Source == "none" && maxV > 0 {
+	if p.Source == "none" && seen.NoLowBat {
+		p.Source, p.Power, p.Confidence = "datapoints", "mains", "assumed"
+	}
+	if p.Source == "none" && maxV >= guessMinV && maxV <= guessMaxV {
 		cells := 1
 		switch {
 		case maxV > 3.6:

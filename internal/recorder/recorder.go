@@ -9,6 +9,7 @@ package recorder
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log"
 	"sort"
@@ -479,7 +480,7 @@ func (r *Recorder) learnDevices(ctx context.Context, only []string) (added int, 
 				ex = &device{cur: store.Current{Interface: iface.Name, Address: d.Address}}
 				r.devs[k] = ex
 			} else {
-				dev.FirstSeen = ex.FirstSeen
+				dev.FirstSeen, dev.Ignored = ex.FirstSeen, ex.Ignored
 				if ex.Power != "unknown" {
 					dev.Power = ex.Power
 				}
@@ -536,6 +537,28 @@ func (r *Recorder) profileLocked(ctx context.Context, d *device, slots bool) {
 		}
 		r.o.Store.PutSlots(d.Interface, d.Address, sl)
 	}
+}
+
+// ErrNoDevice is answered by SetIgnored for a device the recorder does not track.
+var ErrNoDevice = errors.New("no such device")
+
+// SetIgnored switches a device's monitoring off ("do not monitor") or back on. An ignored device
+// keeps being recorded - its samples and changes stay - but leaves the device list's default
+// view, the forecast, the shopping list and the notifications, and the detector stops watching
+// it (its open detections are discarded).
+func (r *Recorder) SetIgnored(ctx context.Context, iface, address string, on bool) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	d := r.devs[iface+"."+address]
+	if d == nil || !d.tracked {
+		return ErrNoDevice
+	}
+	if err := r.o.Store.SetIgnored(ctx, iface, address, on, r.o.Now().UnixMilli()); err != nil {
+		return err
+	}
+	d.Ignored = on
+	r.profileLocked(ctx, d, false)
+	return nil
 }
 
 // Reprofile recomputes every device's profile (after an override changed) and writes power and
@@ -1049,6 +1072,8 @@ type View struct {
 	// ServiceMessagesOff: the user switched the device's service messages off in the system
 	// (a classic CCU; never set on openccu-lite, which has no such switch).
 	ServiceMessagesOff bool `json:"service_messages_off,omitempty"`
+	// Ignored: the user switched the device's monitoring off (SetIgnored).
+	Ignored bool `json:"ignored,omitempty"`
 	// Profile is the battery profile: slots, levels, where it came from.
 	Profile batteries.Profile `json:"profile"`
 }
@@ -1064,7 +1089,8 @@ func (r *Recorder) Devices(lang string) []View {
 		}
 		v := View{Interface: d.Interface, Address: d.Address, Model: d.Model, Firmware: d.Firmware, Power: d.Power, VoltageDP: d.VoltageDP, LowBatDP: d.LowBatDP,
 			Voltage: d.cur.Voltage, VoltageTS: d.cur.VoltageTS, VoltageStatus: d.cur.VoltageStatus, LowBat: d.cur.LowBat, LowBatSince: d.cur.LowBatSince,
-			Unreach: d.cur.Unreach, UnreachSince: d.cur.UnreachSince, LastReport: d.cur.LastReport, FirstSeen: d.FirstSeen, Rooms: []string{}, Profile: d.profile}
+			Unreach: d.cur.Unreach, UnreachSince: d.cur.UnreachSince, LastReport: d.cur.LastReport, FirstSeen: d.FirstSeen, Rooms: []string{}, Profile: d.profile,
+			Ignored: d.Ignored}
 		if v.Profile.Slots == nil {
 			v.Profile.Slots = []batteries.Slot{}
 		}
