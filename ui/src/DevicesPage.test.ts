@@ -132,7 +132,7 @@ describe('DevicesPage: the filter', () => {
         await fireEvent.click(screen.getByText('Monitor again'));
         await waitFor(() => expect(calls).toEqual(['DELETE api/v1/devices/HmIP-RF/A4/ignore']));
         await waitFor(() => expect(screen.getAllByText('Do not monitor').length).toBe(2));
-        await fireEvent.click(screen.getAllByText('Do not monitor')[0]);
+        await fireEvent.click(screen.getAllByText('Do not monitor')[0]!);
         await waitFor(() => expect(calls.length).toBe(2));
         expect(calls[1]).toMatch(/^PUT api\/v1\/devices\/HmIP-RF\/A[14]\/ignore$/);
     });
