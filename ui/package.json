@@ -17,7 +17,7 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "ccu-addon-kit": "github:hobbyquaker/ccu-addon-kit#68cbb26",
+    "ccu-addon-kit": "github:hobbyquaker/ccu-addon-kit#5dd8044",
     "occulite-ui": "^0.1.0",
     "svelte": "^5.57.0",
     "uplot": "^1.6.32"

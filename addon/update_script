@@ -23,6 +23,43 @@ WWW=battery-config
 WWW_DIR=$CONF_DIR/addons/www/$WWW
 EXITCODE=10
 
+# --- architecture check ---
+# One package per architecture; ARCH beside this script names the package's (the build writes it
+# and checks it against the daemon's ELF header). A package this system cannot run is refused
+# here, before anything of the installed version is stopped or removed, so that version keeps
+# running. The installers discard this script's output (OpenCCU shows "Error (13)", openccu-lite
+# "unsupported platform"), so the message goes to the system log as well.
+PKG_ARCH=$(cat ./ARCH 2>/dev/null)
+MACHINE=$(uname -m)
+# what the system runs, as the packages are named; a 64-bit ARM system and an armv8l (a 32-bit
+# ARM system on a 64-bit kernel, piVCCU's container) run the armv7l package as well
+case "$MACHINE" in
+    x86_64|amd64) SYS_ARCH=x86_64; RUNS="x86_64" ;;
+    aarch64|arm64) SYS_ARCH=aarch64; RUNS="aarch64 armv7l" ;;
+    armv7*|armv8l) SYS_ARCH=armv7l; RUNS="armv7l" ;;
+    *) SYS_ARCH=""; RUNS="" ;;
+esac
+case " $RUNS " in
+    *" $PKG_ARCH "*) ;;
+    *)
+        PKG_VERSION=$(sed -n 's/^VERSION_ADDON=//p' ./$ADDON/versions 2>/dev/null)
+        if [ -n "$SYS_ARCH" ]; then
+            RIGHT="$ADDON-$SYS_ARCH-$PKG_VERSION.tar.gz"
+            DE="Dieses Paket ist für ${PKG_ARCH:-?}, dieses System ist $MACHINE: bitte $RIGHT herunterladen. Die installierte Version bleibt unverändert."
+            EN="This package is for ${PKG_ARCH:-?}, this system is $MACHINE: please download $RIGHT. The installed version is left unchanged."
+        else
+            DE="Dieses Paket ist für ${PKG_ARCH:-?}, dieses System ist $MACHINE: dafür gibt es kein Paket. Die installierte Version bleibt unverändert."
+            EN="This package is for ${PKG_ARCH:-?}, this system is $MACHINE: there is no package for it. The installed version is left unchanged."
+        fi
+        echo "$DE" >&2
+        echo "$EN" >&2
+        logger -t $ADDON -p user.err "$DE" 2>/dev/null
+        logger -t $ADDON -p user.err "$EN" 2>/dev/null
+        exit 13
+        ;;
+esac
+# --- end of the architecture check ---
+
 mount | grep /usr/local >/dev/null 2>&1 || mount /usr/local
 
 mkdir -p $ADDONS_DIR && chmod 755 $ADDONS_DIR

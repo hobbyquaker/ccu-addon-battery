@@ -44,9 +44,17 @@ for arch in $ARCHES; do
     rm -f addon/battery/bin/battery
     CGO_ENABLED=0 GOOS=linux GOARCH=$goarch GOARM=$goarm $GO build -trimpath -ldflags "-s -w -X main.version=$VERSION" -o addon/battery/bin/battery ./cmd/battery
 
+    # ARCH tells update_script which systems the package is for; it must be the daemon's own
+    # architecture (ELF e_machine at offset 18: 62 x86-64, 183 AArch64, 40 ARM)
+    case $(od -An -tu2 -j18 -N2 addon/battery/bin/battery | tr -d ' ') in
+        62) elf=x86_64 ;; 183) elf=aarch64 ;; 40) elf=armv7l ;; *) elf=unknown ;;
+    esac
+    [ "$elf" = "$arch" ] || { echo "bin/battery is $elf, not $arch" >&2; exit 1; }
+
     out=dist/battery-$arch-$VERSION.tar.gz
     stage=$(mktemp -d)
     cp -a addon/update_script addon/openccu-lite.json addon/battery.cfg addon/battery "$stage/"
+    printf '%s\n' "$arch" > "$stage/ARCH"
     rm -rf "$stage/battery/var" "$stage/battery/backup" "$stage/battery/etc/battery.json"
     find "$stage" \( -name '._*' -o -name '.DS_Store' \) -exec rm -f {} +
     chmod 755 "$stage/update_script" "$stage/battery/rc.d" "$stage/battery/bin/battery" "$stage/battery/bin/kit-run" "$stage/battery/bin/update_addon" "$stage/battery/bin/backup-snapshot" "$stage/battery/bin/backup-restore"

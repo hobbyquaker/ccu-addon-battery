@@ -63,6 +63,8 @@ jobs:
           cache-dependency-path: ui/package-lock.json
       - run: VERSION=0.0.0-ci scripts/build.sh
       - run: tar tzf dist/battery-x86_64-0.0.0-ci.tar.gz | sort
+      - name: install test (the wrong architecture refused, the right one installed)
+        run: scripts/install-test.sh 0.0.0-ci
       - uses: actions/upload-artifact@v4
         with:
           name: packages

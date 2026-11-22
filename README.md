@@ -302,7 +302,11 @@ loszuwerden.
 ## Auf einer CCU3 oder OpenCCU
 
 Dasselbe Paket lässt sich als klassisches Addon installieren (*Einstellungen → Systemsteuerung →
-Zusatzsoftware*, oder `/bin/install_addon` auf OpenCCU). Dort zeichnet der Dienst direkt von den
+Zusatzsoftware*, oder `/bin/install_addon` auf OpenCCU). Es gibt ein Paket je Architektur: `armv7l`
+für die CCU3, `aarch64` für OpenCCU auf einem Raspberry Pi 3, 4 oder 5, `x86_64` für die OVA und
+Intel-Rechner – welches, sagt `uname -m`. Ein Paket für eine andere Architektur weist die
+Installation ab (OpenCCU meldet *Error (13)*), und die installierte Version läuft unverändert
+weiter; der Update-Hinweis der Zusatzsoftware-Seite führt direkt zum passenden Paket. Dort zeichnet der Dienst direkt von den
 Schnittstellenprozessen auf – er meldet sich per XML-RPC auf dem Loopback (Port 8292) für ihre
 Ereignisse an, liest die Geräteliste und alle Viertelstunde den Kanal 0 der Homematic-IP-Geräte
 aus dem Cache des Prozesses – und nimmt Namen und Räume aus der ReGaHSS; der *Einstellungen*-Knopf
@@ -322,6 +326,7 @@ go test -race ./...                      # Speicher, Aufzeichnung, Erkennung, We
 python3 data/check.py                    # die Batterietabelle
 (cd ui && npm ci && npm run check && npm test && npm run build)   # die Anwendung und die Einstellungsseite
 VERSION=1.5.1 scripts/build.sh           # dist/battery-<arch>-<version>.tar.gz für aarch64, x86_64, armv7l
+scripts/install-test.sh 1.5.1            # die Pakete in einem busybox-Container installiert (docker, x86_64)
 ```
 
 Ein Release ist ein Tag `v<version>` auf `main`: [release.yml](.github/workflows/release.yml) prüft,

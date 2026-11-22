@@ -46,6 +46,7 @@ jobs:
             (cd dist && sha256sum -c "$(basename "$pkg").sha256")
             test "$(tar -xzOf "$pkg" ./openccu-lite.json | jq -r .version)" = "$VERSION"
             test "$(tar -xzOf "$pkg" ./battery/versions)" = "VERSION_ADDON=$VERSION"
+            test "$(tar -xzOf "$pkg" ./ARCH)" = "$arch"
           done
       - name: The release notes
         run: |

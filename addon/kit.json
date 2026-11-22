@@ -36,7 +36,8 @@
     }
   ],
   "update": {
-    "github": "hobbyquaker/ccu-addon-battery"
+    "github": "hobbyquaker/ccu-addon-battery",
+    "assetHint": "battery-{arch}-{version}.tar.gz"
   },
   "tabs": [
     "storage",

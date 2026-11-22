@@ -283,7 +283,11 @@ database) and `backup` (its copy) for a reinstall. Remove that directory by hand
 ## On a CCU3 or OpenCCU
 
 The same package installs as a classic addon (*Einstellungen → Systemsteuerung → Zusatzsoftware*,
-or `/bin/install_addon` on OpenCCU). There the daemon records from the interface processes
+or `/bin/install_addon` on OpenCCU). There is one package per architecture: `armv7l` for the CCU3,
+`aarch64` for OpenCCU on a Raspberry Pi 3, 4 or 5, `x86_64` for the OVA and Intel machines -
+`uname -m` says which. A package for another architecture is refused by the installation
+(OpenCCU says *Error (13)*), and the installed version keeps running unchanged; the update hint on
+the Zusatzsoftware page leads straight to the matching package. There the daemon records from the interface processes
 themselves - it registers for their events over XML-RPC on the loopback (port 8292), lists the
 devices and reads the Homematic IP channel 0 from the process's cache every quarter of an hour -
 and takes the names and rooms from ReGaHSS; the WebUI's *Einstellungen* button of the addon opens
@@ -301,6 +305,7 @@ go test -race ./...                      # the store, the recorder, the detector
 python3 data/check.py                    # the battery table
 (cd ui && npm ci && npm run check && npm test && npm run build)   # the app and the settings page
 VERSION=1.5.1 scripts/build.sh           # dist/battery-<arch>-<version>.tar.gz for aarch64, x86_64, armv7l
+scripts/install-test.sh 1.5.1            # the packages installed in a busybox container (docker, x86_64)
 ```
 
 A release is a tag `v<version>` on `main`: [release.yml](.github/workflows/release.yml) checks that
