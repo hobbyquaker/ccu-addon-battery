@@ -8,7 +8,7 @@ records the battery voltage and the low-battery flag of every device, detects ba
 them, lets you say which batteries went in, and turns the record into how long batteries last, which
 devices eat batteries, which batteries do best, what is due soon and what to buy.
 
-**Status: 1.5.1** ([changelog](CHANGELOG.md); the packages are on the [releases
+**Status: 1.5.2** ([changelog](CHANGELOG.md); the packages are on the [releases
 page](https://github.com/hobbyquaker/ccu-addon-battery/releases)). Tested on openccu-lite with real
 devices and on OpenCCU; feedback from piVCCU comes from the Homematic forum, on the CCU3 firmware so
 far without paired battery devices - feedback is welcome.
@@ -304,8 +304,8 @@ firmware 3.89.11 (`armv7l`), there so far without paired battery devices - feedb
 go test -race ./...                      # the store, the recorder, the detector, the changes, the statistics, the API, the package files
 python3 data/check.py                    # the battery table
 (cd ui && npm ci && npm run check && npm test && npm run build)   # the app and the settings page
-VERSION=1.5.1 scripts/build.sh           # dist/battery-<arch>-<version>.tar.gz for aarch64, x86_64, armv7l
-scripts/install-test.sh 1.5.1            # the packages installed in a busybox container (docker, x86_64)
+VERSION=1.5.2 scripts/build.sh           # dist/battery-<arch>-<version>.tar.gz for aarch64, x86_64, armv7l
+scripts/install-test.sh 1.5.2            # the packages installed in a busybox container (docker, x86_64)
 ```
 
 A release is a tag `v<version>` on `main`: [release.yml](.github/workflows/release.yml) checks that

@@ -1,5 +1,16 @@
 # Changelog
 
+## [1.5.2] - 2026-11-22
+
+- **CCU3, OpenCCU and openccu-lite:** a package for another architecture is refused at the installation instead of
+  installing and then failing to start (`syntax error: unexpected ")"` in the log). The installation stops before it
+  touches the installed version, which keeps running; OpenCCU shows *Error (13)*, openccu-lite *unsupported
+  platform*, and the system log names both architectures and the package to download (e.g.
+  `battery-x86_64-1.5.2.tar.gz`). A Raspberry Pi with a 64-bit system still takes the `armv7l` package as well.
+  (reported in the homematic-forum)
+- **CCU3 and OpenCCU:** the update hint on the *Zusatzsoftware* page links the package for the system
+  (`uname -m`) directly instead of the release page with all three files.
+
 ## [1.5.1] - 2026-11-21
 
 - **Every system:** a model that runs on batteries or on a power supply unit, the **HmIP-MP3P** sounder, is now
