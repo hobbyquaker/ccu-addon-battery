@@ -5,12 +5,13 @@
     import {i18n, t} from 'occulite-ui/i18n';
     import type {NoticesStore} from 'occulite-ui/notices';
 
+    import BatteryEditor, {type Scope} from './BatteryEditor.svelte';
     import ChangeDeleteDialog from './ChangeDeleteDialog.svelte';
     import ChangeDialog, {type EditorResult} from './ChangeDialog.svelte';
     import DevicePicture from './DevicePicture.svelte';
     import VoltageChart, {type SamplePoint} from './VoltageChart.svelte';
-    import {del, get, patch, post, put} from './api.js';
-    import {batteryName, describeSlots, formatCents, formatDateTime, formatDays, formatVoltage, lifeText, relativeTime, statusOf, type Change, type DeviceView} from './model.js';
+    import {ApiError, del, get, patch, post, put} from './api.js';
+    import {batteryName, chemistryLabel, describeSlots, originsOf, type ModelInfo, type OverrideBody, type Origin, formatCents, formatDateTime, formatDays, formatVoltage, lifeText, relativeTime, statusOf, type Change, type DeviceView} from './model.js';
 
     let {device, notices, onback, onchanged}: {device: DeviceView; notices: NoticesStore; onback: () => void; onchanged?: () => void} = $props();
 
@@ -100,10 +101,14 @@
 
     let confirmDelete = $state<Change | undefined>();
 
-    // the device's own override (GET devices/{iface}/{address}/override): the power supply switch
-    // of a model that runs on batteries or a power supply unit writes its power
-    type Override = {power?: string; [k: string]: unknown};
+    // the device's own override (GET devices/{iface}/{address}/override) and its model's (GET
+    // models/{model}): the battery editor writes either, the power supply switch of a model that
+    // runs on batteries or a power supply unit writes the device's power. This device wins over
+    // its model, the model over the table.
+    type Override = OverrideBody;
     let override = $state<Override | null>(null);
+    let modelInfo = $state<ModelInfo | null>(null);
+    let editorBatteriesOpen = $state(false);
     const devPath = $derived(`api/v1/devices/${encodeURIComponent(device.interface)}/${encodeURIComponent(device.address)}`);
 
     async function loadOverride() {
@@ -112,12 +117,42 @@
         } catch {
             override = null;
         }
+        try {
+            modelInfo = await get<ModelInfo>(`api/v1/models/${encodeURIComponent(device.model)}`);
+        } catch (e) {
+            // 404: the table lacks the model and nobody set it
+            modelInfo = e instanceof ApiError && e.status === 404 ? {in_table: false} : null;
+        }
     }
 
     $effect(() => {
         void key;
         loadOverride();
     });
+
+    const origins = $derived(originsOf(device.profile, override, modelInfo?.override, !!modelInfo?.in_table));
+    function originText(o: Origin): string {
+        return o === 'model' ? t('origin.model', {model: device.model}) : t('origin.' + o);
+    }
+    const chemistry = $derived(device.profile?.slots?.find((s) => s.chemistry)?.chemistry ?? '');
+
+    async function editorSaved(scope: Scope, removed: boolean) {
+        notices.push('info', t(`editor.${removed ? 'removed' : 'saved'}.${scope}`, {model: device.model}));
+        await loadOverride();
+        onchanged?.();
+    }
+
+    async function resetLevel(scope: Scope) {
+        busy = true;
+        try {
+            await del(scope === 'device' ? `${devPath}/override` : `api/v1/models/${encodeURIComponent(device.model)}/override`);
+            await editorSaved(scope, true);
+        } catch (e) {
+            notices.push('error', t('editor.failed', {error: (e as Error).message}));
+        } finally {
+            busy = false;
+        }
+    }
 
     // the power supply choice: automatic (no power in the override: the addon tells it by the
     // voltage), batteries or the power supply unit (the override's power, which wins)
@@ -194,7 +229,19 @@
         </div>
         <dl class="bat-kv">
             <dt>{t('Batteries')}</dt>
-            <dd>{describeSlots(device.profile?.slots) || t('profile.unknown')} <span class="bat-muted">({device.profile ? t('profile.' + device.profile.source) : ''})</span></dd>
+            <dd data-testid="slots">{describeSlots(device.profile?.slots) || t('profile.unknown')} <span class="bat-muted" data-testid="slots-origin">({origins.slots === 'auto' || origins.slots === 'none' ? (device.profile ? t('profile.' + device.profile.source) : '') : originText(origins.slots)})</span></dd>
+            {#if !supplyChoice}
+                <dt>{t('supply.label')}</dt>
+                <dd data-testid="power">{t('power.' + (device.profile?.power ?? 'unknown'))} <span class="bat-muted" data-testid="power-origin">({originText(origins.power)})</span></dd>
+            {/if}
+            {#if chemistry}
+                <dt>{t('editor.chemistry')}</dt>
+                <dd data-testid="chemistry">{chemistryLabel(chemistry, t)} <span class="bat-muted" data-testid="chemistry-origin">({originText(origins.chemistry)})</span></dd>
+            {/if}
+            {#if device.profile?.outdoor}
+                <dt>{t('editor.outdoor')}</dt>
+                <dd data-testid="outdoor">✓ <span class="bat-muted" data-testid="outdoor-origin">({originText(origins.outdoor)})</span></dd>
+            {/if}
             <dt>{t('Voltage')}</dt>
             <dd class="bat-mono">{formatVoltage(device.voltage, lang) || '–'}{#if device.voltage_ts}{' '}<span class="bat-muted">{relativeTime(device.voltage_ts, Date.now(), lang)}</span>{/if}</dd>
             {#if device.profile?.fresh}
@@ -224,6 +271,17 @@
                     {/if}
                 </dd>
             {/if}
+            {#if override || modelInfo?.override}
+                <dt>{t('own.label')}</dt>
+                <dd class="bat-own" data-testid="own-values">
+                    {#if modelInfo?.override}
+                        <span class="bat-own-level" data-testid="own-model">{t('own.model', {model: device.model})} <button type="button" class="bat-cell-button" data-testid="reset-model" title={t('editor.reset.title')} disabled={busy} onclick={() => resetLevel('model')}>{t('editor.reset')}</button></span>
+                    {/if}
+                    {#if override}
+                        <span class="bat-own-level" data-testid="own-device">{t('own.device')} <button type="button" class="bat-cell-button" data-testid="reset-device" title={t('editor.reset.title')} disabled={busy} onclick={() => resetLevel('device')}>{t('editor.reset')}</button></span>
+                    {/if}
+                </dd>
+            {/if}
             {#if device.ignored}
                 <dt></dt>
                 <dd class="bat-muted" data-testid="ignored-note">{t('ignore.detail')}</dd>
@@ -231,6 +289,7 @@
         </dl>
         <div class="bat-actions">
             <button type="button" class="primary" onclick={openRecord} disabled={busy}>{t('change.record.button')}</button>
+            <button type="button" data-testid="edit-batteries" title={t('editor.button.title')} onclick={() => (editorBatteriesOpen = true)} disabled={busy}>{t('editor.button')}</button>
             <button type="button" data-testid="ignore-toggle" title={device.ignored ? t('ignore.undo') : t('ignore.title')} onclick={() => setIgnored(!device.ignored)} disabled={busy}
                 >{device.ignored ? t('ignore.undo') : t('ignore.button')}</button
             >
@@ -283,5 +342,7 @@
 </div>
 
 <ChangeDialog bind:open={editorOpen} mode={editorMode} {device} change={editing} at={Date.now()} {busy} onsubmit={save} />
+
+<BatteryEditor bind:open={editorBatteriesOpen} {device} deviceOverride={override} {modelInfo} onsaved={editorSaved} onerror={(m) => notices.push('error', t('editor.failed', {error: m}))} />
 
 <ChangeDeleteDialog change={confirmDelete} {busy} onclose={() => (confirmDelete = undefined)} onconfirm={(c) => (remove(c), (confirmDelete = undefined))} />

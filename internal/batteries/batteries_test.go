@@ -232,3 +232,34 @@ func TestResolveSeen(t *testing.T) {
 		t.Errorf("override: %+v", p)
 	}
 }
+
+// The order the device page promises: a device's own values win over its model's, the model's
+// over the table - field by field, so a device override of the slots keeps the model's power.
+func TestPrecedenceTableModelDevice(t *testing.T) {
+	tb := Shipped()
+	tr, fa := true, false
+	model := &Override{Power: "battery", Slots: []Slot{{Count: 2, Type: "AA"}}, Outdoor: &tr}
+	dev := &Override{Slots: []Slot{{Count: 1, Type: "CR2032"}}, Outdoor: &fa}
+	for _, c := range []struct {
+		name, model  string
+		mOv, dOv     *Override
+		power, slots string
+		outdoor      bool
+		source       string
+	}{
+		{"table", "HmIP-WRC2", nil, nil, "battery", "2× AAA", false, "table"},
+		{"model over table", "HmIP-WRC2", model, nil, "battery", "2× AA", true, "override"},
+		{"device over model", "HmIP-WRC2", model, dev, "battery", "1× CR2032", false, "override"},
+		{"device alone over table", "HmIP-WRC2", nil, dev, "battery", "1× CR2032", false, "override"},
+		{"device power, model slots", "HmIP-WRC2", model, &Override{Power: "external"}, "external", "2× AA", true, "override"},
+		{"not in the table: nothing", "HB-UNI-Sen-TEMP-DS18B20", nil, nil, "unknown", "", false, "none"},
+		{"not in the table: the model's", "HB-UNI-Sen-TEMP-DS18B20", model, nil, "battery", "2× AA", true, "override"},
+		{"not in the table: the device's over the model's", "HB-UNI-Sen-TEMP-DS18B20", model, dev, "battery", "1× CR2032", false, "override"},
+		{"not in the table: the device's alone", "HB-UNI-Sen-TEMP-DS18B20", nil, &Override{Slots: []Slot{{Count: 3, Type: "AAA"}}}, "battery", "3× AAA", false, "override"},
+	} {
+		p := tb.Resolve(c.model, c.mOv, c.dOv, 0)
+		if p.Power != c.power || Describe(p.Slots) != c.slots || p.Outdoor != c.outdoor || p.Source != c.source {
+			t.Errorf("%s: %+v", c.name, p)
+		}
+	}
+}

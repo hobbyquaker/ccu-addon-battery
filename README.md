@@ -92,7 +92,13 @@ Batterien / Netzteil*; am Netzteil gibt es keine Vorhersage und keine Wechselerk
 liefern – oder mit dem Spannungsstatus OVERFLOW, eine Stunde lang gemeldet, gilt das Gerät als am
 Netzteil, und die Seite sagt, dass es automatisch erkannt wurde; eine Stunde lang zurück im
 Bereich der Batterien gilt es wieder als batteriebetrieben. Ein einzelner Ausreißer ändert
-nichts. *Nicht überwachen*
+nichts. *Batterien bearbeiten…* stellt ein, was die Batterietabelle sagt oder nicht weiß:
+Stromversorgung, Batteriefächer (Anzahl und Typ je Fach), Batterieart, Akkus und *Im Freien* –
+für *nur dieses Gerät* oder für *alle Geräte des Modells*. Die Werte eines Geräts gehen denen
+seines Modells vor, die des Modells der Tabelle; neben jedem Wert steht, woher er kommt (aus der
+Batterietabelle, eigener Wert für alle Geräte des Modells, eigener Wert dieses Geräts), und unter
+*Eigene Werte* lässt sich jede Stufe für sich zurücksetzen. So bekommt auch ein Modell, das in
+der Tabelle fehlt (etwa ein selbst gebautes HB-Gerät), seine Batterien. *Nicht überwachen*
 gibt es auch hier. Darunter alle gebuchten Wechsel des Geräts, jeder
 bearbeitbar und löschbar; hier die übernommenen mit ihrer Herkunft in der Notiz.
 
@@ -202,7 +208,8 @@ Batterie-leer-Meldung kennt, gilt als netzbetrieben (so melden sich die Aktoren 
 Die Daten sind CC0:
 nehmen Sie sie für jedes Projekt. Das Addon bettet sie ein, sucht Modelle ohne Rücksicht auf
 Groß- und Kleinschreibung (und über ihre Aliasse) und lässt sie je Modell oder je Gerät
-korrigieren (eine Fernbedienung im Tischaufsteller, Lithium- oder Akkuzellen). Korrekturen an der
+korrigieren (eine Fernbedienung im Tischaufsteller, Lithium- oder Akkuzellen): auf der
+Geräteseite unter *Batterien bearbeiten…*, oder über die API. Korrekturen an der
 Tabelle sind als Pull Requests willkommen; `python3 data/check.py` prüft sie (die CI führt es aus),
 und [tools/](tools/README.md) enthält die Skripte, mit denen sie gebaut wurde.
 
@@ -325,6 +332,7 @@ dort bisher ohne angelernte Batteriegeräte – Rückmeldungen sind willkommen.
 go test -race ./...                      # Speicher, Aufzeichnung, Erkennung, Wechsel, Statistik, API, Paketdateien
 python3 data/check.py                    # die Batterietabelle
 (cd ui && npm ci && npm run check && npm test && npm run build)   # die Anwendung und die Einstellungsseite
+(cd ui && npx playwright test)           # die Geräteseite im Browser gegen die echte API (internal/e2eserver, nach dem Build)
 VERSION=1.5.2 scripts/build.sh           # dist/battery-<arch>-<version>.tar.gz für aarch64, x86_64, armv7l
 scripts/install-test.sh 1.5.2            # die Pakete in einem busybox-Container installiert (docker, x86_64)
 ```

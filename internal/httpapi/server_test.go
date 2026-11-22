@@ -387,8 +387,21 @@ func TestChangesAPI(t *testing.T) {
 	if w := call(h, "PUT", "/addons/battery/api/v1/models/HmIP-WRC2/override", user, `{"power":"solar"}`, csrf...); w.Code != 422 {
 		t.Fatalf("bad override: %d %s", w.Code, w.Body)
 	}
-	if w := call(h, "GET", "/addons/battery/api/v1/models", user, ""); w.Code != 200 {
-		t.Fatalf("models: %d", w.Code)
+	if w := call(h, "GET", "/addons/battery/api/v1/models", user, ""); w.Code != 200 || !strings.Contains(w.Body.String(), `"types":["9V","AA","AAA",`) || !strings.Contains(w.Body.String(), `"chemistries":["alkaline",`) || !strings.Contains(w.Body.String(), `"powers":["battery",`) {
+		t.Fatalf("models: %d %s", w.Code, w.Body)
+	}
+	// a model the table lacks (a self-built HB device): its override makes it known
+	if w := call(h, "PUT", "/addons/battery/api/v1/models/HB-UNI-Sen-TEMP-DS18B20/override", user, `{"power":"battery","slots":[{"count":2,"type":"AA"}],"outdoor":true}`, csrf...); w.Code != 200 {
+		t.Fatalf("unknown model override: %d %s", w.Code, w.Body)
+	}
+	if w := call(h, "GET", "/addons/battery/api/v1/models/hb-uni-sen-temp-ds18b20", user, ""); w.Code != 200 || !strings.Contains(w.Body.String(), `"in_table":false`) || !strings.Contains(w.Body.String(), `"source":"override"`) || !strings.Contains(w.Body.String(), `"slots":[{"count":2,"type":"AA"}]`) {
+		t.Fatalf("unknown model with override: %d %s", w.Code, w.Body)
+	}
+	if w := call(h, "DELETE", "/addons/battery/api/v1/models/HB-UNI-Sen-TEMP-DS18B20/override", user, "", csrf...); w.Code != 204 {
+		t.Fatalf("unknown model override delete: %d", w.Code)
+	}
+	if w := call(h, "GET", "/addons/battery/api/v1/models/HB-UNI-Sen-TEMP-DS18B20", user, ""); w.Code != 404 {
+		t.Fatalf("unknown model after reset: %d", w.Code)
 	}
 	if w := call(h, "DELETE", "/addons/battery/api/v1/models/HmIP-WRC2/override", user, "", csrf...); w.Code != 204 {
 		t.Fatalf("model override delete: %d", w.Code)

@@ -29,7 +29,7 @@ const notices = {push: vi.fn()} as unknown as import('occulite-ui/notices').Noti
 
 type Call = {url: string; method: string; body?: string};
 
-function serve(override: Record<string, unknown> | null): Call[] {
+function serve(override: Record<string, unknown> | null, model: Record<string, unknown> = {in_table: true}): Call[] {
     const calls: Call[] = [];
     vi.stubGlobal(
         'fetch',
@@ -38,6 +38,7 @@ function serve(override: Record<string, unknown> | null): Call[] {
             calls.push({url: u, method: init?.method ?? 'GET', body: init?.body as string | undefined});
             let body: unknown = {};
             if (u.includes('/override')) body = init?.method && init.method !== 'GET' ? {ok: true} : {override};
+            else if (u.includes('api/v1/models/')) body = model;
             else if (u.includes('api/v1/samples')) body = {samples: []};
             else if (u.includes('api/v1/changes')) body = {changes: []};
             return new Response(JSON.stringify(body), {status: 200, headers: {'Content-Type': 'application/json'}});
@@ -103,5 +104,40 @@ describe('DeviceDetail: the power supply choice', () => {
         await screen.findByTestId('device-detail');
         await new Promise((r) => setTimeout(r, 20));
         expect(screen.queryByTestId('supply')).toBeNull();
+    });
+});
+
+describe('DeviceDetail: the battery editor', () => {
+    beforeEach(() => {
+        // jsdom's <dialog> has no showModal
+        HTMLDialogElement.prototype.showModal ??= function (this: HTMLDialogElement) {
+            this.open = true;
+        };
+        HTMLDialogElement.prototype.close ??= function (this: HTMLDialogElement) {
+            this.open = false;
+        };
+        addMessages(MESSAGES);
+        i18n.language = 'de';
+        vi.stubGlobal('ResizeObserver', class {
+            observe() {}
+            unobserve() {}
+            disconnect() {}
+        });
+    });
+    afterEach(() => {
+        cleanup();
+        vi.unstubAllGlobals();
+    });
+
+    it('writes the model override for all devices of the model, only what differs from the table', async () => {
+        const calls = serve(null, {in_table: true, row: {power: 'battery', slots: [{count: 2, type: 'AAA'}]}, profile: {power: 'battery', slots: [{count: 2, type: 'AAA'}]}});
+        const wrc2: DeviceView = {...mp3p({source: 'table', power: 'battery', table_power: 'battery', slots: [{count: 2, type: 'AAA'}]}, 'battery'), model: 'HmIP-WRC2', address: 'WRC2'};
+        render(DeviceDetail, {device: wrc2, notices, onback: () => {}});
+        await fireEvent.click(await screen.findByTestId('edit-batteries'));
+        await fireEvent.click(await screen.findByLabelText('alle Geräte des Modells HmIP-WRC2'));
+        await fireEvent.click(screen.getByTestId('editor-outdoor'));
+        await fireEvent.click(screen.getByTestId('editor-save'));
+        await waitFor(() => expect(calls.some((c) => c.method === 'PUT' && c.url.includes('/models/HmIP-WRC2/override'))).toBe(true));
+        expect(JSON.parse(calls.find((c) => c.method === 'PUT')!.body!)).toEqual({outdoor: true});
     });
 });

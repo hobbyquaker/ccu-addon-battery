@@ -1643,7 +1643,7 @@
   },
   "/api/v1/models": {
    "get": {
-    "summary": "the models of the installation with their table rows",
+    "summary": "the models of the installation with their table rows; table.types, table.chemistries and table.powers list what an override may name",
     "parameters": [
      {
       "name": "unknown",

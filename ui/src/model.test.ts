@@ -1,6 +1,6 @@
 import {describe, expect, it} from 'vitest';
 
-import {DEFAULT_DEVICE_FILTER, batteryName, checkState, compareDevices, describeSlots, evidenceSummary, filterDevices, formatBytes, formatCents, formatDays, formatRange, formatVoltage, fromLocalInput, isMains, isStick, lifeText, loadDeviceFilter, locationText, modelInitials, parsePrice, priceInput, relativeTime, saveDeviceFilter, statusOf, toLocalInput, type DeviceView} from './model.js';
+import {DEFAULT_DEVICE_FILTER, baselineOf, batteryName, chemistryLabel, originsOf, overrideOf, profileForm, profileFormValid, checkState, compareDevices, describeSlots, evidenceSummary, filterDevices, formatBytes, formatCents, formatDays, formatRange, formatVoltage, fromLocalInput, isMains, isStick, lifeText, loadDeviceFilter, locationText, modelInitials, parsePrice, priceInput, relativeTime, saveDeviceFilter, statusOf, toLocalInput, type DeviceView} from './model.js';
 
 const dev = (p: Partial<DeviceView>): DeviceView => ({
     interface: 'HmIP-RF',
@@ -232,5 +232,60 @@ describe('storage locations', () => {
     it('knows a stick from the user partition', () => {
         expect(['usb:X', 'usb-uuid:1A2B-3C4D', 'usb-path:/media/usb1'].map(isStick)).toEqual([true, true, true]);
         expect(isStick('userfs')).toBe(false);
+    });
+});
+
+describe('the battery editor', () => {
+    const wrc2 = baselineOf({power: 'battery', slots: [{count: 2, type: 'AAA'}]});
+    const none = baselineOf(null);
+
+    it('fills the fields from the override over its baseline', () => {
+        expect(profileForm(wrc2, null)).toEqual({power: 'battery', slots: [{count: 2, type: 'AAA'}], chemistry: '', rechargeable: false, outdoor: false});
+        expect(profileForm(wrc2, {slots: [{count: 2, type: 'AA'}], outdoor: true, rechargeable: true})).toEqual({power: 'battery', slots: [{count: 2, type: 'AA'}], chemistry: '', rechargeable: true, outdoor: true});
+    });
+
+    it('a model the table lacks: prefilled with what the device shows (a guess), unknown otherwise', () => {
+        expect(profileForm(none, null, {source: 'guess', power: 'battery', slots: [{count: 2, type: 'AA'}]})).toMatchObject({power: 'battery', slots: [{count: 2, type: 'AA'}]});
+        expect(profileForm(none, null, {source: 'none', power: 'unknown', slots: []})).toMatchObject({power: 'unknown', slots: []});
+        expect(profileForm(none, null, {source: 'datapoints', power: 'mains', slots: []}).power).toBe('mains');
+    });
+
+    it('writes only what differs from the baseline; nothing differs: no override', () => {
+        expect(overrideOf(profileForm(wrc2, null), wrc2)).toBeNull();
+        expect(overrideOf({...profileForm(wrc2, null), outdoor: true}, wrc2)).toEqual({outdoor: true});
+        expect(overrideOf({...profileForm(wrc2, null), slots: [{count: 2, type: 'AA'}]}, wrc2)).toEqual({slots: [{count: 2, type: 'AA'}]});
+        expect(overrideOf({...profileForm(wrc2, null), rechargeable: true, chemistry: 'lithium-aa'}, wrc2)).toEqual({chemistry: 'lithium-aa', rechargeable: true});
+        expect(overrideOf({power: 'battery', slots: [{count: 1, type: 'CR2032'}], chemistry: '', rechargeable: false, outdoor: false}, none)).toEqual({power: 'battery', slots: [{count: 1, type: 'CR2032'}]});
+    });
+
+    it('a power without batteries drops the slots and the chemistry', () => {
+        expect(overrideOf({power: 'external', slots: [{count: 3, type: 'C'}], chemistry: 'nimh', rechargeable: true, outdoor: false}, none)).toEqual({power: 'external'});
+        expect(overrideOf({power: 'mains', slots: [{count: 1, type: 'AA'}], chemistry: '', rechargeable: false, outdoor: false}, wrc2)).toEqual({power: 'mains'});
+        expect(profileFormValid({power: 'mains', slots: [{count: 0, type: 'X'}], chemistry: '', rechargeable: false, outdoor: false}, ['AA'])).toBe(true);
+    });
+
+    it('refuses what the API refuses: a count outside 1-12, an unknown type', () => {
+        const f = (count: number, type: string) => profileFormValid({power: 'battery', slots: [{count, type}], chemistry: '', rechargeable: false, outdoor: false}, ['AA', 'AAA']);
+        expect(f(2, 'AA')).toBe(true);
+        expect(f(0, 'AA')).toBe(false);
+        expect(f(13, 'AA')).toBe(false);
+        expect(f(1.5, 'AA')).toBe(false);
+        expect(f(2, 'AAAA')).toBe(false);
+    });
+
+    it('says per value where it comes from: this device over the model over the table', () => {
+        const p = {source: 'override' as const, power: 'battery', slots: [{count: 2, type: 'AA'}]};
+        expect(originsOf(p, null, null, true)).toEqual({power: 'table', slots: 'table', chemistry: 'table', outdoor: 'table'});
+        expect(originsOf(p, null, {slots: [{count: 2, type: 'AA'}], outdoor: true}, true)).toEqual({power: 'table', slots: 'model', chemistry: 'table', outdoor: 'model'});
+        expect(originsOf(p, {rechargeable: true, slots: [{count: 1, type: 'AA'}]}, {slots: [{count: 2, type: 'AA'}]}, true)).toEqual({power: 'table', slots: 'device', chemistry: 'device', outdoor: 'table'});
+        expect(originsOf({source: 'guess', power: 'battery', slots: []}, null, null, false)).toEqual({power: 'auto', slots: 'auto', chemistry: 'none', outdoor: 'none'});
+        expect(originsOf({source: 'table', power: 'external', auto: true, slots: []}, null, null, true).power).toBe('auto');
+        expect(originsOf({source: 'override', power: 'battery', slots: []}, null, {power: 'battery'}, false).power).toBe('model');
+    });
+
+    it('names the chemistries, an unknown one as it is', () => {
+        const tr = (k: string) => `<${k}>`;
+        expect(chemistryLabel('nimh', tr)).toBe('<chemistry.nimh>');
+        expect(chemistryLabel('zinc-air', tr)).toBe('zinc-air');
     });
 });

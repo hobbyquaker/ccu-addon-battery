@@ -87,8 +87,14 @@ automatic / batteries / power supply unit) here; on a power supply there is no f
 change detection. *Automatic* (the default) tells it by the voltage: 4.9 V or more - above what the
 cells give - or the voltage status OVERFLOW, held for an hour, is the power supply unit, and the
 page says it was detected automatically; back in the cells' range for an hour it is batteries
-again. A single outlier changes nothing. *Do not
-monitor* is here as well. Below it every recorded change of the device, each editable and
+again. A single outlier changes nothing. *Batterien bearbeiten…* (edit batteries) sets what the
+battery table says or does not know: the power supply, the battery slots (count and type per
+slot), the battery kind, rechargeables and *outdoors* - for *this device only* or for *all
+devices of the model*. A device's values come before its model's, the model's before the table's;
+beside every value the page says where it comes from (the battery table, an own value for all
+devices of the model, this device's own value), and *Eigene Werte* (own values) resets each level
+on its own. So a model missing from the table (a self-built HB device, say) gets its batteries
+too. *Do not monitor* is here as well. Below it every recorded change of the device, each editable and
 deletable; here the imported ones, their origin in the note.
 
 ### Recording a change
@@ -190,7 +196,8 @@ models eQ-3's own product pages and manuals; a model that neither the manufactur
 names is shown as *unknown* instead of guessed. A model missing from the table that reports a voltage but
 no low-battery flag counts as mains-powered (that is how Homematic IP actuators report). The data is CC0: take it for any project. The addon
 embeds it, looks models up case-insensitively (and by their aliases), and lets you correct it
-per model or per device (a remote in a desk stand, lithium or rechargeable cells). Corrections to
+per model or per device (a remote in a desk stand, lithium or rechargeable cells): on the device
+page under *Batterien bearbeiten…* (edit batteries), or through the API. Corrections to
 the table are welcome as pull requests; `python3 data/check.py` checks it (CI runs it), and
 [tools/](tools/README.md) has the scripts it was built with.
 
@@ -304,6 +311,7 @@ firmware 3.89.11 (`armv7l`), there so far without paired battery devices - feedb
 go test -race ./...                      # the store, the recorder, the detector, the changes, the statistics, the API, the package files
 python3 data/check.py                    # the battery table
 (cd ui && npm ci && npm run check && npm test && npm run build)   # the app and the settings page
+(cd ui && npx playwright test)           # the device page in a browser against the real API (internal/e2eserver, after the build)
 VERSION=1.5.2 scripts/build.sh           # dist/battery-<arch>-<version>.tar.gz for aarch64, x86_64, armv7l
 scripts/install-test.sh 1.5.2            # the packages installed in a busybox container (docker, x86_64)
 ```

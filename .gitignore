@@ -19,3 +19,5 @@
 *.db
 *.db-wal
 *.db-shm
+/ui/test-results/
+/ui/playwright-report/

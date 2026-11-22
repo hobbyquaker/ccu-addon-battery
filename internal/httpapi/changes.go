@@ -515,7 +515,14 @@ func (o Options) models(w http.ResponseWriter, r *http.Request) {
 		out = append(out, *m)
 	}
 	sort.Slice(out, func(i, j int) bool { return out[i].Model < out[j].Model })
-	writeJSON(w, 200, map[string]any{"table": map[string]any{"version": o.Changes.Table().Version, "updated": o.Changes.Table().Updated, "models": len(o.Changes.Table().Models)}, "models": out})
+	tb := o.Changes.Table()
+	chems := make([]string, 0, len(tb.Chemistries))
+	for c := range tb.Chemistries {
+		chems = append(chems, c)
+	}
+	sort.Strings(chems)
+	// types and chemistries: what an override's slots may name (the device page's editor)
+	writeJSON(w, 200, map[string]any{"table": map[string]any{"version": tb.Version, "updated": tb.Updated, "models": len(tb.Models), "types": tb.TypeNames(), "chemistries": chems, "powers": batteries.Powers}, "models": out})
 }
 
 func (o Options) model(w http.ResponseWriter, r *http.Request) {

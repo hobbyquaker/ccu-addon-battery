@@ -682,3 +682,78 @@ button.bat-link.bat-truncate {
     width: auto;
     min-width: 14em;
 }
+
+/* the battery editor and the own values of the device page */
+.bat-scope {
+    border: 0;
+    padding: 0;
+    margin: 8px 0;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px 16px;
+}
+
+.bat-scope legend {
+    opacity: 0.85;
+    padding: 0;
+    margin-bottom: 4px;
+}
+
+.bat-editor-note {
+    min-height: 2.8em;
+    margin: 4px 0;
+}
+
+.bat-slot-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 4px 0;
+}
+
+.bat-count-input {
+    width: 4.5em;
+    font: inherit;
+    padding: 4px 6px;
+    color: inherit;
+    background: var(--hmm-input-bg, transparent);
+    border: 1px solid var(--hmm-border, #8884);
+    border-radius: 4px;
+}
+
+.bat-slot-row select {
+    font: inherit;
+    padding: 4px 6px;
+    min-width: 7rem;
+    color: inherit;
+    background: var(--hmm-input-bg, transparent);
+    border: 1px solid var(--hmm-border, #8884);
+    border-radius: 4px;
+}
+
+.bat-own {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px 16px;
+}
+
+.bat-own-level {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.bat-dialog-buttons .bat-reset {
+    margin-right: auto;
+}
+
+.bat-slot-row .bat-cell-button {
+    width: 2.2em;
+    padding: 2px 0;
+    text-align: center;
+}
+
+.bat-slot .bat-add-slot {
+    width: auto;
+    padding: 2px 10px;
+}

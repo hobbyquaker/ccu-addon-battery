@@ -551,3 +551,138 @@ export function fromLocalInput(v: string): number {
     if (!v) return NaN;
     return new Date(v).getTime();
 }
+
+// ---- the battery editor (the device page's correction of the battery table) -------------------
+
+/** An override of the battery table, for one device or for every device of a model (the API's body). */
+export interface OverrideBody {
+    power?: string;
+    slots?: Slot[];
+    chemistry?: string;
+    rechargeable?: boolean;
+    outdoor?: boolean;
+}
+
+/** What the layer below an override says: the table row for a model, the model's profile for a device. */
+export interface Baseline {
+    power: string;
+    slots: Slot[];
+    outdoor: boolean;
+}
+
+/** The editor's fields. chemistry "" is the slot types' own. */
+export interface ProfileForm {
+    power: string;
+    slots: Slot[];
+    chemistry: string;
+    rechargeable: boolean;
+    outdoor: boolean;
+}
+
+/** The powers the editor offers (the table's kinds and the power supply unit; "unknown" only shows itself). */
+export const EDITOR_POWERS = ['battery', 'rechargeable', 'battery-or-dc', 'external', 'mains', 'bus', 'host'];
+
+/** A baseline from a table row or a profile; none: the model is not in the table. */
+export function baselineOf(x?: {power?: string; slots?: Slot[]; outdoor?: boolean} | null): Baseline {
+    return {power: x?.power || 'unknown', slots: (x?.slots ?? []).map((s) => ({...s})), outdoor: !!x?.outdoor};
+}
+
+/**
+ * The editor's fields: the override over its baseline. Where neither says anything (a model the
+ * table lacks), what the device shows - a guessed cell count, mains by its datapoints - prefills
+ * the fields, so saving confirms it.
+ */
+export function profileForm(base: Baseline, ov: OverrideBody | null | undefined, shown?: Profile): ProfileForm {
+    let power = ov?.power || base.power;
+    let slots = ov?.slots?.length ? ov.slots : base.slots;
+    if (power === 'unknown' && shown && shown.power !== 'unknown' && !shown.auto) power = shown.power;
+    if (slots.length === 0 && shown?.slots?.length && (shown.source === 'guess' || base.power === 'unknown')) slots = shown.slots.map((s) => ({count: s.count, type: s.type}));
+    return {
+        power,
+        slots: slots.map((s) => ({...s})),
+        chemistry: ov?.chemistry ?? '',
+        rechargeable: !!ov?.rechargeable,
+        outdoor: ov?.outdoor ?? base.outdoor,
+    };
+}
+
+function slotsEqual(a: Slot[], b: Slot[]): boolean {
+    return a.length === b.length && a.every((s, i) => s.count === b[i]!.count && s.type === b[i]!.type && (s.chemistry ?? '') === (b[i]!.chemistry ?? ''));
+}
+
+/**
+ * The override the editor writes: only what differs from the baseline, so the table's own levels
+ * stay wherever nothing was changed; null when nothing differs (the override is removed).
+ */
+export function overrideOf(form: ProfileForm, base: Baseline): OverrideBody | null {
+    const o: OverrideBody = {};
+    if (form.power !== base.power && form.power !== 'unknown') o.power = form.power;
+    // mains, a bus, the host or the power supply unit: the batteries do not matter
+    if (powerTakesBatteries(form.power)) {
+        if (form.slots.length > 0 && !slotsEqual(form.slots, base.slots)) o.slots = form.slots.map((s) => (s.chemistry ? {count: s.count, type: s.type, chemistry: s.chemistry} : {count: s.count, type: s.type}));
+        if (form.chemistry) o.chemistry = form.chemistry;
+        if (form.rechargeable) o.rechargeable = true;
+    }
+    if (form.outdoor !== base.outdoor) o.outdoor = form.outdoor;
+    return Object.keys(o).length ? o : null;
+}
+
+/** The fields the API would refuse: a count outside 1-12, a type the table does not know. */
+export function profileFormValid(form: ProfileForm, types: string[]): boolean {
+    if (!powerTakesBatteries(form.power)) return true;
+    return form.slots.every((s) => Number.isInteger(s.count) && s.count >= 1 && s.count <= 12 && types.includes(s.type));
+}
+
+/** Whether the power takes batteries at all (the slots are asked for). */
+export function powerTakesBatteries(power: string): boolean {
+    return power === 'battery' || power === 'battery-or-dc' || power === 'unknown' || power === 'rechargeable';
+}
+
+/** A row of the battery table, the fields the editor uses. */
+export interface TableRow {
+    power: string;
+    slots?: Slot[];
+    outdoor?: boolean;
+}
+
+/** GET models/{model}: the row, the model's override and the model's profile (row + model override). */
+export interface ModelInfo {
+    model?: string;
+    in_table: boolean;
+    row?: TableRow;
+    override?: OverrideBody;
+    profile?: {power: string; slots: Slot[]; outdoor?: boolean};
+}
+
+/** Where a value of the device's profile comes from: this device's override, its model's, the table, the addon's own guess. */
+export type Origin = 'device' | 'model' | 'table' | 'auto' | 'none';
+
+export interface Origins {
+    power: Origin;
+    slots: Origin;
+    chemistry: Origin;
+    outdoor: Origin;
+}
+
+/**
+ * Per value, the level it comes from - this device wins over its model, the model over the table
+ * (the order the backend resolves in).
+ */
+export function originsOf(profile: Profile | undefined, devOv: OverrideBody | null | undefined, modelOv: OverrideBody | null | undefined, inTable: boolean): Origins {
+    const below: Origin = inTable ? 'table' : profile && (profile.source === 'guess' || profile.source === 'datapoints') ? 'auto' : 'none';
+    const pick = (has: (o: OverrideBody) => boolean, fallback: Origin): Origin => (devOv && has(devOv) ? 'device' : modelOv && has(modelOv) ? 'model' : fallback);
+    const chem = (o: OverrideBody) => !!o.chemistry || !!o.rechargeable;
+    return {
+        power: pick((o) => !!o.power, profile?.auto ? 'auto' : below),
+        slots: pick((o) => !!o.slots?.length, below),
+        chemistry: pick(chem, inTable ? 'table' : 'none'),
+        outdoor: pick((o) => o.outdoor !== undefined, inTable ? 'table' : 'none'),
+    };
+}
+
+const CHEMISTRIES = ['alkaline', 'alkaline-button', 'lithium-coin', 'lithium', 'lithium-aa', 'nimh', 'lead'];
+
+/** A chemistry's label in the user's language; an unknown one as it is. */
+export function chemistryLabel(c: string, tr: (key: string) => string): string {
+    return CHEMISTRIES.includes(c) ? tr('chemistry.' + c) : c;
+}
