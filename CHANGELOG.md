@@ -1,5 +1,18 @@
 # Changelog
 
+## [1.5.4] - 2026-11-22
+
+- **Every system:** a device in eQ-3's table stand (HmIP-DS55) is set with one click: *Batterien bearbeiten…*
+  offers *Im Tischaufsteller (2× AA)*, for this device or for all devices of the model. The addon then counts with
+  the stand's two AA cells instead of the device's AAA cells and with the doubled battery life eQ-3 states; the
+  device's own low-battery level stays. The device page names the source *Tischaufsteller*, and *Zurücksetzen*
+  removes it like any own value. It is offered for the 55 mm devices eQ-3 names the stand for - the wall-mount
+  remotes (HmIP-WRC2, HmIP-WRC6), wall thermostats (HmIP-WTH-1/-2), temperature and humidity sensors (HmIP-STH,
+  HmIP-STHD), the rotary button (HmIP-WRCR), the motion detector for 55 mm frames (HmIP-SMI55) and Homematic's
+  55 mm buttons and displays (HM-PB-2-WM55, HM-PB-6-WM55, HM-Dis-WM55, HM-Dis-EP-WM55, HM-Sen-MDIR-WM55), with
+  their anthracite and earlier versions. The battery table lists the eQ-3 documents it stands on. (asked for in the
+  homematic-forum)
+
 ## [1.5.3] - 2026-11-22
 
 - **Every system:** the device page shows the settings for the power supply, the battery slots (count and type) and
