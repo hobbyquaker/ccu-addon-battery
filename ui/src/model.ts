@@ -52,6 +52,8 @@ export interface Profile {
     auto?: boolean;
     /** The table row's power before the overrides. */
     table_power?: string;
+    /** The preset the slots come from (the table stand), absent otherwise. */
+    preset?: string;
 }
 
 export interface Evidence {
@@ -556,6 +558,8 @@ export function fromLocalInput(v: string): number {
 
 /** An override of the battery table, for one device or for every device of a model (the API's body). */
 export interface OverrideBody {
+    /** One of the table's presets (the table stand): its power and slots replace the layer below's. */
+    preset?: string;
     power?: string;
     slots?: Slot[];
     chemistry?: string;
@@ -568,10 +572,31 @@ export interface Baseline {
     power: string;
     slots: Slot[];
     outdoor: boolean;
+    /** The preset the layer below already uses ("" none). */
+    preset: string;
+}
+
+/** A preset of the battery table (GET models/{model} → presets): a named power and slots, e.g. eQ-3's table stand. */
+export interface PresetInfo {
+    name: {de: string; en: string};
+    label: {de: string; en: string};
+    power: string;
+    slots: Slot[];
+    life_factor?: number;
+}
+
+export type Presets = Record<string, PresetInfo>;
+
+/** A preset's text in the user's language. */
+export function presetText(p: PresetInfo | undefined, what: 'name' | 'label', lang = 'en'): string {
+    if (!p) return '';
+    return lang === 'de' ? p[what].de : p[what].en;
 }
 
 /** The editor's fields. chemistry "" is the slot types' own. */
 export interface ProfileForm {
+    /** The preset the form holds ("" none); it counts only while power and slots are the preset's. */
+    preset: string;
     power: string;
     slots: Slot[];
     chemistry: string;
@@ -583,8 +608,8 @@ export interface ProfileForm {
 export const EDITOR_POWERS = ['battery', 'rechargeable', 'battery-or-dc', 'external', 'mains', 'bus', 'host'];
 
 /** A baseline from a table row or a profile; none: the model is not in the table. */
-export function baselineOf(x?: {power?: string; slots?: Slot[]; outdoor?: boolean} | null): Baseline {
-    return {power: x?.power || 'unknown', slots: (x?.slots ?? []).map((s) => ({...s})), outdoor: !!x?.outdoor};
+export function baselineOf(x?: {power?: string; slots?: Slot[]; outdoor?: boolean; preset?: string} | null): Baseline {
+    return {power: x?.power || 'unknown', slots: (x?.slots ?? []).map((s) => ({...s})), outdoor: !!x?.outdoor, preset: x?.preset ?? ''};
 }
 
 /**
@@ -592,12 +617,15 @@ export function baselineOf(x?: {power?: string; slots?: Slot[]; outdoor?: boolea
  * table lacks), what the device shows - a guessed cell count, mains by its datapoints - prefills
  * the fields, so saving confirms it.
  */
-export function profileForm(base: Baseline, ov: OverrideBody | null | undefined, shown?: Profile): ProfileForm {
-    let power = ov?.power || base.power;
-    let slots = ov?.slots?.length ? ov.slots : base.slots;
+export function profileForm(base: Baseline, ov: OverrideBody | null | undefined, shown?: Profile, presets: Presets = {}): ProfileForm {
+    const pr = ov?.preset ? presets[ov.preset] : undefined;
+    let power = pr?.power || ov?.power || base.power;
+    let slots = pr ? pr.slots : ov?.slots?.length ? ov.slots : base.slots;
+    const preset = pr ? ov!.preset! : ov?.slots?.length ? '' : base.preset;
     if (power === 'unknown' && shown && shown.power !== 'unknown' && !shown.auto) power = shown.power;
     if (slots.length === 0 && shown?.slots?.length && (shown.source === 'guess' || base.power === 'unknown')) slots = shown.slots.map((s) => ({count: s.count, type: s.type}));
     return {
+        preset,
         power,
         slots: slots.map((s) => ({...s})),
         chemistry: ov?.chemistry ?? '',
@@ -614,17 +642,33 @@ function slotsEqual(a: Slot[], b: Slot[]): boolean {
  * The override the editor writes: only what differs from the baseline, so the table's own levels
  * stay wherever nothing was changed; null when nothing differs (the override is removed).
  */
-export function overrideOf(form: ProfileForm, base: Baseline): OverrideBody | null {
+export function overrideOf(form: ProfileForm, base: Baseline, presets: Presets = {}): OverrideBody | null {
     const o: OverrideBody = {};
-    if (form.power !== base.power && form.power !== 'unknown') o.power = form.power;
+    const preset = activePreset(form, presets);
+    // a preset the layer below already uses is inherited, not written again
+    if (preset && preset !== base.preset) o.preset = preset;
+    if (!preset && form.power !== base.power && form.power !== 'unknown') o.power = form.power;
     // mains, a bus, the host or the power supply unit: the batteries do not matter
     if (powerTakesBatteries(form.power)) {
-        if (form.slots.length > 0 && !slotsEqual(form.slots, base.slots)) o.slots = form.slots.map((s) => (s.chemistry ? {count: s.count, type: s.type, chemistry: s.chemistry} : {count: s.count, type: s.type}));
+        if (!preset && form.slots.length > 0 && !slotsEqual(form.slots, base.slots)) o.slots = form.slots.map((s) => (s.chemistry ? {count: s.count, type: s.type, chemistry: s.chemistry} : {count: s.count, type: s.type}));
         if (form.chemistry) o.chemistry = form.chemistry;
         if (form.rechargeable) o.rechargeable = true;
     }
     if (form.outdoor !== base.outdoor) o.outdoor = form.outdoor;
     return Object.keys(o).length ? o : null;
+}
+
+/** The form's preset while power and slots are still the preset's ("" otherwise: the user changed them). */
+export function activePreset(form: ProfileForm, presets: Presets): string {
+    const p = form.preset ? presets[form.preset] : undefined;
+    return p && p.power === form.power && slotsEqual(form.slots, p.slots) ? form.preset : '';
+}
+
+/** The form with a preset chosen: its power and slots (the chemistry, rechargeable and outdoor stay). */
+export function applyPreset(form: ProfileForm, id: string, presets: Presets): ProfileForm {
+    const p = presets[id];
+    if (!p) return form;
+    return {...form, preset: id, power: p.power, slots: p.slots.map((s) => ({...s}))};
 }
 
 /** The fields the API would refuse: a count outside 1-12, a type the table does not know. */
@@ -643,6 +687,8 @@ export interface TableRow {
     power: string;
     slots?: Slot[];
     outdoor?: boolean;
+    /** The presets the editor offers for the model (the table stand). */
+    presets?: string[];
 }
 
 /** GET models/{model}: the row, the model's override and the model's profile (row + model override). */
@@ -651,7 +697,9 @@ export interface ModelInfo {
     in_table: boolean;
     row?: TableRow;
     override?: OverrideBody;
-    profile?: {power: string; slots: Slot[]; outdoor?: boolean};
+    profile?: {power: string; slots: Slot[]; outdoor?: boolean; preset?: string};
+    /** The presets the row offers and the override names, by id. */
+    presets?: Presets;
 }
 
 /** Where a value of the device's profile comes from: this device's override, its model's, the table, the addon's own guess. */
@@ -671,10 +719,11 @@ export interface Origins {
 export function originsOf(profile: Profile | undefined, devOv: OverrideBody | null | undefined, modelOv: OverrideBody | null | undefined, inTable: boolean): Origins {
     const below: Origin = inTable ? 'table' : profile && (profile.source === 'guess' || profile.source === 'datapoints') ? 'auto' : 'none';
     const pick = (has: (o: OverrideBody) => boolean, fallback: Origin): Origin => (devOv && has(devOv) ? 'device' : modelOv && has(modelOv) ? 'model' : fallback);
+    const slots = (o: OverrideBody) => !!o.slots?.length || !!o.preset;
     const chem = (o: OverrideBody) => !!o.chemistry || !!o.rechargeable;
     return {
         power: pick((o) => !!o.power, profile?.auto ? 'auto' : below),
-        slots: pick((o) => !!o.slots?.length, below),
+        slots: pick(slots, below),
         chemistry: pick(chem, inTable ? 'table' : 'none'),
         outdoor: pick((o) => o.outdoor !== undefined, inTable ? 'table' : 'none'),
     };

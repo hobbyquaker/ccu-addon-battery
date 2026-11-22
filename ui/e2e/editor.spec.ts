@@ -187,3 +187,69 @@ test('saving the table values removes the override; reset in the editor', async 
     await expect(page.getByTestId('power')).toContainText('Batterien');
     await expect(page.getByTestId('power-origin')).toHaveText('(aus der Batterietabelle)');
 });
+
+test('the table stand: one click per device, per model, and reset', async ({page}) => {
+    const stand = 'editor-preset-eq3-table-stand';
+    await openDevice(page, 'WRC2A');
+    await page.getByTestId('edit-batteries').click();
+    let ed = page.getByTestId('battery-editor');
+    const button = ed.getByTestId(stand);
+    await expect(button).toHaveText('Im Tischaufsteller (2× AA)');
+    await expect(button).toHaveAttribute('aria-pressed', 'false');
+    const before = await button.boundingBox();
+    await button.click();
+    await expect(button).toHaveAttribute('aria-pressed', 'true');
+    // chosen or not, the button keeps its box
+    const after = await button.boundingBox();
+    expect(after?.width).toBe(before?.width);
+    expect(after?.height).toBe(before?.height);
+    await expect(ed.getByTestId('editor-count-0')).toHaveValue('2');
+    await expect(ed.getByTestId('editor-type-0')).toHaveValue('AA');
+    await ed.getByTestId('editor-save').click();
+    await expect(ed).toBeHidden();
+    await expect(page.getByTestId('slots')).toContainText('2× AA');
+    await expect(page.getByTestId('slots')).not.toContainText('AAA');
+    await expect(page.getByTestId('slots-origin')).toHaveText('(Tischaufsteller, nur dieses Gerät)');
+    await expect(page.getByTestId('own-device')).toBeVisible();
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+
+    // reopened: the preset is the device's; slots changed by hand leave it
+    await page.getByTestId('edit-batteries').click();
+    ed = page.getByTestId('battery-editor');
+    await expect(ed.getByTestId(stand)).toHaveAttribute('aria-pressed', 'true');
+    await ed.getByTestId('editor-count-0').fill('3');
+    await expect(ed.getByTestId(stand)).toHaveAttribute('aria-pressed', 'false');
+    await ed.getByRole('button', {name: 'Abbrechen'}).click();
+
+    await page.getByTestId('reset-device').click();
+    await expect(page.getByTestId('slots')).toContainText('2× AAA');
+    await expect(page.getByTestId('slots-origin')).toHaveText('(aus der Batterietabelle)');
+
+    // every device of the model: the other remote has it too, its editor shows it inherited
+    await page.getByTestId('edit-batteries').click();
+    ed = page.getByTestId('battery-editor');
+    await ed.getByText('alle Geräte des Modells HmIP-WRC2').click();
+    await ed.getByTestId(stand).click();
+    await ed.getByTestId('editor-save').click();
+    await expect(page.getByTestId('slots-origin')).toHaveText('(Tischaufsteller, alle HmIP-WRC2)');
+    await back(page);
+    await openDevice(page, 'WRC2B');
+    await expect(page.getByTestId('slots')).toContainText('2× AA');
+    await expect(page.getByTestId('slots-origin')).toHaveText('(Tischaufsteller, alle HmIP-WRC2)');
+    await page.getByTestId('edit-batteries').click();
+    ed = page.getByTestId('battery-editor');
+    await expect(ed.getByRole('radio', {name: 'nur dieses Gerät'})).toBeChecked();
+    await expect(ed.getByTestId(stand)).toHaveAttribute('aria-pressed', 'true');
+    // saving the inherited values writes nothing for the device
+    await ed.getByTestId('editor-save').click();
+    await expect(page.getByTestId('own-device')).toHaveCount(0);
+    await page.getByTestId('reset-model').click();
+    await expect(page.getByTestId('slots')).toContainText('2× AAA');
+    await expect(page.getByTestId('own-values')).toHaveCount(0);
+});
+
+test('the table stand is offered only where the table names it', async ({page}) => {
+    await openDevice(page, 'HBSEN0001');
+    await page.getByTestId('edit-batteries').click();
+    await expect(page.getByTestId('battery-editor').getByTestId('editor-presets')).toHaveCount(0);
+});

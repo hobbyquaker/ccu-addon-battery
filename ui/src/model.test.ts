@@ -1,6 +1,6 @@
 import {describe, expect, it} from 'vitest';
 
-import {DEFAULT_DEVICE_FILTER, baselineOf, batteryName, chemistryLabel, originsOf, overrideOf, profileForm, profileFormValid, checkState, compareDevices, describeSlots, evidenceSummary, filterDevices, formatBytes, formatCents, formatDays, formatRange, formatVoltage, fromLocalInput, isMains, isStick, lifeText, loadDeviceFilter, locationText, modelInitials, parsePrice, priceInput, relativeTime, saveDeviceFilter, statusOf, toLocalInput, type DeviceView} from './model.js';
+import {DEFAULT_DEVICE_FILTER, activePreset, applyPreset, baselineOf, presetText, type Presets, batteryName, chemistryLabel, originsOf, overrideOf, profileForm, profileFormValid, checkState, compareDevices, describeSlots, evidenceSummary, filterDevices, formatBytes, formatCents, formatDays, formatRange, formatVoltage, fromLocalInput, isMains, isStick, lifeText, loadDeviceFilter, locationText, modelInitials, parsePrice, priceInput, relativeTime, saveDeviceFilter, statusOf, toLocalInput, type DeviceView} from './model.js';
 
 const dev = (p: Partial<DeviceView>): DeviceView => ({
     interface: 'HmIP-RF',
@@ -240,8 +240,8 @@ describe('the battery editor', () => {
     const none = baselineOf(null);
 
     it('fills the fields from the override over its baseline', () => {
-        expect(profileForm(wrc2, null)).toEqual({power: 'battery', slots: [{count: 2, type: 'AAA'}], chemistry: '', rechargeable: false, outdoor: false});
-        expect(profileForm(wrc2, {slots: [{count: 2, type: 'AA'}], outdoor: true, rechargeable: true})).toEqual({power: 'battery', slots: [{count: 2, type: 'AA'}], chemistry: '', rechargeable: true, outdoor: true});
+        expect(profileForm(wrc2, null)).toEqual({preset: '', power: 'battery', slots: [{count: 2, type: 'AAA'}], chemistry: '', rechargeable: false, outdoor: false});
+        expect(profileForm(wrc2, {slots: [{count: 2, type: 'AA'}], outdoor: true, rechargeable: true})).toEqual({preset: '', power: 'battery', slots: [{count: 2, type: 'AA'}], chemistry: '', rechargeable: true, outdoor: true});
     });
 
     it('a model the table lacks: prefilled with what the device shows (a guess), unknown otherwise', () => {
@@ -255,17 +255,17 @@ describe('the battery editor', () => {
         expect(overrideOf({...profileForm(wrc2, null), outdoor: true}, wrc2)).toEqual({outdoor: true});
         expect(overrideOf({...profileForm(wrc2, null), slots: [{count: 2, type: 'AA'}]}, wrc2)).toEqual({slots: [{count: 2, type: 'AA'}]});
         expect(overrideOf({...profileForm(wrc2, null), rechargeable: true, chemistry: 'lithium-aa'}, wrc2)).toEqual({chemistry: 'lithium-aa', rechargeable: true});
-        expect(overrideOf({power: 'battery', slots: [{count: 1, type: 'CR2032'}], chemistry: '', rechargeable: false, outdoor: false}, none)).toEqual({power: 'battery', slots: [{count: 1, type: 'CR2032'}]});
+        expect(overrideOf({preset: '', power: 'battery', slots: [{count: 1, type: 'CR2032'}], chemistry: '', rechargeable: false, outdoor: false}, none)).toEqual({power: 'battery', slots: [{count: 1, type: 'CR2032'}]});
     });
 
     it('a power without batteries drops the slots and the chemistry', () => {
-        expect(overrideOf({power: 'external', slots: [{count: 3, type: 'C'}], chemistry: 'nimh', rechargeable: true, outdoor: false}, none)).toEqual({power: 'external'});
-        expect(overrideOf({power: 'mains', slots: [{count: 1, type: 'AA'}], chemistry: '', rechargeable: false, outdoor: false}, wrc2)).toEqual({power: 'mains'});
-        expect(profileFormValid({power: 'mains', slots: [{count: 0, type: 'X'}], chemistry: '', rechargeable: false, outdoor: false}, ['AA'])).toBe(true);
+        expect(overrideOf({preset: '', power: 'external', slots: [{count: 3, type: 'C'}], chemistry: 'nimh', rechargeable: true, outdoor: false}, none)).toEqual({power: 'external'});
+        expect(overrideOf({preset: '', power: 'mains', slots: [{count: 1, type: 'AA'}], chemistry: '', rechargeable: false, outdoor: false}, wrc2)).toEqual({power: 'mains'});
+        expect(profileFormValid({preset: '', power: 'mains', slots: [{count: 0, type: 'X'}], chemistry: '', rechargeable: false, outdoor: false}, ['AA'])).toBe(true);
     });
 
     it('refuses what the API refuses: a count outside 1-12, an unknown type', () => {
-        const f = (count: number, type: string) => profileFormValid({power: 'battery', slots: [{count, type}], chemistry: '', rechargeable: false, outdoor: false}, ['AA', 'AAA']);
+        const f = (count: number, type: string) => profileFormValid({preset: '', power: 'battery', slots: [{count, type}], chemistry: '', rechargeable: false, outdoor: false}, ['AA', 'AAA']);
         expect(f(2, 'AA')).toBe(true);
         expect(f(0, 'AA')).toBe(false);
         expect(f(13, 'AA')).toBe(false);
@@ -281,6 +281,52 @@ describe('the battery editor', () => {
         expect(originsOf({source: 'guess', power: 'battery', slots: []}, null, null, false)).toEqual({power: 'auto', slots: 'auto', chemistry: 'none', outdoor: 'none'});
         expect(originsOf({source: 'table', power: 'external', auto: true, slots: []}, null, null, true).power).toBe('auto');
         expect(originsOf({source: 'override', power: 'battery', slots: []}, null, {power: 'battery'}, false).power).toBe('model');
+    });
+
+    describe('the table stand preset', () => {
+        const presets: Presets = {
+            'eq3-table-stand': {name: {de: 'Im Tischaufsteller (2× AA)', en: 'In the table stand (2× AA)'}, label: {de: 'Tischaufsteller', en: 'table stand'}, power: 'battery', slots: [{count: 2, type: 'AA'}], life_factor: 2},
+        };
+        const id = 'eq3-table-stand';
+
+        it('one click: the preset\'s power and slots, written as the preset alone', () => {
+            const f = applyPreset({...profileForm(wrc2, null), outdoor: true}, id, presets);
+            expect(f).toMatchObject({preset: id, power: 'battery', slots: [{count: 2, type: 'AA'}], outdoor: true});
+            expect(activePreset(f, presets)).toBe(id);
+            expect(overrideOf(f, wrc2, presets)).toEqual({preset: id, outdoor: true});
+            expect(overrideOf({...f, rechargeable: true}, wrc2, presets)).toEqual({preset: id, rechargeable: true, outdoor: true});
+            expect(applyPreset(f, 'nope', presets)).toBe(f);
+        });
+
+        it('slots changed by hand after the click: own slots, no preset', () => {
+            const f = applyPreset(profileForm(wrc2, null), id, presets);
+            f.slots[0]!.count = 3;
+            expect(activePreset(f, presets)).toBe('');
+            expect(overrideOf(f, wrc2, presets)).toEqual({slots: [{count: 3, type: 'AA'}]});
+        });
+
+        it('a stored preset fills the form with its slots', () => {
+            expect(profileForm(wrc2, {preset: id}, undefined, presets)).toEqual({preset: id, power: 'battery', slots: [{count: 2, type: 'AA'}], chemistry: '', rechargeable: false, outdoor: false});
+            // the definition missing (an older table): the layer below's values
+            expect(profileForm(wrc2, {preset: id}).slots).toEqual([{count: 2, type: 'AAA'}]);
+        });
+
+        it('a preset the model already uses is inherited by the device, not written again', () => {
+            const model = baselineOf({power: 'battery', slots: [{count: 2, type: 'AA'}], preset: id});
+            const f = profileForm(model, null, undefined, presets);
+            expect(f.preset).toBe(id);
+            expect(overrideOf(f, model, presets)).toBeNull();
+            expect(overrideOf({...f, slots: [{count: 1, type: 'CR2032'}]}, model, presets)).toEqual({slots: [{count: 1, type: 'CR2032'}]});
+        });
+
+        it('the source: the level that set the preset, and its label', () => {
+            const p = {source: 'override' as const, power: 'battery', slots: [{count: 2, type: 'AA'}], preset: id};
+            expect(originsOf(p, {preset: id}, null, true).slots).toBe('device');
+            expect(originsOf(p, null, {preset: id}, true).slots).toBe('model');
+            expect(presetText(presets[id], 'label', 'de')).toBe('Tischaufsteller');
+            expect(presetText(presets[id], 'name', 'en')).toBe('In the table stand (2× AA)');
+            expect(presetText(undefined, 'name', 'de')).toBe('');
+        });
     });
 
     it('names the chemistries, an unknown one as it is', () => {

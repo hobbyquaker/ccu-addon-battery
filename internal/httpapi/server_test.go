@@ -415,6 +415,35 @@ func TestChangesAPI(t *testing.T) {
 	if w := call(h, "DELETE", "/addons/battery/api/v1/devices/HmIP-RF/WRC2/override", user, "", csrf...); w.Code != 204 {
 		t.Fatalf("device override delete: %d", w.Code)
 	}
+	// the table stand: offered by the row, listed with the table, set per device and per model
+	if w := call(h, "GET", "/addons/battery/api/v1/models", user, ""); !strings.Contains(w.Body.String(), `"presets":{"eq3-table-stand":{"name":{"de":"Im Tischaufsteller (2× AA)"`) {
+		t.Fatalf("models: presets: %s", w.Body)
+	}
+	if w := call(h, "GET", "/addons/battery/api/v1/models/HmIP-WRC2", user, ""); !strings.Contains(w.Body.String(), `"presets":["eq3-table-stand"]`) || !strings.Contains(w.Body.String(), `"presets":{"eq3-table-stand":{"name":{"de":"Im Tischaufsteller (2× AA)","en":"In the table stand (2× AA)"},"label":{"de":"Tischaufsteller","en":"table stand"},`) {
+		t.Fatalf("model: presets: %s", w.Body)
+	}
+	if w := call(h, "PUT", "/addons/battery/api/v1/devices/HmIP-RF/WRC2/override", user, `{"preset":"eq3-table-stand"}`, csrf...); w.Code != 200 {
+		t.Fatalf("device preset: %d %s", w.Code, w.Body)
+	}
+	if w := call(h, "GET", "/addons/battery/api/v1/devices/HmIP-RF/WRC2/override", user, ""); !strings.Contains(w.Body.String(), `"override":{"preset":"eq3-table-stand"}`) {
+		t.Fatalf("device preset get: %s", w.Body)
+	}
+	if w := call(h, "PUT", "/addons/battery/api/v1/models/HmIP-WRC2/override", user, `{"preset":"eq3-table-stand"}`, csrf...); w.Code != 200 {
+		t.Fatalf("model preset: %d %s", w.Code, w.Body)
+	}
+	if w := call(h, "GET", "/addons/battery/api/v1/models/HmIP-WRC2", user, ""); !strings.Contains(w.Body.String(), `"override":{"preset":"eq3-table-stand"}`) || !strings.Contains(w.Body.String(), `"slots":[{"count":2,"type":"AA"}],"fresh"`) || !strings.Contains(w.Body.String(), `"preset":"eq3-table-stand"}`) {
+		t.Fatalf("model with the preset: %s", w.Body)
+	}
+	for _, body := range []string{`{"preset":"nope"}`, `{"preset":"eq3-table-stand","slots":[{"count":2,"type":"AA"}]}`} {
+		if w := call(h, "PUT", "/addons/battery/api/v1/devices/HmIP-RF/WRC2/override", user, body, csrf...); w.Code != 422 {
+			t.Fatalf("bad preset %s: %d", body, w.Code)
+		}
+	}
+	for _, path := range []string{"devices/HmIP-RF/WRC2/override", "models/HmIP-WRC2/override"} {
+		if w := call(h, "DELETE", "/addons/battery/api/v1/"+path, user, "", csrf...); w.Code != 204 {
+			t.Fatalf("preset reset %s: %d", path, w.Code)
+		}
+	}
 	if w := call(h, "PUT", "/addons/battery/api/v1/devices/HmIP-RF/NOPE/override", user, `{}`, csrf...); w.Code != 422 {
 		t.Fatalf("unknown device override: %d", w.Code)
 	}

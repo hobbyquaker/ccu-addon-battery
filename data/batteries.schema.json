@@ -59,6 +59,12 @@
         }
       }
     },
+    "presets": {
+      "description": "Named battery setups a model row may offer (the editor's one-click choices), e.g. eQ-3's table stand, which feeds the device from its own 2x AA.",
+      "type": "object",
+      "propertyNames": {"pattern": "^[a-z0-9][a-z0-9-]*$"},
+      "additionalProperties": {"$ref": "#/$defs/preset"}
+    },
     "models": {
       "type": "object",
       "propertyNames": {"pattern": "^[A-Za-z0-9][A-Za-z0-9_.!-]*$"},
@@ -86,7 +92,34 @@
         "id": {"type": "string"},
         "url": {"type": "string"},
         "quote": {"type": "string"},
-        "says": {"type": "string"}
+        "says": {"type": "string"},
+        "preset": {"type": "string", "description": "the cite supports the row's preset of this id, not its own slots"}
+      }
+    },
+    "preset": {
+      "type": "object",
+      "required": ["name", "label", "power", "slots", "sources"],
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "type": "object",
+          "required": ["de", "en"],
+          "additionalProperties": false,
+          "properties": {"de": {"type": "string"}, "en": {"type": "string"}}
+        },
+        "label": {
+          "description": "the short source label the device page shows beside the slots",
+          "type": "object",
+          "required": ["de", "en"],
+          "additionalProperties": false,
+          "properties": {"de": {"type": "string"}, "en": {"type": "string"}}
+        },
+        "holder": {"type": "array", "items": {"type": "string"}},
+        "power": {"enum": ["battery", "rechargeable"]},
+        "slots": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/slot"}},
+        "life_factor": {"type": "number", "exclusiveMinimum": 0, "description": "the row's life_years times this"},
+        "sources": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/cite"}},
+        "note": {"type": "string"}
       }
     },
     "model": {
@@ -112,6 +145,7 @@
         "limit_note": {"type": "string", "description": "why low_bat_limit does not fit the cell count; turns check.py's error into a warning"},
         "life_years": {"type": "number"},
         "aliases": {"type": "array", "items": {"type": "string"}},
+        "presets": {"type": "array", "minItems": 1, "items": {"type": "string"}, "description": "ids of presets the editor offers for the model"},
         "sources": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/cite"}},
         "confidence": {"enum": ["manufacturer", "prior-art", "single-source", "assumed"]},
         "note": {"type": "string"}

@@ -11,7 +11,7 @@
     import DevicePicture from './DevicePicture.svelte';
     import VoltageChart, {type SamplePoint} from './VoltageChart.svelte';
     import {ApiError, del, get, patch, post, put} from './api.js';
-    import {batteryName, chemistryLabel, describeSlots, originsOf, type ModelInfo, type OverrideBody, type Origin, formatCents, formatDateTime, formatDays, formatVoltage, lifeText, relativeTime, statusOf, type Change, type DeviceView} from './model.js';
+    import {batteryName, chemistryLabel, describeSlots, originsOf, type ModelInfo, type OverrideBody, type Origin, formatCents, formatDateTime, formatDays, formatVoltage, lifeText, presetText, relativeTime, statusOf, type Change, type DeviceView} from './model.js';
 
     let {device, notices, onback, onchanged}: {device: DeviceView; notices: NoticesStore; onback: () => void; onchanged?: () => void} = $props();
 
@@ -131,6 +131,12 @@
     });
 
     const origins = $derived(originsOf(device.profile, override, modelInfo?.override, !!modelInfo?.in_table));
+    // the slots' source: a preset (the table stand) by its own label and the level that set it
+    const presetLabel = $derived(device.profile?.preset ? presetText(modelInfo?.presets?.[device.profile.preset], 'label', lang) : '');
+    function slotsOriginText(o: Origin): string {
+        if (presetLabel && (o === 'device' || o === 'model')) return t('origin.preset.' + o, {label: presetLabel, model: device.model});
+        return o === 'auto' || o === 'none' ? (device.profile ? t('profile.' + device.profile.source) : '') : originText(o);
+    }
     function originText(o: Origin): string {
         return o === 'model' ? t('origin.model', {model: device.model}) : t('origin.' + o);
     }
@@ -229,7 +235,7 @@
         </div>
         <dl class="bat-kv">
             <dt>{t('Batteries')}</dt>
-            <dd data-testid="slots">{describeSlots(device.profile?.slots) || t('profile.unknown')} <span class="bat-muted" data-testid="slots-origin">({origins.slots === 'auto' || origins.slots === 'none' ? (device.profile ? t('profile.' + device.profile.source) : '') : originText(origins.slots)})</span></dd>
+            <dd data-testid="slots">{describeSlots(device.profile?.slots) || t('profile.unknown')} <span class="bat-muted" data-testid="slots-origin">({slotsOriginText(origins.slots)})</span></dd>
             {#if !supplyChoice}
                 <dt>{t('supply.label')}</dt>
                 <dd data-testid="power">{t('power.' + (device.profile?.power ?? 'unknown'))} <span class="bat-muted" data-testid="power-origin">({originText(origins.power)})</span></dd>

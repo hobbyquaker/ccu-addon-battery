@@ -263,3 +263,74 @@ func TestPrecedenceTableModelDevice(t *testing.T) {
 		}
 	}
 }
+
+// The table stand (eQ-3 HmIP-DS55): a preset of the table, offered per row, applied per model or
+// per device in the usual precedence, with the device's own levels where the pack keeps the
+// row's voltage and twice the table's battery life.
+func TestTableStandPreset(t *testing.T) {
+	tb := Shipped()
+	const id = "eq3-table-stand"
+	pr, ok := tb.Presets[id]
+	if !ok || pr.Name["de"] != "Im Tischaufsteller (2× AA)" || pr.Name["en"] == "" || Describe(pr.Slots) != "2× AA" || pr.LifeFactor != 2 {
+		t.Fatalf("preset: %+v", pr)
+	}
+	for _, m := range []string{"HmIP-WRC2-2", "hmip-wrc6", "HmIP-STHD", "HmIP-STH", "HMIP-WRC2", "HmIP-WTH-2", "HmIP-SMI55-2", "HM-PB-2-WM55"} {
+		if l := tb.PresetsFor(m); len(l) != 1 || l[0] != id {
+			t.Errorf("%s offers %v", m, l)
+		}
+	}
+	for _, m := range []string{"HmIP-WTH-3", "HmIP-eTRV-2", "HmIP-BSM", "HB-UNI-Sen-TEMP-DS18B20"} {
+		if l := tb.PresetsFor(m); l != nil {
+			t.Errorf("%s offers %v", m, l)
+		}
+	}
+	row, _, _ := tb.Lookup("HmIP-WRC6")
+	stand := &Override{Preset: id}
+	tr := true
+	for _, c := range []struct {
+		name          string
+		mOv, dOv      *Override
+		slots, preset string
+		low           float64
+		life          float64
+	}{
+		{"table", nil, nil, "2× AAA", "", 2.2, row.LifeYears},
+		{"device in the stand", nil, stand, "2× AA", id, 2.2, row.LifeYears * 2},
+		{"every device of the model", stand, nil, "2× AA", id, 2.2, row.LifeYears * 2},
+		{"device's own slots over the model's stand", stand, &Override{Slots: []Slot{{Count: 1, Type: "CR2032"}}}, "1× CR2032", "", 2.4, row.LifeYears},
+		{"device in the stand over the model's slots", &Override{Slots: []Slot{{Count: 3, Type: "AAA"}}}, stand, "2× AA", id, 2.2, row.LifeYears * 2},
+		{"stand with rechargeables", nil, &Override{Preset: id, Rechargeable: &tr}, "2× AA (nimh)", id, 2.2, row.LifeYears * 2},
+		{"stand outdoors keeps the levels", nil, &Override{Preset: id, Outdoor: &tr}, "2× AA", id, 2.2, row.LifeYears * 2},
+	} {
+		p := tb.Resolve("HmIP-WRC6", c.mOv, c.dOv, 0)
+		if Describe(p.Slots) != c.slots || p.Preset != c.preset || p.Power != "battery" || p.LifeYears != c.life {
+			t.Errorf("%s: %+v", c.name, p)
+		}
+		// LOW_BAT_LIMIT 2.2 stays the device's while the pack keeps the row's 3 V; rechargeables
+		// change the chemistry and take its levels
+		if c.name != "stand with rechargeables" && p.Low != c.low {
+			t.Errorf("%s: low %v, want %v", c.name, p.Low, c.low)
+		}
+		if c.preset != "" && p.Source != "override" {
+			t.Errorf("%s: source %q", c.name, p.Source)
+		}
+	}
+	// a model the table lacks: the stand's slots, no levels of its own to keep
+	if p := tb.Resolve("HB-UNI-Sen-TEMP-DS18B20", nil, stand, 0); Describe(p.Slots) != "2× AA" || p.Power != "battery" || p.Preset != id || p.Low == 0 {
+		t.Errorf("not in the table: %+v", p)
+	}
+	for _, c := range []struct {
+		o   Override
+		err bool
+	}{
+		{Override{Preset: id}, false},
+		{Override{Preset: id, Chemistry: "nimh", Outdoor: &tr}, false},
+		{Override{Preset: "nope"}, true},
+		{Override{Preset: id, Slots: []Slot{{Count: 2, Type: "AA"}}}, true},
+		{Override{Preset: id, Power: "mains"}, true},
+	} {
+		if err := tb.Validate(c.o); (err != nil) != c.err {
+			t.Errorf("Validate(%+v) = %v", c.o, err)
+		}
+	}
+}

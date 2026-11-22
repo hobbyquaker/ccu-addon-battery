@@ -98,7 +98,13 @@ für *nur dieses Gerät* oder für *alle Geräte des Modells*. Die Werte eines G
 seines Modells vor, die des Modells der Tabelle; neben jedem Wert steht, woher er kommt (aus der
 Batterietabelle, eigener Wert für alle Geräte des Modells, eigener Wert dieses Geräts), und unter
 *Eigene Werte* lässt sich jede Stufe für sich zurücksetzen. So bekommt auch ein Modell, das in
-der Tabelle fehlt (etwa ein selbst gebautes HB-Gerät), seine Batterien. *Nicht überwachen*
+der Tabelle fehlt (etwa ein selbst gebautes HB-Gerät), seine Batterien. Steckt ein Gerät im
+Tischaufsteller von eQ-3 (HmIP-DS55), genügt ein Klick auf *Im Tischaufsteller (2× AA)*: der
+Aufsteller versorgt das Gerät aus seinen eigenen zwei Mignon-Zellen statt der Micro-Zellen des
+Geräts, und die Tabelle rechnet mit der doppelten Laufzeit, die eQ-3 nennt. Angeboten wird das
+bei den Geräten im 55er-Format, für die eQ-3 den Aufsteller nennt (Wandtaster, Wandthermostate,
+Temperatursensoren, Drehtaster, Bewegungsmelder für 55er-Rahmen und die 55er-Taster und -Displays
+von Homematic); neben den Batterien steht dann *Tischaufsteller*. *Nicht überwachen*
 gibt es auch hier. Darunter alle gebuchten Wechsel des Geräts, jeder
 bearbeitbar und löschbar; hier die übernommenen mit ihrer Herkunft in der Notiz.
 

@@ -699,6 +699,40 @@ button.bat-link.bat-truncate {
     margin-bottom: 4px;
 }
 
+.bat-presets {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px 10px;
+    margin: 4px 0 8px;
+}
+
+.bat-presets-label {
+    opacity: 0.85;
+}
+
+/* the same box chosen or not: only the colours change */
+.bat-preset {
+    box-sizing: border-box;
+    max-width: 100%;
+    font: inherit;
+    padding: 3px 10px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    border-radius: 4px;
+    border: 1px solid var(--hmm-border, #8884);
+    background: var(--hmm-surface-2, transparent);
+    color: inherit;
+    cursor: pointer;
+}
+
+.bat-preset.active {
+    border-color: var(--hmm-accent, #2c6fb3);
+    background: var(--hmm-accent, #2c6fb3);
+    color: var(--hmm-on-accent, #fff);
+}
+
 .bat-editor-note {
     min-height: 2.8em;
     margin: 4px 0;

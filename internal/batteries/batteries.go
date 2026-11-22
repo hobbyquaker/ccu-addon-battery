@@ -22,6 +22,7 @@ type Table struct {
 	Types       map[string]Type      `json:"types"`
 	Chemistries map[string]Chemistry `json:"chemistries"`
 	Models      map[string]Model     `json:"models"`
+	Presets     map[string]Preset    `json:"presets,omitempty"`
 
 	index map[string]string // lower-case model or alias -> key in Models
 }
@@ -68,6 +69,19 @@ type Model struct {
 	LifeYears   float64  `json:"life_years,omitempty"`
 	Aliases     []string `json:"aliases,omitempty"`
 	Confidence  string   `json:"confidence"`
+	// Presets are the ids of the presets the editor offers for the model (the table stand).
+	Presets []string `json:"presets,omitempty"`
+}
+
+// Preset is a named battery setup a row may offer: eQ-3's table stand feeds a 55 mm device from
+// its own 2x AA instead of the device's 2x AAA, and the cells last twice as long.
+type Preset struct {
+	Name       map[string]string `json:"name"`
+	Label      map[string]string `json:"label"`
+	Holder     []string          `json:"holder,omitempty"`
+	Power      string            `json:"power"`
+	Slots      []Slot            `json:"slots"`
+	LifeFactor float64           `json:"life_factor,omitempty"`
 }
 
 // Parse reads a table.
@@ -105,6 +119,15 @@ func Shipped() *Table {
 	return shipped
 }
 
+// PresetsFor lists the presets a model's row offers (nil without a row or without presets).
+func (t *Table) PresetsFor(model string) []string {
+	m, _, ok := t.Lookup(model)
+	if !ok {
+		return nil
+	}
+	return m.Presets
+}
+
 // Lookup finds a model by its TYPE, case-insensitively and through the aliases; the second
 // result is the table's own spelling.
 func (t *Table) Lookup(model string) (Model, string, bool) {
@@ -129,6 +152,9 @@ func (t *Table) TypeNames() []string {
 // carries the fix) or one device (a remote in a desk stand, an eTRV on lithium cells, a slot of
 // rechargeables). A zero field leaves the value below it alone.
 type Override struct {
+	// Preset names one of the table's presets: its power and slots replace the layer below's
+	// (the chemistry, rechargeable and outdoor fields still apply on top).
+	Preset       string `json:"preset,omitempty"`
 	Power        string `json:"power,omitempty"`
 	Slots        []Slot `json:"slots,omitempty"`
 	Chemistry    string `json:"chemistry,omitempty"`
@@ -144,6 +170,14 @@ var Powers = []string{"battery", "rechargeable", "battery-or-dc", "mains", "bus"
 func (t *Table) Validate(o Override) error {
 	if o.Power != "" && !contains(Powers, o.Power) {
 		return fmt.Errorf("unknown power %q", o.Power)
+	}
+	if o.Preset != "" {
+		if _, ok := t.Presets[o.Preset]; !ok {
+			return fmt.Errorf("unknown preset %q", o.Preset)
+		}
+		if o.Power != "" || len(o.Slots) > 0 {
+			return fmt.Errorf("preset %q brings its own power and slots", o.Preset)
+		}
 	}
 	if o.Chemistry != "" {
 		if _, ok := t.Chemistries[o.Chemistry]; !ok {
@@ -197,6 +231,8 @@ type Profile struct {
 	// TablePower is the table row's power, before the overrides ("" without a row): the device
 	// page offers the power supply choice for battery-or-dc.
 	TablePower string `json:"table_power,omitempty"`
+	// Preset is the preset the slots come from ("" when none, or a layer above set its own slots).
+	Preset string `json:"preset,omitempty"`
 }
 
 // Detects says whether the detector runs for the device at all: not for mains, bus, host or
@@ -254,7 +290,7 @@ func (t *Table) Resolve(model string, modelOv, devOv *Override, maxV float64) Pr
 func (t *Table) ResolveSeen(model string, modelOv, devOv *Override, seen Seen) Profile {
 	maxV := seen.MaxV
 	p := Profile{Source: "none", Power: "unknown", Slots: []Slot{}}
-	var lowLimit, fresh float64
+	var lowLimit, fresh, rowNominal float64
 	if m, key, ok := t.Lookup(model); ok {
 		p.Source, p.Model, p.Power, p.Outdoor, p.LifeYears, p.Confidence = "table", key, m.Power, m.Outdoor, m.LifeYears, m.Confidence
 		p.TablePower = m.Power
@@ -265,17 +301,34 @@ func (t *Table) ResolveSeen(model string, modelOv, devOv *Override, seen Seen) P
 		if lowLimit == 0 {
 			lowLimit = m.LowBatLimit
 		}
+		rowNominal = t.nominal(m.Slots)
 	}
 	changed := false
+	// presetFit: a preset whose pack has the row's voltage (2x AA for 2x AAA) keeps the device's
+	// own levels (LOW_BAT_LIMIT, the row's fresh level), unless a layer changed slots or chemistry
+	presetFit := false
+	lifeFactor := 1.0
 	for _, o := range []*Override{modelOv, devOv} {
 		if o == nil {
 			continue
+		}
+		if pr, ok := t.Presets[o.Preset]; ok {
+			p.Power, p.Slots, p.Preset, changed = pr.Power, append([]Slot{}, pr.Slots...), o.Preset, true
+			lifeFactor = 1
+			if pr.LifeFactor > 0 {
+				lifeFactor = pr.LifeFactor
+			}
+			presetFit = rowNominal > 0 && math.Abs(t.nominal(pr.Slots)-rowNominal) < 1e-9
+			if !presetFit {
+				fresh = 0
+			}
 		}
 		if o.Power != "" {
 			p.Power, changed = o.Power, true
 		}
 		if len(o.Slots) > 0 {
 			p.Slots, changed = append([]Slot{}, o.Slots...), true
+			p.Preset, lifeFactor, presetFit = "", 1, false
 			fresh = 0 // the row's own fresh level was for its own slots
 		}
 		chem := o.Chemistry
@@ -286,11 +339,14 @@ func (t *Table) ResolveSeen(model string, modelOv, devOv *Override, seen Seen) P
 			for i := range p.Slots {
 				p.Slots[i].Chemistry = chem
 			}
-			fresh, changed = 0, true
+			fresh, changed, presetFit = 0, true, false
 		}
 		if o.Outdoor != nil {
 			p.Outdoor, changed = *o.Outdoor, true
 		}
+	}
+	if p.Preset != "" && p.LifeYears > 0 {
+		p.LifeYears = round2(p.LifeYears * lifeFactor)
 	}
 	if changed {
 		p.Source = "override"
@@ -333,7 +389,7 @@ func (t *Table) ResolveSeen(model string, modelOv, devOv *Override, seen Seen) P
 		if fresh > 0 {
 			p.Fresh = fresh
 		}
-		if lowLimit > 0 && !changed {
+		if lowLimit > 0 && (!changed || presetFit) {
 			p.Low = lowLimit
 		}
 		if p.Outdoor {
@@ -341,6 +397,15 @@ func (t *Table) ResolveSeen(model string, modelOv, devOv *Override, seen Seen) P
 		}
 	}
 	return p
+}
+
+// nominal is the pack's nominal voltage: count x the type's.
+func (t *Table) nominal(slots []Slot) float64 {
+	var v float64
+	for _, s := range slots {
+		v += float64(s.Count) * t.Types[s.Type].NominalV
+	}
+	return v
 }
 
 func round2(f float64) float64 { return math.Round(f*100) / 100 }

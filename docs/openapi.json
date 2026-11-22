@@ -118,6 +118,10 @@
      "table_power": {
       "type": "string",
       "description": "the table row's power before the overrides; absent without a row"
+     },
+     "preset": {
+      "type": "string",
+      "description": "the preset the slots come from (an override named it and no layer above set its own slots); absent otherwise"
      }
     }
    },
@@ -125,6 +129,10 @@
     "type": "object",
     "description": "changes what the battery table says; a missing field leaves the value below alone",
     "properties": {
+     "preset": {
+      "type": "string",
+      "description": "one of the table's presets (GET models: table.presets), e.g. eq3-table-stand - eQ-3's table stand with 2x AA: its power and slots replace the layer below's; not together with power or slots"
+     },
      "power": {
       "type": "string"
      },

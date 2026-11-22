@@ -2,7 +2,7 @@
  "$schema": "./batteries.schema.json",
  "version": 1,
  "license": "CC0-1.0",
- "updated": "2026-11-21",
+ "updated": "2026-11-22",
  "sources": {
   "eq3-site": {
    "name": "homematic-ip.com product pages (eQ-3 AG), field 'Versorgungsspannung'",
@@ -78,6 +78,14 @@
    "kind": "corpus",
    "read": "2026-10-27",
    "note": "homematic-manager's device data (openccu-data model names and descriptions)"
+  },
+  "eq3-ds55": {
+   "name": "eQ-3 Homematic IP Tischaufsteller HmIP-DS55 / HmIP-DS55-A: product page, installation guide and datasheet",
+   "url": "https://homematic-ip.com/de/produkt/tischaufsteller",
+   "license": "facts from the manufacturer's documents; the sentences that carry them are quoted",
+   "kind": "manufacturer",
+   "read": "2026-11-22",
+   "note": "the stand takes 2x AA and feeds the device put into it, whose own cells come out; eQ-3: the battery life doubles"
   }
  },
  "types": {
@@ -220,6 +228,58 @@
    "low": 1.75,
    "step": 0.08,
    "note": "per cell of a 12 V lead pack (6 cells): 12.6 V full, HM-Sec-SFA-SM's limit 10.5 V"
+  }
+ },
+ "presets": {
+  "eq3-table-stand": {
+   "name": {
+    "de": "Im Tischaufsteller (2× AA)",
+    "en": "In the table stand (2× AA)"
+   },
+   "label": {
+    "de": "Tischaufsteller",
+    "en": "table stand"
+   },
+   "holder": [
+    "HmIP-DS55",
+    "HmIP-DS55-A"
+   ],
+   "power": "battery",
+   "slots": [
+    {
+     "count": 2,
+     "type": "AA"
+    }
+   ],
+   "life_factor": 2,
+   "sources": [
+    {
+     "id": "eq3-ds55",
+     "url": "https://homematic-ip.com/de/produkt/tischaufsteller",
+     "quote": "2× 1,5 V LR6/Mignon/AA"
+    },
+    {
+     "id": "eq3-ds55",
+     "url": "https://homematic-ip.com/de/produkt/tischaufsteller",
+     "quote": "Der HmIP-DS55-A ist für alle batteriebetriebenen Homematic IP Geräte im einheitlichen 55er-Format ausgelegt."
+    },
+    {
+     "id": "eq3-ds55",
+     "url": "https://www.homematic-ip.com/sites/default/files/downloads/hmip-ds55-um-gef.pdf",
+     "quote": "Der Homematic IP Tischaufsteller kann universell für den Betrieb von batterieversorgten Geräten im 55er-Format (z. B. Homematic IP Wandthermostat oder Homematic IP Wandtaster – 2-fach) verwendet werden."
+    },
+    {
+     "id": "eq3-ds55",
+     "url": "https://www.eq-3.de/Downloads/eq3/downloads_produktkatalog/homematic_ip/pdb/HMIP-DS55_141743_Produktdatenblatt_V1.5.pdf",
+     "quote": "Versorgungsspannung des eingesetzten Geräts erfolgt über die Mignon-Batterien des Tischaufstellers - dadurch verdoppelt sich die Batterielaufzeit des eingesetzten Geräts"
+    },
+    {
+     "id": "eq3-ds55",
+     "url": "https://www.eq-3.de/Downloads/eq3/downloads_produktkatalog/homematic_ip/pdb/HMIP-DS55_141743_Produktdatenblatt_V1.5.pdf",
+     "quote": "Kompatibel mit allen Geräten im 55er-Format (auch anderer Produktgruppen wie z. B. Homematic, MAX! Heizungssteuerung, FS20, etc.)"
+    }
+   ],
+   "note": "a model gets the preset where eQ-3 names it for the stand: its product page, the stand's guide (first-generation HmIP wall thermostat and wall-mount remote) or the stand's datasheet (Homematic 55 devices). Not listed: HmIP-WTH-3 (its page does not name the stand), HmIP-WRCD (no manufacturer document found); the editor's own slots still cover them."
   }
  },
  "models": {
@@ -632,7 +692,16 @@
     {
      "id": "corpus",
      "says": "LOWBAT"
+    },
+    {
+     "id": "eq3-ds55",
+     "url": "https://www.eq-3.de/Downloads/eq3/downloads_produktkatalog/homematic_ip/pdb/HMIP-DS55_141743_Produktdatenblatt_V1.5.pdf",
+     "quote": "Kompatibel mit allen Geräten im 55er-Format (auch anderer Produktgruppen wie z. B. Homematic, MAX! Heizungssteuerung, FS20, etc.)",
+     "preset": "eq3-table-stand"
     }
+   ],
+   "presets": [
+    "eq3-table-stand"
    ]
   },
   "HM-Dis-TD-T": {
@@ -679,7 +748,16 @@
     {
      "id": "corpus",
      "says": "LOWBAT"
+    },
+    {
+     "id": "eq3-ds55",
+     "url": "https://www.eq-3.de/Downloads/eq3/downloads_produktkatalog/homematic_ip/pdb/HMIP-DS55_141743_Produktdatenblatt_V1.5.pdf",
+     "quote": "Kompatibel mit allen Geräten im 55er-Format (auch anderer Produktgruppen wie z. B. Homematic, MAX! Heizungssteuerung, FS20, etc.)",
+     "preset": "eq3-table-stand"
     }
+   ],
+   "presets": [
+    "eq3-table-stand"
    ]
   },
   "HM-DW-WM": {
@@ -2068,7 +2146,16 @@
     {
      "id": "iobroker-servicemeldungen",
      "says": "2x AAA"
+    },
+    {
+     "id": "eq3-ds55",
+     "url": "https://www.eq-3.de/Downloads/eq3/downloads_produktkatalog/homematic_ip/pdb/HMIP-DS55_141743_Produktdatenblatt_V1.5.pdf",
+     "quote": "Kompatibel mit allen Geräten im 55er-Format (auch anderer Produktgruppen wie z. B. Homematic, MAX! Heizungssteuerung, FS20, etc.)",
+     "preset": "eq3-table-stand"
     }
+   ],
+   "presets": [
+    "eq3-table-stand"
    ]
   },
   "HM-PB-2-WM55-2": {
@@ -2103,7 +2190,16 @@
     {
      "id": "iobroker-servicemeldungen",
      "says": "2x AAA"
+    },
+    {
+     "id": "eq3-ds55",
+     "url": "https://www.eq-3.de/Downloads/eq3/downloads_produktkatalog/homematic_ip/pdb/HMIP-DS55_141743_Produktdatenblatt_V1.5.pdf",
+     "quote": "Kompatibel mit allen Geräten im 55er-Format (auch anderer Produktgruppen wie z. B. Homematic, MAX! Heizungssteuerung, FS20, etc.)",
+     "preset": "eq3-table-stand"
     }
+   ],
+   "presets": [
+    "eq3-table-stand"
    ]
   },
   "HM-PB-4-WM": {
@@ -2224,7 +2320,16 @@
     {
      "id": "iobroker-servicemeldungen",
      "says": "2x AAA"
+    },
+    {
+     "id": "eq3-ds55",
+     "url": "https://www.eq-3.de/Downloads/eq3/downloads_produktkatalog/homematic_ip/pdb/HMIP-DS55_141743_Produktdatenblatt_V1.5.pdf",
+     "quote": "Kompatibel mit allen Geräten im 55er-Format (auch anderer Produktgruppen wie z. B. Homematic, MAX! Heizungssteuerung, FS20, etc.)",
+     "preset": "eq3-table-stand"
     }
+   ],
+   "presets": [
+    "eq3-table-stand"
    ]
   },
   "HM-PBI-4-FM": {
@@ -3726,7 +3831,16 @@
     {
      "id": "corpus",
      "says": "LOWBAT"
+    },
+    {
+     "id": "eq3-ds55",
+     "url": "https://www.eq-3.de/Downloads/eq3/downloads_produktkatalog/homematic_ip/pdb/HMIP-DS55_141743_Produktdatenblatt_V1.5.pdf",
+     "quote": "Kompatibel mit allen Geräten im 55er-Format (auch anderer Produktgruppen wie z. B. Homematic, MAX! Heizungssteuerung, FS20, etc.)",
+     "preset": "eq3-table-stand"
     }
+   ],
+   "presets": [
+    "eq3-table-stand"
    ]
   },
   "HM-Sen-RD-O": {
@@ -6554,7 +6668,16 @@
     {
      "id": "iobroker-servicemeldungen",
      "says": "2x AAA"
+    },
+    {
+     "id": "eq3-ds55",
+     "url": "https://www.homematic-ip.com/sites/default/files/downloads/hmip-ds55-um-gef.pdf",
+     "quote": "Der Homematic IP Tischaufsteller kann universell für den Betrieb von batterieversorgten Geräten im 55er-Format (z. B. Homematic IP Wandthermostat oder Homematic IP Wandtaster – 2-fach) verwendet werden.",
+     "preset": "eq3-table-stand"
     }
+   ],
+   "presets": [
+    "eq3-table-stand"
    ]
   },
   "HmIP-SMI55-2": {
@@ -6577,7 +6700,16 @@
     {
      "id": "battery-notes",
      "says": "2x AAA"
+    },
+    {
+     "id": "eq3-ds55",
+     "url": "https://homematic-ip.com/de/produkt/bewegungsmelder-fuer-55er-rahmen-innen",
+     "quote": "Integration in den Homematic IP Tischaufsteller (HmIP-DS55) für eine längere Batterielebensdauer",
+     "preset": "eq3-table-stand"
     }
+   ],
+   "presets": [
+    "eq3-table-stand"
    ]
   },
   "HmIP-SMI55-A": {
@@ -6596,7 +6728,16 @@
      "id": "eq3-manual",
      "url": "https://homematic-ip.com/sites/default/files/downloads/hmip-smi55-a-um-web.pdf",
      "quote": "2x 1,5 V LR03/Micro/AAA"
+    },
+    {
+     "id": "eq3-ds55",
+     "url": "https://homematic-ip.com/de/produkt/bewegungsmelder-fuer-55er-rahmen-innen-anthrazit",
+     "quote": "Integration in den Homematic IP Tischaufsteller (HmIP-DS55) für eine längere Batterielebensdauer",
+     "preset": "eq3-table-stand"
     }
+   ],
+   "presets": [
+    "eq3-table-stand"
    ]
   },
   "HmIP-SMO": {
@@ -6929,7 +7070,16 @@
     {
      "id": "iobroker-servicemeldungen",
      "says": "2x AAA"
+    },
+    {
+     "id": "eq3-ds55",
+     "url": "https://homematic-ip.com/de/produkt/temperatur-und-luftfeuchtigkeitssensor-innen",
+     "quote": "Integration in den Homematic IP Tischaufsteller (HmIP-DS55) für eine längere Batterielebensdauer",
+     "preset": "eq3-table-stand"
     }
+   ],
+   "presets": [
+    "eq3-table-stand"
    ]
   },
   "HmIP-STH-A": {
@@ -6948,7 +7098,16 @@
      "id": "eq3-site",
      "url": "https://homematic-ip.com/de/produkt/temperatur-und-luftfeuchtigkeitssensor-innen-anthrazit",
      "quote": "2x 1,5 V LR03/Micro/AAA"
+    },
+    {
+     "id": "eq3-ds55",
+     "url": "https://homematic-ip.com/de/produkt/temperatur-und-luftfeuchtigkeitssensor-innen-anthrazit",
+     "quote": "Integration in den Homematic IP Tischaufsteller (HmIP-DS55) für eine längere Batterielebensdauer",
+     "preset": "eq3-table-stand"
     }
+   ],
+   "presets": [
+    "eq3-table-stand"
    ]
   },
   "HmIP-STHD": {
@@ -6983,7 +7142,16 @@
     {
      "id": "iobroker-servicemeldungen",
      "says": "2x AAA"
+    },
+    {
+     "id": "eq3-ds55",
+     "url": "https://homematic-ip.com/de/produkt/temperatur-und-luftfeuchtigkeitssensor-mit-display-innen",
+     "quote": "Integration in den Homematic IP Tischaufsteller (HmIP-DS55) für eine längere Batterielebensdauer",
+     "preset": "eq3-table-stand"
     }
+   ],
+   "presets": [
+    "eq3-table-stand"
    ]
   },
   "HmIP-STHD-A": {
@@ -7002,7 +7170,16 @@
      "id": "eq3-site",
      "url": "https://homematic-ip.com/de/produkt/temperatur-und-luftfeuchtigkeitssensor-mit-display-innen-anthrazit",
      "quote": "2x 1,5 V LR03/Micro/AAA"
+    },
+    {
+     "id": "eq3-ds55",
+     "url": "https://homematic-ip.com/de/produkt/temperatur-und-luftfeuchtigkeitssensor-mit-display-innen-anthrazit",
+     "quote": "Integration in den Homematic IP Tischaufsteller (HmIP-DS55) für eine längere Batterielebensdauer",
+     "preset": "eq3-table-stand"
     }
+   ],
+   "presets": [
+    "eq3-table-stand"
    ]
   },
   "HmIP-STHO": {
@@ -7900,7 +8077,16 @@
     {
      "id": "iobroker-servicemeldungen",
      "says": "2x AAA"
+    },
+    {
+     "id": "eq3-ds55",
+     "url": "https://www.homematic-ip.com/sites/default/files/downloads/hmip-ds55-um-gef.pdf",
+     "quote": "Der Homematic IP Tischaufsteller kann universell für den Betrieb von batterieversorgten Geräten im 55er-Format (z. B. Homematic IP Wandthermostat oder Homematic IP Wandtaster – 2-fach) verwendet werden.",
+     "preset": "eq3-table-stand"
     }
+   ],
+   "presets": [
+    "eq3-table-stand"
    ]
   },
   "HmIP-WRC2-2": {
@@ -7919,7 +8105,16 @@
      "id": "eq3-site",
      "url": "https://homematic-ip.com/de/produkt/wandtaster-2-fach",
      "quote": "2x 1,5 V LR03/Micro/AAA"
+    },
+    {
+     "id": "eq3-ds55",
+     "url": "https://homematic-ip.com/de/produkt/wandtaster-2-fach",
+     "quote": "Integration in den Homematic IP Tischaufsteller (HmIP-DS55) für eine längere Batterielebensdauer",
+     "preset": "eq3-table-stand"
     }
+   ],
+   "presets": [
+    "eq3-table-stand"
    ]
   },
   "HmIP-WRC2-A": {
@@ -7938,7 +8133,16 @@
      "id": "eq3-manual",
      "url": "https://homematic-ip.com/sites/default/files/downloads/hmip-wrc2-a-um-gef-eq-3.pdf",
      "quote": "2x 1,5 V LR03/Micro/AAA"
+    },
+    {
+     "id": "eq3-ds55",
+     "url": "https://www.homematic-ip.com/sites/default/files/downloads/hmip-ds55-um-gef.pdf",
+     "quote": "Der Homematic IP Tischaufsteller kann universell für den Betrieb von batterieversorgten Geräten im 55er-Format (z. B. Homematic IP Wandthermostat oder Homematic IP Wandtaster – 2-fach) verwendet werden.",
+     "preset": "eq3-table-stand"
     }
+   ],
+   "presets": [
+    "eq3-table-stand"
    ]
   },
   "HmIP-WRC2-A-2": {
@@ -7957,7 +8161,16 @@
      "id": "eq3-manual",
      "url": "https://homematic-ip.com/sites/default/files/downloads/161830a0_161869a0_hmip-wrc2-a-2_um_g.pdf",
      "quote": "2x 1,5 V LR03/Micro/AAA"
+    },
+    {
+     "id": "eq3-ds55",
+     "url": "https://homematic-ip.com/de/produkt/wandtaster-2-fach-anthrazit",
+     "quote": "Integration in den Homematic IP Tischaufsteller (HmIP-DS55) für eine längere Batterielebensdauer",
+     "preset": "eq3-table-stand"
     }
+   ],
+   "presets": [
+    "eq3-table-stand"
    ]
   },
   "HmIP-WRC6": {
@@ -7997,7 +8210,16 @@
     {
      "id": "iobroker-servicemeldungen",
      "says": "2x AAA"
+    },
+    {
+     "id": "eq3-ds55",
+     "url": "https://homematic-ip.com/de/produkt/wandtaster-6-fach",
+     "quote": "Integration in den Homematic IP Tischaufsteller (HmIP-DS55) für eine längere Batterielebensdauer",
+     "preset": "eq3-table-stand"
     }
+   ],
+   "presets": [
+    "eq3-table-stand"
    ]
   },
   "HmIP-WRC6-230": {
@@ -8044,7 +8266,16 @@
      "id": "eq3-manual",
      "url": "https://homematic-ip.com/sites/default/files/downloads/hmip-wrc6-a-um-gef-eq-3.pdf",
      "quote": "2x 1,5 V LR03/Micro/AAA"
+    },
+    {
+     "id": "eq3-ds55",
+     "url": "https://homematic-ip.com/de/produkt/wandtaster-6-fach-anthrazit",
+     "quote": "Integration in den Homematic IP Tischaufsteller (HmIP-DS55) für eine längere Batterielebensdauer",
+     "preset": "eq3-table-stand"
     }
+   ],
+   "presets": [
+    "eq3-table-stand"
    ]
   },
   "HmIP-WRCC2": {
@@ -8115,7 +8346,16 @@
     {
      "id": "iobroker-servicemeldungen",
      "says": "2x AAA"
+    },
+    {
+     "id": "eq3-ds55",
+     "url": "https://homematic-ip.com/de/produkt/drehtaster",
+     "quote": "Integration in den Homematic IP Tischaufsteller (HmIP-DS55) für eine längere Batterielebensdauer",
+     "preset": "eq3-table-stand"
     }
+   ],
+   "presets": [
+    "eq3-table-stand"
    ]
   },
   "HmIP-WSM": {
@@ -8208,7 +8448,16 @@
     {
      "id": "corpus",
      "says": "LOW_BAT, OPERATING_VOLTAGE; LOW_BAT_LIMIT 2.2"
+    },
+    {
+     "id": "eq3-ds55",
+     "url": "https://www.homematic-ip.com/sites/default/files/downloads/hmip-ds55-um-gef.pdf",
+     "quote": "Der Homematic IP Tischaufsteller kann universell für den Betrieb von batterieversorgten Geräten im 55er-Format (z. B. Homematic IP Wandthermostat oder Homematic IP Wandtaster – 2-fach) verwendet werden.",
+     "preset": "eq3-table-stand"
     }
+   ],
+   "presets": [
+    "eq3-table-stand"
    ]
   },
   "HmIP-WTH-1": {
@@ -8231,7 +8480,16 @@
     {
      "id": "battery-notes",
      "says": "2x AAA"
+    },
+    {
+     "id": "eq3-ds55",
+     "url": "https://homematic-ip.com/de/produkt/wandthermostat-mit-luftfeuchtigkeitssensor",
+     "quote": "Integration in den Homematic IP Tischaufsteller (HmIP-DS55) für eine längere Batterielebensdauer",
+     "preset": "eq3-table-stand"
     }
+   ],
+   "presets": [
+    "eq3-table-stand"
    ]
   },
   "HmIP-WTH-2": {
@@ -8267,7 +8525,16 @@
     {
      "id": "iobroker-servicemeldungen",
      "says": "2x AAA"
+    },
+    {
+     "id": "eq3-ds55",
+     "url": "https://homematic-ip.com/de/produkt/wandthermostat-mit-luftfeuchtigkeitssensor-2",
+     "quote": "Integration in den Homematic IP Tischaufsteller (HmIP-DS55) für eine längere Batterielebensdauer",
+     "preset": "eq3-table-stand"
     }
+   ],
+   "presets": [
+    "eq3-table-stand"
    ]
   },
   "HmIP-WTH-3": {
@@ -8309,7 +8576,16 @@
     {
      "id": "battery-notes",
      "says": "2x AAA"
+    },
+    {
+     "id": "eq3-ds55",
+     "url": "https://homematic-ip.com/de/produkt/wandthermostat-mit-luftfeuchtigkeitssensor-anthrazit",
+     "quote": "Integration in den Homematic IP Tischaufsteller (HmIP-DS55) für eine längere Batterielebensdauer",
+     "preset": "eq3-table-stand"
     }
+   ],
+   "presets": [
+    "eq3-table-stand"
    ]
   },
   "HmIP-WTH-B": {

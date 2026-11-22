@@ -94,7 +94,12 @@ devices of the model*. A device's values come before its model's, the model's be
 beside every value the page says where it comes from (the battery table, an own value for all
 devices of the model, this device's own value), and *Eigene Werte* (own values) resets each level
 on its own. So a model missing from the table (a self-built HB device, say) gets its batteries
-too. *Do not monitor* is here as well. Below it every recorded change of the device, each editable and
+too. A device in eQ-3's table stand (HmIP-DS55) takes one click, *Im Tischaufsteller (2× AA)* (in
+the table stand): the stand feeds the device from its own two AA cells instead of the device's
+AAA cells, and the table counts with the doubled battery life eQ-3 states. It is offered for the
+55 mm devices eQ-3 names the stand for (wall-mount remotes, wall thermostats, temperature sensors,
+the rotary button, the motion detector for 55 mm frames and Homematic's 55 mm buttons and
+displays); the page then says *Tischaufsteller* (table stand) beside the batteries. *Do not monitor* is here as well. Below it every recorded change of the device, each editable and
 deletable; here the imported ones, their origin in the note.
 
 ### Recording a change

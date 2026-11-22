@@ -522,7 +522,15 @@ func (o Options) models(w http.ResponseWriter, r *http.Request) {
 	}
 	sort.Strings(chems)
 	// types and chemistries: what an override's slots may name (the device page's editor)
-	writeJSON(w, 200, map[string]any{"table": map[string]any{"version": tb.Version, "updated": tb.Updated, "models": len(tb.Models), "types": tb.TypeNames(), "chemistries": chems, "powers": batteries.Powers}, "models": out})
+	writeJSON(w, 200, map[string]any{"table": map[string]any{"version": tb.Version, "updated": tb.Updated, "models": len(tb.Models), "types": tb.TypeNames(), "chemistries": chems, "powers": batteries.Powers, "presets": presetsOf(tb)}, "models": out})
+}
+
+// presetsOf is the table's presets for the editor (an empty object without any).
+func presetsOf(tb *batteries.Table) map[string]batteries.Preset {
+	if tb.Presets == nil {
+		return map[string]batteries.Preset{}
+	}
+	return tb.Presets
 }
 
 func (o Options) model(w http.ResponseWriter, r *http.Request) {
@@ -540,6 +548,15 @@ func (o Options) model(w http.ResponseWriter, r *http.Request) {
 	if hasOv {
 		out["override"] = x
 	}
+	// the presets the row offers (and the one the override names), for the editor and the labels
+	tb := o.Changes.Table()
+	presets := map[string]batteries.Preset{}
+	for _, id := range append(append([]string{}, row.Presets...), x.Preset) {
+		if pr, ok := tb.Presets[id]; ok {
+			presets[id] = pr
+		}
+	}
+	out["presets"] = presets
 	writeJSON(w, 200, out)
 }
 

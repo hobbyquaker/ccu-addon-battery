@@ -108,9 +108,11 @@ BATTERY_POWER = {"battery", "rechargeable", "battery-or-dc"}
 
 def check_table(data):
     sources, types, chems, models = data["sources"], data["types"], data["chemistries"], data["models"]
+    presets = data.get("presets", {})
     for name, t in types.items():
         if t["chemistry"] not in chems:
             err(f"types.{name}: chemistry {t['chemistry']!r} not in chemistries")
+    check_presets(presets, sources, types, chems, models)
     seen = {}
     for key, m in models.items():
         names = [key] + m.get("aliases", [])
@@ -135,16 +137,30 @@ def check_table(data):
                 err(f"{where}.slots[{i}]: unknown chemistry {ch!r}")
         if not m["sources"]:
             err(f"{where}: no source")
+        for pid in m.get("presets", []):
+            if pid not in presets:
+                err(f"{where}: unknown preset {pid!r}")
+                continue
+            if power not in BATTERY_POWER:
+                err(f"{where}: preset {pid!r} on a {power} model")
+            # the row says why the preset fits it: a manufacturer document, quoted
+            if not any(c.get("preset") == pid and c["id"] in sources and sources[c["id"]]["kind"] == "manufacturer"
+                       and c.get("quote") for c in m["sources"]):
+                err(f"{where}: preset {pid!r} without a quoted manufacturer source marked \"preset\": {pid!r}")
+        for i, c in enumerate(m["sources"]):
+            if c.get("preset") and c["preset"] not in m.get("presets", []):
+                err(f"{where}.sources[{i}]: cites preset {c['preset']!r} the row does not offer")
         kinds = []
         for i, c in enumerate(m["sources"]):
             if c["id"] not in sources:
                 err(f"{where}.sources[{i}]: unknown source id {c['id']!r}")
                 continue
-            kinds.append(sources[c["id"]]["kind"])
+            if not c.get("preset"):  # a preset's cite says nothing about the row's own slots
+                kinds.append(sources[c["id"]]["kind"])
         # a source without a licence (the ioBroker script) is a cross-check only: it never carries a
         # row on its own, battery or mains (a row stands on a manufacturer document, a licensed
         # table or the classification by model class)
-        carrying = [c["id"] for c in m["sources"] if c["id"] in sources and c["id"] != "corpus"
+        carrying = [c["id"] for c in m["sources"] if c["id"] in sources and c["id"] != "corpus" and not c.get("preset")
                     and not sources[c["id"]].get("license", "").startswith("none")]
         if not carrying:
             err(f"{where}: no source carries the row (an unlicensed source and the corpus alone do not)")
@@ -165,6 +181,29 @@ def check_table(data):
         lbl = m.get("low_bat_limit")
         if lbl is not None and slots:
             check_ratio(where, lbl, slots, types, "low_bat_limit", m.get("limit_note"))
+
+
+def check_presets(presets, sources, types, chems, models):
+    """A preset names known slot types and stands on a quoted manufacturer source; every preset is used."""
+    used = {pid for m in models.values() for pid in m.get("presets", [])}
+    for pid, p in presets.items():
+        where = f"presets.{pid}"
+        for i, sl in enumerate(p["slots"]):
+            if sl["type"] not in types:
+                err(f"{where}.slots[{i}]: unknown type {sl['type']!r}")
+            elif sl.get("chemistry", types[sl["type"]]["chemistry"]) not in chems:
+                err(f"{where}.slots[{i}]: unknown chemistry")
+        for i, c in enumerate(p["sources"]):
+            if c["id"] not in sources:
+                err(f"{where}.sources[{i}]: unknown source id {c['id']!r}")
+        if not any(c["id"] in sources and sources[c["id"]]["kind"] == "manufacturer" and c.get("quote")
+                   for c in p["sources"]):
+            err(f"{where}: no quoted manufacturer source")
+        for h in p.get("holder", []):
+            if h.upper() not in {k.upper() for k in models}:
+                warn(f"{where}: holder {h!r} has no row")
+        if pid not in used:
+            warn(f"{where}: no model offers it")
 
 
 def pack_voltage(slots, types):

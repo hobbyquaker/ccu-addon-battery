@@ -4,14 +4,15 @@
     // device or for every device of its model, and "Reset" back to what the table says. It writes
     // the override the API keeps (devices/{iface}/{address}/override, models/{model}/override),
     // only what differs from the layer below, so a model the table lacks (a self-built device) is
-    // made known the same way.
+    // made known the same way. A preset of the table (eQ-3's table stand: 2x AA instead of the
+    // device's own cells) is one click, written as the preset's id, for the rows that offer it.
     import {untrack} from 'svelte';
     import {Dialog} from 'occulite-ui';
-    import {t} from 'occulite-ui/i18n';
+    import {i18n, t} from 'occulite-ui/i18n';
 
     import DevicePicture from './DevicePicture.svelte';
     import {del, get, put} from './api.js';
-    import {baselineOf, chemistryLabel, EDITOR_POWERS, overrideOf, powerTakesBatteries, profileForm, profileFormValid, type Baseline, type DeviceView, type ModelInfo, type OverrideBody, type ProfileForm} from './model.js';
+    import {activePreset, applyPreset, baselineOf, chemistryLabel, EDITOR_POWERS, overrideOf, powerTakesBatteries, presetText, profileForm, profileFormValid, type Baseline, type DeviceView, type ModelInfo, type OverrideBody, type ProfileForm} from './model.js';
 
     export type Scope = 'device' | 'model';
 
@@ -32,7 +33,7 @@
     } = $props();
 
     let scope = $state<Scope>('device');
-    let form = $state<ProfileForm>({power: 'unknown', slots: [], chemistry: '', rechargeable: false, outdoor: false});
+    let form = $state<ProfileForm>({preset: '', power: 'unknown', slots: [], chemistry: '', rechargeable: false, outdoor: false});
     let types = $state<string[]>([]);
     let chemistries = $state<string[]>([]);
     let busy = $state(false);
@@ -48,7 +49,7 @@
     }
 
     function fill(s: Scope) {
-        form = profileForm(baseline(s), overrideOfScope(s), device.profile);
+        form = profileForm(baseline(s), overrideOfScope(s), device.profile, presets);
     }
 
     // filled when the dialog opens, on "this device only": a change for every device of the model
@@ -78,6 +79,11 @@
         form.slots.push({count: 1, type: form.slots.at(-1)?.type ?? 'AA'});
     }
 
+    const lang = $derived(i18n.language);
+    // the presets the model's row offers (the table stand), with their definitions
+    const presets = $derived(modelInfo?.presets ?? {});
+    const offered = $derived((modelInfo?.row?.presets ?? []).filter((id) => presets[id]));
+    const active = $derived(activePreset(form, presets));
     const takesBatteries = $derived(powerTakesBatteries(form.power));
     // the type list holds the slots' own types even before the table's list arrived
     const typeOptions = $derived([...new Set([...types, ...form.slots.map((s) => s.type).filter(Boolean)])]);
@@ -89,7 +95,7 @@
         busy = true;
         const path = scope === 'device' ? `api/v1/devices/${encodeURIComponent(device.interface)}/${encodeURIComponent(device.address)}/override` : `api/v1/models/${encodeURIComponent(device.model)}/override`;
         try {
-            const body = overrideOf(form, baseline(scope));
+            const body = overrideOf(form, baseline(scope), presets);
             if (body) await put(path, body);
             else if (hasOverride) await del(path);
             open = false;
@@ -130,6 +136,14 @@
         {#if hasOverride}{t(scope === 'device' ? 'editor.state.device' : 'editor.state.model')}{:else if notInTable}{t('editor.state.notInTable')}{:else}{t('editor.state.table')}{/if}
         {#if scope === 'model' && deviceOverride}{' '}{t('editor.deviceWins')}{/if}
     </p>
+    {#if offered.length}
+        <div class="bat-presets" data-testid="editor-presets">
+            <span class="bat-presets-label">{t('editor.presets')}</span>
+            {#each offered as id (id)}
+                <button type="button" class="bat-preset" class:active={active === id} aria-pressed={active === id} data-testid="editor-preset-{id}" title={t('editor.preset.title')} disabled={busy} onclick={() => (form = applyPreset(form, id, presets))}>{presetText(presets[id], 'name', lang)}</button>
+            {/each}
+        </div>
+    {/if}
     <div class="bat-form">
         <label for="bat-ed-power">{t('supply.label')}</label>
         <select id="bat-ed-power" data-testid="editor-power" bind:value={form.power} disabled={busy}>

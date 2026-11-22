@@ -108,12 +108,29 @@ that have no row. Exit 1 on an error; warnings fail only with `--strict`.
   (one licensed table), `assumed` (a classification by model class, e.g. a 230 V actuator; check before relying on it).
 - **`sources`:** `id` into the top-level `sources`, plus `url`, `quote` (the manufacturer's words) or `says` (what
   a prior-art table or the corpus says). Prior-art citations stay on manufacturer rows as a cross-check; where one
-  disagrees with the manual, `note` says so.
+  disagrees with the manual, `note` says so. A citation with `preset` backs the row's preset of that id, not its own
+  slots: it neither carries the row nor counts for its `confidence`.
+- **`presets`:** ids from the top-level `presets` the addon's battery editor offers for the model as one click.
+
+**Presets.** The top-level `presets` are named battery setups: `name` (the editor's button) and `label` (the
+source the device page shows) in `de` and `en`, the `power` and `slots` they set, `life_factor` (the row's
+`life_years` times this), `holder` (the models of the holder itself) and `sources`. There is one so far,
+**`eq3-table-stand`**: eQ-3's table stand HmIP-DS55 / HmIP-DS55-A takes 2× AA and feeds the 55 mm device put
+into it, whose own cells come out; eQ-3 says the battery life doubles. 24 rows offer it, each with a quoted eQ-3
+document marked `"preset": "eq3-table-stand"`: 14 whose product page says *Integration in den Homematic IP
+Tischaufsteller (HmIP-DS55)* (HmIP-WRC2-2, -WRC2-A-2, -WRC6, -WRC6-A, -WRCR, -STH, -STH-A, -STHD, -STHD-A, -WTH-1,
+-WTH-A, -WTH-2, -SMI55-2, -SMI55-A), their first generation, which the stand's own guide names (HMIP-WRC2,
+HmIP-WRC2-A, HMIP-WTH, HmIP-SMI55), and Homematic's 55 mm battery devices, which the stand's datasheet covers
+(HM-PB-2-WM55, HM-PB-2-WM55-2, HM-PB-6-WM55, HM-Dis-WM55, HM-Dis-EP-WM55, HM-Sen-MDIR-WM55). All take 2× AAA, so
+the stand's 2× AA keep the pack's 3 V and the device's own `LOW_BAT_LIMIT`. Not offered: HmIP-WTH-3 (its page does
+not name the stand) and HmIP-WRCD (no eQ-3 document found) - the editor's own slots still cover them. `check.py`
+fails on an unknown preset, a preset on a mains row, a row's preset without its quoted manufacturer citation, and a
+preset without one.
 
 **Levels for the detection rules.** `chemistries` holds per-cell `fresh`, `low` and `step` (rule B's jump) values;
 a row's pack levels are `count × per-cell` of its slot's chemistry (default: the type's), and the device's own
 `low` (its `LOW_BAT_LIMIT`) wins over the computed one. 2× AA alkaline: fresh 2.96 V, low 2.2 V, step 0.24 V. A per-device user override (rechargeables, a DS55 desk stand) changes the chemistry or the
-slots, not this table.
+slots (or names a preset), not this table.
 
 **Shape notes:** `sources` is a list of citations instead of one string (a row
 can stand on the manual and still record what prior art says); `confidence` is new (uncertain rows are marked, not
@@ -129,6 +146,7 @@ BidCos remotes).
 | --- | --- | --- | --- |
 | homematic-ip.com product pages (eQ-3) | current HmIP, HmIP-Wired and ELV-SH products; a structured "Versorgungsspannung" field and the typical battery life | the manufacturer's facts | primary source (`eq3-site`), the supply line quoted |
 | eQ-3 manuals (`eq-3.de/…/bda/<model>_UM_GE_eQ-3_web.pdf`) and ELV-hosted manuals/datasheets (`media.elv.com/file/<article>_um.pdf`) | discontinued HmIP and BidCos models | the manufacturer's facts | primary source (`eq3-manual`, `elv-manual`), the supply line quoted |
+| eQ-3's table stand HmIP-DS55 (product page `homematic-ip.com/de/produkt/tischaufsteller`, installation guide `hmip-ds55-um-gef.pdf`, datasheet `HMIP-DS55_141743_Produktdatenblatt_V1.5.pdf`) and the product pages that name it | which 55 mm devices fit the stand, its 2× AA, the doubled battery life | the manufacturer's facts | the `eq3-table-stand` preset and the rows that offer it (`eq3-ds55`), the sentences quoted |
 | ELVjournal construction articles of the kits (`media.elv.com/file/<article>_<name>.pdf`, "Technische Daten") | Homematic kits and boards (HM-LC-Sw4-Ba-PCB, HM-MOD-*, HM-OU-CM-PCB, ...) | the kit maker's facts (ELV develops and sells eQ-3's kits) | primary source (`elv-journal`), the supply line quoted |
 | [Home Assistant Battery Notes](https://github.com/andrew-codechimp/HA-Battery-Notes) `library/library.json` | ~130 Homematic models (manufacturer eQ-3) | MIT | cross-check; a row's source where no manual was found (with its citation) |
 | [aiohomematic](https://github.com/SukramJ/aiohomematic) `operating_voltage_level.py` | 85 models (prefix-matched) | MIT | cross-check; source as above |
