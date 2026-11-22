@@ -14,7 +14,8 @@
     "build:app": "vite build",
     "build:settings": "vite build --config settings/vite.config.mjs",
     "check": "svelte-check --tsconfig ./tsconfig.json --fail-on-warnings",
-    "test": "vitest run"
+    "test": "vitest run",
+    "test:e2e": "playwright test"
   },
   "dependencies": {
     "ccu-addon-kit": "github:hobbyquaker/ccu-addon-kit#5dd8044",
