@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.5.3] - 2026-11-22
+
+- **Every system:** the device page shows the settings for the power supply, the battery slots (count and type) and
+  the battery kind again, for one device or for all devices of a model (*Batterien bearbeiten…*); they were stored,
+  but the page did not show them. A device's values come before its model's, the model's before the battery table's;
+  the page says where each value comes from and resets each level on its own. This also works for a model missing
+  from the battery table, such as a self-built HB device. (reported in the homematic-forum)
+
 ## [1.5.2] - 2026-11-22
 
 - **CCU3, OpenCCU and openccu-lite:** a package for another architecture is refused at the installation instead of
