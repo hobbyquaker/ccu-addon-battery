@@ -124,9 +124,17 @@ if [ $EXITCODE -eq 0 ] && [ ! -f /etc/init.d/S00InstallAddon ]; then
 fi
 
 # a new proxy rule on a running OpenCCU: lighttpd reads its fragments only when it starts (the
-# CCU3 firmware installs during the shutdown, so its boot reads it)
+# CCU3 firmware installs during the shutdown, so its boot reads it). This script runs inside a
+# request of that very lighttpd: the WebUI's cp_software.cgi execs /bin/install_addon and answers
+# (and, for a fresh install, reboots) only when it has returned. A restart here tears down that
+# request: the WebUI hangs in its dialog or shows "Error while loading the following file:
+# /config/cp_software.cgi", no reboot follows and the service is not started. So `reload`, a
+# graceful restart (running requests finish on the old server); where it fails, a restart detached
+# and delayed until the WebUI's answer is out (the same as rc.d's uninstall and homematic-manager).
 if [ $LIGHTTPD_NEW -eq 1 ] && [ ! -f /etc/init.d/S00InstallAddon ] && [ -x /etc/init.d/S50lighttpd ]; then
-    /etc/init.d/S50lighttpd restart >/dev/null 2>&1
+    if ! /etc/init.d/S50lighttpd reload >/dev/null 2>&1; then
+        (sleep 5; /etc/init.d/S50lighttpd restart) >/dev/null 2>&1 </dev/null &
+    fi
 fi
 
 exit $EXITCODE
