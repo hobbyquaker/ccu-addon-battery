@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.5.6] - 2026-11-23
+
+- **OpenCCU:** a first installation through the WebUI no longer breaks off. The install script restarted the web
+  server to read the addon's proxy rule while the WebUI's install request was still running on it, so the request
+  was cut off: the WebUI showed "Error while loading the following file: /config/cp_software.cgi" (OpenCCU 3.89.14)
+  or hung, no reboot followed and the addon did not start. It now reloads the web server gracefully. An update was
+  not affected. (reported by zoephelweb in the homematic-forum)
+
 ## [1.5.5] - 2026-11-23
 
 - **Every system:** the voltage of self-built devices (HB-…) is recognised on any channel, including

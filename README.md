@@ -9,7 +9,7 @@ Batteriewechsel, lässt Sie eintragen, welche Batterien eingelegt wurden, und ma
 Protokoll: wie lange Batterien halten, welche Geräte Batteriefresser sind, welche Batterien am
 besten abschneiden, was bald fällig ist und was zu kaufen ist.
 
-**Stand: 1.5.5** ([Änderungen](CHANGELOG.md); die Pakete stehen auf der
+**Stand: 1.5.6** ([Änderungen](CHANGELOG.md); die Pakete stehen auf der
 [Release-Seite](https://github.com/hobbyquaker/ccu-addon-battery/releases)). Getestet auf
 openccu-lite mit echten Geräten und auf OpenCCU; Rückmeldungen von piVCCU gibt es aus dem
 Homematic-Forum, auf der CCU3-Firmware bisher ohne angelernte Batteriegeräte – Rückmeldungen sind
@@ -340,8 +340,8 @@ go test -race ./...                      # Speicher, Aufzeichnung, Erkennung, We
 python3 data/check.py                    # die Batterietabelle
 (cd ui && npm ci && npm run check && npm test && npm run build)   # die Anwendung und die Einstellungsseite
 (cd ui && npx playwright test)           # die Geräteseite im Browser gegen die echte API (internal/e2eserver, nach dem Build)
-VERSION=1.5.5 scripts/build.sh           # dist/battery-<arch>-<version>.tar.gz für aarch64, x86_64, armv7l
-scripts/install-test.sh 1.5.5            # die Pakete in einem busybox-Container installiert (docker, x86_64)
+VERSION=1.5.6 scripts/build.sh           # dist/battery-<arch>-<version>.tar.gz für aarch64, x86_64, armv7l
+scripts/install-test.sh 1.5.6            # die Pakete in einem busybox-Container installiert (docker, x86_64)
 ```
 
 Ein Release ist ein Tag `v<version>` auf `main`: [release.yml](.github/workflows/release.yml) prüft,
