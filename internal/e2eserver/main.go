@@ -55,6 +55,15 @@ func main() {
 	s.Values["HmIP-RF/WRC2B:0/VALUES"] = map[string]any{"OPERATING_VOLTAGE": 3.0, "LOW_BAT": false, "UNREACH": false}
 	s.Values["BidCos-RF/HBSEN0001:0/VALUES"] = map[string]any{"LOWBAT": false, "UNREACH": false}
 	s.Values["BidCos-RF/HBSEN0002:0/VALUES"] = map[string]any{"LOWBAT": false, "UNREACH": false}
+	// a self-built sensor with its battery voltage on channel 1 (BATTERY_VOLTAGE), seeded from the
+	// state store as BidCos values are
+	s.Devices["BidCos-RF"] = append(s.Devices["BidCos-RF"],
+		map[string]any{"ADDRESS": "HBIAQ0001", "TYPE": "HB-UNI-Sen-IAQ", "FIRMWARE": "1.0", "VERSION": 1, "CHILDREN": []string{"HBIAQ0001:0", "HBIAQ0001:1"}},
+		map[string]any{"ADDRESS": "HBIAQ0001:0", "TYPE": "MAINTENANCE", "PARENT": "HBIAQ0001"},
+		map[string]any{"ADDRESS": "HBIAQ0001:1", "TYPE": "WEATHER", "PARENT": "HBIAQ0001"})
+	s.Paramsets["BidCos-RF/HB-UNI-Sen-IAQ/1.0/1/MAINTENANCE/VALUES"] = map[string]any{"LOWBAT": map[string]any{"TYPE": "BOOL"}, "UNREACH": map[string]any{"TYPE": "BOOL"}}
+	s.Paramsets["BidCos-RF/HB-UNI-Sen-IAQ/1.0/1/WEATHER/VALUES"] = map[string]any{"BATTERY_VOLTAGE": map[string]any{"TYPE": "FLOAT", "UNIT": "V"}, "IAQ_LEVEL": map[string]any{"TYPE": "INTEGER"}}
+	s.State = append(s.State, map[string]any{"interface": "BidCos-RF", "address": "HBIAQ0001:1", "datapoint": "BATTERY_VOLTAGE", "value": 2.95, "ts": time.Now().UTC().Format(time.RFC3339), "confirmed": true, "source": "event"})
 
 	dir, err := os.MkdirTemp("", "battery-e2e-")
 	if err != nil {

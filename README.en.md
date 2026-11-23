@@ -178,6 +178,7 @@ internet only when you click it.
 | `OPERATING_VOLTAGE`, `OPERATING_VOLTAGE_STATUS`, `LOW_BAT`, `BOOTED`, `UNREACH` | channel 0 | every Homematic IP device |
 | `LOWBAT`, `UNREACH` | channel 0 | every BidCos radio device |
 | `BATTERY_STATE` | the thermostat channel | HM-CC-RT-DN, HM-TC-IT-WM-W-EU |
+| `OPERATING_VOLTAGE`, else `BATTERY_VOLTAGE` (in volts) | the first channel that carries it | self-built devices (HB-…) that do not report their voltage on channel 0 |
 
 The interfaces recorded are `HmIP-RF` and `BidCos-RF`. BidCos-Wired (mains-powered devices) and
 VirtualDevices (the system's groups) are left out entirely: the addon lists no devices there and does

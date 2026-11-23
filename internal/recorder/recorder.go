@@ -27,7 +27,12 @@ import (
 )
 
 // Keys are the datapoints the recorder subscribes to.
-var Keys = []string{"OPERATING_VOLTAGE", "OPERATING_VOLTAGE_STATUS", "LOW_BAT", "LOWBAT", "BATTERY_STATE", "BOOTED", "UNREACH"}
+var Keys = []string{"OPERATING_VOLTAGE", "OPERATING_VOLTAGE_STATUS", "LOW_BAT", "LOWBAT", "BATTERY_STATE", "BATTERY_VOLTAGE", "BOOTED", "UNREACH"}
+
+// isVoltageKey says whether a key is one a device's voltage datapoint (VoltageDP) may name.
+func isVoltageKey(k string) bool {
+	return k == "OPERATING_VOLTAGE" || k == "BATTERY_STATE" || k == "BATTERY_VOLTAGE"
+}
 
 // Downsampling: a row when the voltage moved by Step or more since the last row, the low-battery
 // flag changed, or MaxGap passed since the last row, whichever comes first.
@@ -417,12 +422,35 @@ func (r *Recorder) learnDevices(ctx context.Context, only []string) (added int, 
 			continue
 		}
 		byAddr := map[string]litesource.DeviceDescription{}
-		var want []string
+		kids := map[string][]string{} // device address -> its channels' addresses
 		for _, d := range descs {
 			byAddr[d.Address] = d
-			if strings.HasSuffix(d.Address, ":0") || isThermostatChannel(d.Type) {
-				want = append(want, d.Address)
+			if dev, _, ok := strings.Cut(d.Address, ":"); ok {
+				kids[dev] = append(kids[dev], d.Address)
 			}
+		}
+		// every channel's VALUES description - a self-built device keeps its voltage on any
+		// channel -, but asked once per kind of channel: a channel's description depends on the
+		// device's type, firmware and version and the channel's type, not on its address
+		var want []string
+		rep := map[string]string{} // address -> the address asked for its kind
+		kind := map[string]string{}
+		for _, d := range descs {
+			if !strings.Contains(d.Address, ":") {
+				continue
+			}
+			p := byAddr[d.Parent]
+			k := p.Type + "\x00" + p.Firmware + "\x00" + strconv.Itoa(p.Version) + "\x00" + d.Type
+			if p.Address == "" {
+				k = "\x00" + d.Address // an orphaned channel: on its own
+			}
+			if a, ok := kind[k]; ok {
+				rep[d.Address] = a
+				continue
+			}
+			kind[k] = d.Address
+			rep[d.Address] = d.Address
+			want = append(want, d.Address)
 		}
 		keys := map[string]string{}
 		sets := litesource.ParamsetCache{}
@@ -449,33 +477,26 @@ func (r *Recorder) learnDevices(ctx context.Context, only []string) (added int, 
 			failed[iface.Name] = fmt.Errorf("descriptions: %w", descErr)
 			continue
 		}
+		for a, r := range rep {
+			if key, ok := keys[r]; ok {
+				keys[a] = key
+			}
+		}
 		for _, d := range descs {
 			if strings.Contains(d.Address, ":") || d.Address == "" {
 				continue
 			}
 			dev := store.Device{Interface: iface.Name, Address: d.Address, Model: d.Type, Firmware: d.Firmware, Power: "unknown", FirstSeen: now, LastSeen: now}
-			if set := sets[keys[d.Address+":0"]]; set != nil {
-				if _, ok := set["OPERATING_VOLTAGE"]; ok {
-					dev.VoltageDP = "0/OPERATING_VOLTAGE"
-				}
-				if _, ok := set["LOW_BAT"]; ok {
-					dev.LowBatDP = "0/LOW_BAT"
-				} else if _, ok := set["LOWBAT"]; ok {
-					dev.LowBatDP = "0/LOWBAT"
-				}
-			}
-			if dev.VoltageDP == "" {
-				for _, ch := range d.Children {
-					c := byAddr[ch]
-					if set := sets[keys[ch]]; set != nil && isThermostatChannel(c.Type) {
-						if _, ok := set["BATTERY_STATE"]; ok {
-							_, idx, _ := strings.Cut(ch, ":")
-							dev.VoltageDP = idx + "/BATTERY_STATE"
-							break
-						}
+			var chans []channel
+			for _, ch := range kids[d.Address] {
+				if set := sets[keys[ch]]; set != nil {
+					_, idx, _ := strings.Cut(ch, ":")
+					if n, err := strconv.Atoi(idx); err == nil {
+						chans = append(chans, channel{Index: n, Type: byAddr[ch].Type, Set: set})
 					}
 				}
 			}
+			dev.VoltageDP, dev.LowBatDP = datapoints(chans)
 			r.mu.Lock()
 			k := iface.Name + "." + d.Address
 			ex := r.devs[k]
@@ -581,6 +602,57 @@ func isThermostatChannel(t string) bool {
 	return t == "CLIMATECONTROL_RT_TRANSCEIVER" || t == "THERMALCONTROL_TRANSMIT"
 }
 
+// channel is one channel of a device as the detection of its datapoints sees it: its index, its
+// type and its VALUES description.
+type channel struct {
+	Index int
+	Type  string
+	Set   litesource.Paramset
+}
+
+// datapoints finds a device's voltage and low-battery datapoints ("<channel>/<key>", or "")
+// from its channels' VALUES descriptions:
+//   - the voltage: OPERATING_VOLTAGE on channel 0 (every Homematic IP device), else
+//     BATTERY_STATE on a thermostat channel (HM-CC-RT-DN, HM-TC-IT-WM-W-EU), else the first
+//     channel with OPERATING_VOLTAGE, else the first with BATTERY_VOLTAGE - those two only as a
+//     FLOAT in volts, which is how self-built (HB-) devices report their battery on another
+//     channel; a voltmeter's or power meter's reading (HB_VOLTAGE, VOLTAGE, ACTUAL_VOLTAGE,
+//     HB_BAT_VOLTAGE) is never taken;
+//   - the low-battery flag: LOW_BAT or LOWBAT on channel 0 only - a mains device may carry
+//     LOWBAT on a contact channel (HB-UNI-SenAct-4-4-SC), which says nothing of a battery.
+func datapoints(chans []channel) (voltage, lowbat string) {
+	sort.SliceStable(chans, func(i, j int) bool { return chans[i].Index < chans[j].Index })
+	has := func(c channel, k string) bool { _, ok := c.Set[k]; return ok }
+	volts := func(c channel, k string) bool {
+		p, ok := c.Set[k]
+		return ok && p.Type == "FLOAT" && strings.TrimSpace(p.Unit) == "V"
+	}
+	for _, c := range chans {
+		if c.Index != 0 {
+			continue
+		}
+		if has(c, "OPERATING_VOLTAGE") {
+			voltage = "0/OPERATING_VOLTAGE"
+		}
+		if has(c, "LOW_BAT") {
+			lowbat = "0/LOW_BAT"
+		} else if has(c, "LOWBAT") {
+			lowbat = "0/LOWBAT"
+		}
+	}
+	pick := func(match func(channel) bool, key string) {
+		for _, c := range chans {
+			if voltage == "" && match(c) {
+				voltage = strconv.Itoa(c.Index) + "/" + key
+			}
+		}
+	}
+	pick(func(c channel) bool { return isThermostatChannel(c.Type) && has(c, "BATTERY_STATE") }, "BATTERY_STATE")
+	pick(func(c channel) bool { return volts(c, "OPERATING_VOLTAGE") }, "OPERATING_VOLTAGE")
+	pick(func(c channel) bool { return volts(c, "BATTERY_VOLTAGE") }, "BATTERY_VOLTAGE")
+	return voltage, lowbat
+}
+
 func (r *Recorder) retire(iface string, addresses []string) {
 	if !ifaces.IsSupported(iface) {
 		return
@@ -682,7 +754,7 @@ func (r *Recorder) apply(e litesource.Event, live bool) {
 	var sample, supply bool
 	obs := detect.Obs{TS: ms, Seed: !live}
 	switch e.Key {
-	case "OPERATING_VOLTAGE", "BATTERY_STATE":
+	case "OPERATING_VOLTAGE", "BATTERY_STATE", "BATTERY_VOLTAGE":
 		if want := strconv.Itoa(e.Channel()) + "/" + e.Key; want != d.VoltageDP {
 			break
 		}
@@ -773,7 +845,7 @@ func (r *Recorder) apply(e litesource.Event, live bool) {
 		r.supplyLocked(d, ms)
 	}
 	wrote := false
-	if sample && cur.Voltage != nil || sample && e.Key != "OPERATING_VOLTAGE" && e.Key != "BATTERY_STATE" && d.VoltageDP == "" {
+	if sample && cur.Voltage != nil || sample && !isVoltageKey(e.Key) && d.VoltageDP == "" {
 		wrote = r.maybeSample(key, d, ms, live)
 	}
 	switch {

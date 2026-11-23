@@ -11,6 +11,7 @@ check. This page describes the rules (`internal/detect`).
 | --- | --- | --- |
 | `OPERATING_VOLTAGE` (channel 0) | every Homematic IP device | the voltage rules |
 | `BATTERY_STATE` (the thermostat channel) | HM-CC-RT-DN, HM-TC-IT-WM-W-EU | the voltage rules |
+| `OPERATING_VOLTAGE`, else `BATTERY_VOLTAGE` (the first channel with it, a FLOAT in volts) | self-built devices (HB-…) without a voltage on channel 0 | the voltage rules |
 | `BOOTED` (channel 0) | Homematic IP | rule A: true in the first report after a power-up, and in later reports for a while |
 | `LOW_BAT` / `LOWBAT` | all | rule C; the only signal of most BidCos sensors and remotes |
 | `UNREACH` | all | an UNREACH gap that ended in the hour before a jump raises its confidence |

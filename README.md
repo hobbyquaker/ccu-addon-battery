@@ -186,6 +186,7 @@ Ihren Klick hin ins Internet geht.
 | `OPERATING_VOLTAGE`, `OPERATING_VOLTAGE_STATUS`, `LOW_BAT`, `BOOTED`, `UNREACH` | Kanal 0 | jedes Homematic-IP-Gerät |
 | `LOWBAT`, `UNREACH` | Kanal 0 | jedes BidCos-Funkgerät |
 | `BATTERY_STATE` | der Thermostatkanal | HM-CC-RT-DN, HM-TC-IT-WM-W-EU |
+| `OPERATING_VOLTAGE`, sonst `BATTERY_VOLTAGE` (in Volt) | der erste Kanal, der sie trägt | selbstgebaute Geräte (HB-…), die ihre Spannung nicht auf Kanal 0 melden |
 
 Aufgezeichnet werden die Schnittstellen `HmIP-RF` und `BidCos-RF`. BidCos-Wired (netzbetriebene
 Geräte) und VirtualDevices (die Gruppen des Systems) lässt das Addon ganz aus: es liest dort keine

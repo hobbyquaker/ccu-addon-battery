@@ -8,7 +8,7 @@ mode, `synchronous=NORMAL`). This document is the design of the configurable loc
 | Table | Holds |
 | --- | --- |
 | `meta` | key/value, reserved |
-| `devices` | every tracked device: `interface`, `address` (the key), `model`, `firmware`, `power` (`battery`, `mains`, `external`, `fixed`, `unknown`), `voltage_dp` (`0/OPERATING_VOLTAGE`, `4/BATTERY_STATE` or empty), `lowbat_dp` (`0/LOW_BAT`, `0/LOWBAT` or empty), `first_seen`, `last_seen`, `retired_at`, `profile_override` (JSON, phase 1) |
+| `devices` | every tracked device: `interface`, `address` (the key), `model`, `firmware`, `power` (`battery`, `mains`, `external`, `fixed`, `unknown`), `voltage_dp` (`0/OPERATING_VOLTAGE`, `4/BATTERY_STATE`, for a self-built device e.g. `1/OPERATING_VOLTAGE` or `5/BATTERY_VOLTAGE`, or empty), `lowbat_dp` (`0/LOW_BAT`, `0/LOWBAT` or empty), `first_seen`, `last_seen`, `retired_at`, `profile_override` (JSON, phase 1) |
 | `slots` | the device's battery slots (count, type, chemistry, rechargeable) - phase 1 fills them |
 | `current` | the last values per device: voltage and its time, `voltage_status`, `low_bat` and since when, `unreach` and since when, `booted`, `last_report` |
 | `samples` | the downsampled voltage series: `ts`, `voltage`, `low_bat`, `source` (`live`, `seed`, `import`) |
