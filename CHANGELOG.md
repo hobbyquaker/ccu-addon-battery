@@ -1,5 +1,16 @@
 # Changelog
 
+## [1.5.5] - 2026-11-23
+
+- **Every system:** the voltage of self-built devices (HB-…) is recognised on any channel, including
+  `BATTERY_VOLTAGE`. Such devices often report their battery voltage on channel 1 or another channel instead of
+  channel 0, as `OPERATING_VOLTAGE` (e.g. HB-UNI-Sen-CAP-MOIST, HB-UNI-Sen-WEIGHT, HB-UNI-Sen-PF-SC) or as
+  `BATTERY_VOLTAGE` (e.g. HB-UNI-Sen-IAQ, HB-UNI-Sen-DIST/-LEV, HB-RC-4-Dis-TH), and the addon showed no voltage
+  for them. It now takes channel 0's `OPERATING_VOLTAGE` first, as before, then the first channel with
+  `OPERATING_VOLTAGE`, then the first with `BATTERY_VOLTAGE` - only a value in volts, so a voltmeter's or power
+  meter's reading is never taken. Devices already in the list pick up their voltage at the next start of the addon;
+  no setting is needed. The low-battery flag is still read from channel 0 only. (asked for in the homematic-forum)
+
 ## [1.5.4] - 2026-11-22
 
 - **Every system:** a device in eQ-3's table stand (HmIP-DS55) is set with one click: *Batterien bearbeiten…*
