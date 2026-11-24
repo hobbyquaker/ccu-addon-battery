@@ -66,6 +66,21 @@ mkdir -p $ADDONS_DIR && chmod 755 $ADDONS_DIR
 mkdir -p $CONF_DIR/addons/www && chmod 755 $CONF_DIR/addons/www
 mkdir -p $CONF_DIR/rc.d
 
+# --- ccu-addon-kit: was the service running? (update_script-reference, keep identical) ---
+# An update starts the service again only when it ran when this install began (below): an addon
+# that ran before an update runs after it, one that was stopped stays stopped. Asked before
+# anything is stopped, of the service itself: openccu-lite's unit, elsewhere the rc.d script's
+# status (the service convention: exit 0 = running). The CCU3 firmware's install during the
+# shutdown finds the addons already stopped (S98StartAddons stops them before S00InstallAddon
+# runs), so nothing is started there and the boot starts the service.
+WAS_RUNNING=0
+if grep -q '^LITE=' /VERSION 2>/dev/null || [ -x /usr/bin/occulited ]; then
+    systemctl is-active --quiet addon-$ADDON.service 2>/dev/null && WAS_RUNNING=1
+elif [ -x $CONF_DIR/rc.d/$ADDON ]; then
+    $CONF_DIR/rc.d/$ADDON status >/dev/null 2>&1 && WAS_RUNNING=1
+fi
+# --- end ---
+
 # an update: stop the running service through the previous version's script
 if [ -f $CONF_DIR/rc.d/$ADDON ]; then
     EXITCODE=0
@@ -111,17 +126,25 @@ fi
 
 sync
 
-# OpenCCU runs this live and does not reboot after an update: start the service again. The
-# CCU3 firmware runs it in a chroot during the shutdown (S00InstallAddon); the boot starts it.
-# openccu-lite starts the unit itself after the install.
-if [ $EXITCODE -eq 0 ] && [ ! -f /etc/init.d/S00InstallAddon ]; then
+# --- ccu-addon-kit: start it again (update_script-reference, keep identical) ---
+# Only what ran before (WAS_RUNNING, above), from `cd /`: the installer deletes this script's
+# directory when it returns. OpenCCU installs live and does not reboot after an update;
+# openccu-lite starts the unit. The CCU3 firmware (S00InstallAddon exists) normally installs during
+# the shutdown, where nothing ran, but a live install happens there as well (a self-updater
+# calling /bin/install_addon, a piVCCU without the reboot after the upload) - and its installer
+# runs this script in a chroot even then, in a copy of the root that is left behind afterwards.
+# /proc is bound into that chroot, so /proc/1/root is the real root: the service is started there.
+if [ "$WAS_RUNNING" = 1 ]; then
+    cd /
     if grep -q '^LITE=' /VERSION 2>/dev/null || [ -x /usr/bin/occulited ]; then
         systemctl start addon-$ADDON.service 2>/dev/null || true
+    elif [ -f /etc/init.d/S00InstallAddon ] && [ -x /proc/1/root$CONF_DIR/rc.d/$ADDON ] && command -v chroot >/dev/null 2>&1; then
+        chroot /proc/1/root $CONF_DIR/rc.d/$ADDON start
     else
-        cd /
         $CONF_DIR/rc.d/$ADDON start
     fi
 fi
+# --- end ---
 
 # a new proxy rule on a running OpenCCU: lighttpd reads its fragments only when it starts (the
 # CCU3 firmware installs during the shutdown, so its boot reads it). This script runs inside a
@@ -136,5 +159,20 @@ if [ $LIGHTTPD_NEW -eq 1 ] && [ ! -f /etc/init.d/S00InstallAddon ] && [ -x /etc/
         (sleep 5; /etc/init.d/S50lighttpd restart) >/dev/null 2>&1 </dev/null &
     fi
 fi
+
+# --- ccu-addon-kit: the update list (update_script-reference, keep identical) ---
+# After an install the system's list of addon updates is stale: OpenCCU's home page shows "Neue
+# Zusatzsoftware" until its daily check (checkAddonUpdates.sh, at noon) asks the Update: URL of
+# rc.d info again, and it flags any version that differs from the installed one. So the kit's
+# release cache goes, and OpenCCU's check runs once the new version is in place: detached, from
+# `cd /`, with no output and a few seconds later, when this script and the WebUI's request (the
+# installer runs inside it) have ended. Not in the CCU3 firmware's install chroot
+# (S00InstallAddon): a job started there would run in its copy of the root. openccu-lite has no
+# such script.
+rm -f /tmp/kit-$ADDON-release.json
+if [ ! -f /etc/init.d/S00InstallAddon ] && [ -x /bin/checkAddonUpdates.sh ]; then
+    (cd / && sleep 10 && [ ! -e /etc/config/NoAddonUpdateCheck ] && /bin/checkAddonUpdates.sh) >/dev/null 2>&1 </dev/null &
+fi
+# --- end ---
 
 exit $EXITCODE
