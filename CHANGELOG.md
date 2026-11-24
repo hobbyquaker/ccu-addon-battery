@@ -1,5 +1,18 @@
 # Changelog
 
+## [1.5.7] - 2026-11-24
+
+- **piVCCU, CCU3 and every system:** an addon that was running before an update runs again after it. The install
+  script started the service after an update only where it took the system for OpenCCU; on the CCU3 firmware it
+  relied on the reboot that follows an upload there. Where that firmware installs without a reboot - a piVCCU whose
+  restart after the upload is switched off, for example - the addon stayed stopped until it was started by hand.
+  The script now notes whether the addon is running before it stops it and starts it again afterwards on every
+  system; an addon that was stopped stays stopped. (reported in the homematic-forum)
+- **OpenCCU:** after an installation or update the home page no longer keeps announcing "Neue Zusatzsoftware" with
+  an older version. OpenCCU checks the addons for updates once a day and showed the version that was the newest at
+  its last check until the next one, even when a newer one was installed. The install script now has OpenCCU
+  check again a few seconds after the installation. (reported by Tagfahrlicht in the homematic-forum)
+
 ## [1.5.6] - 2026-11-23
 
 - **OpenCCU:** a first installation through the WebUI no longer breaks off. The install script restarted the web
