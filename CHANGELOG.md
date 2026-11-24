@@ -7,7 +7,7 @@
   relied on the reboot that follows an upload there. Where that firmware installs without a reboot - a piVCCU whose
   restart after the upload is switched off, for example - the addon stayed stopped until it was started by hand.
   The script now notes whether the addon is running before it stops it and starts it again afterwards on every
-  system; an addon that was stopped stays stopped. (reported in the homematic-forum)
+  system; an addon that was stopped stays stopped. (reported by Slice in the homematic-forum)
 - **OpenCCU:** after an installation or update the home page no longer keeps announcing "Neue Zusatzsoftware" with
   an older version. OpenCCU checks the addons for updates once a day and showed the version that was the newest at
   its last check until the next one, even when a newer one was installed. The install script now has OpenCCU
