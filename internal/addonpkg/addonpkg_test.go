@@ -35,10 +35,11 @@ func TestManifest(t *testing.T) {
 			t.Errorf("scope %s missing", want)
 		}
 	}
-	if m.Description["de"] == "" || m.Description["en"] == "" {
+	if m.Description["de"] == "" || m.Description["en"] == "" || m.Runtime.Technical["de"] == "" || m.Runtime.Technical["en"] == "" {
 		t.Error("texts in both languages")
 	}
-	// no note: the description says it all (the catalogue's text for users, occulited task 188)
+	// no note: the description says it all; the technical text (what it reads, the group, what it
+	// contacts; D-90) is runtime.technical (occulited task 188)
 	if m.Runtime.Note != nil {
 		t.Error("no note")
 	}

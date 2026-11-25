@@ -12,6 +12,8 @@ github.com/hobbyquaker/ccu-addon-kit/go v0.0.0-20261117205038-039d8140124d h1:uS
 github.com/hobbyquaker/ccu-addon-kit/go v0.0.0-20261117205038-039d8140124d/go.mod h1:IShVNKzAsWAa9IkyYUP/iXwaG1DoxoEGbgODw1XeCTE=
 github.com/hobbyquaker/ccu-addon-kit/go v0.0.0-20261117205411-d8a1f487ff8d h1:6lJNvXiF2hwrHESodBsspFWibMud+dBhs3fgeTzbDuM=
 github.com/hobbyquaker/ccu-addon-kit/go v0.0.0-20261117205411-d8a1f487ff8d/go.mod h1:IShVNKzAsWAa9IkyYUP/iXwaG1DoxoEGbgODw1XeCTE=
+github.com/hobbyquaker/ccu-addon-kit/go v0.0.0-20261125220423-1f064ae6e9c8 h1:gGRNxlop5aFG2A0L+1xY/OtOrMq7mYLU5lLped/UGHo=
+github.com/hobbyquaker/ccu-addon-kit/go v0.0.0-20261125220423-1f064ae6e9c8/go.mod h1:IShVNKzAsWAa9IkyYUP/iXwaG1DoxoEGbgODw1XeCTE=
 github.com/mattn/go-isatty v0.0.24 h1:tGZZoVgT/KiqK1c8ocVLeDS8BSWMRd47J3Lbz7vsReI=
 github.com/mattn/go-isatty v0.0.24/go.mod h1:nMCL3Zebbrt45jsMDgnfIwz6ydEQApk5oEI3HqDio6A=
 github.com/ncruces/go-strftime v1.0.0 h1:HMFp8mLCTPp341M/ZnA4qaf7ZlsbTc+miZjCLOFAw7w=
