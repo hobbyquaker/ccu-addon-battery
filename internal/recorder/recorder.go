@@ -674,7 +674,8 @@ func (r *Recorder) retire(iface string, addresses []string) {
 }
 
 // seed reads the state store for the keys (what it keeps: the low-battery flags, UNREACH), then
-// every tracked HmIP device's :0 VALUES from hmipserver's cache (free on air; never BidCos). It
+// every tracked HmIP device's :0 VALUES from hmipserver's cache (free on air), then the :0 VALUES
+// of every tracked BidCos device whose low-battery flag is still unknown (cacheBidCos). It
 // answers the stream position to subscribe from.
 func (r *Recorder) seed(ctx context.Context) (string, error) {
 	r.setState("seeding")
@@ -715,7 +716,53 @@ func (r *Recorder) seed(ctx context.Context) (string, error) {
 			r.apply(litesource.Event{Interface: d.Interface, Address: d.Address + ":0", Key: k, Value: json.RawMessage(v), TS: ts, Confirmed: true, Source: "sweep"}, false)
 		}
 	}
+	if err := r.cacheBidCos(ctx); err != nil {
+		return snap.EventID, err
+	}
 	return snap.EventID, nil
+}
+
+// SourceCache marks a value read from an interface process's cache: it sets the current value
+// but is no report of the device, so "Last report" stays where it was.
+const SourceCache = "cache"
+
+// cacheBidCos reads LOWBAT and UNREACH of every tracked BidCos device whose low-battery flag is
+// still unknown from rfd's cache (getParamset <address>:0 VALUES). rfd sends LOWBAT and UNREACH
+// as events only when they change, and a classic CCU has no state store: without this read a
+// battery device that never changed its flag since the addon came stays "unknown" for good. rfd
+// answers the MAINTENANCE channel from its cache - nothing goes on air, a sleeping device is never
+// asked. A device the state store already seeded is not read again.
+func (r *Recorder) cacheBidCos(ctx context.Context) error {
+	r.mu.Lock()
+	var todo []*device
+	for _, d := range r.devs {
+		if d.tracked && d.Interface == "BidCos-RF" && d.LowBatDP != "" && d.cur.LowBat == nil {
+			todo = append(todo, d)
+		}
+	}
+	r.mu.Unlock()
+	sort.Slice(todo, func(i, j int) bool { return todo[i].Address < todo[j].Address })
+	ts := r.o.Now()
+	for i, d := range todo {
+		if i > 0 {
+			select {
+			case <-ctx.Done():
+				return ctx.Err()
+			case <-time.After(r.o.ReadPause):
+			}
+		}
+		vals, err := r.o.Source.Read(ctx, d.Interface, d.Address+":0", "VALUES")
+		if err != nil {
+			r.logf("recorder: %s %s:0 VALUES: %v", d.Interface, d.Address, err)
+			continue
+		}
+		for _, k := range []string{"LOWBAT", "UNREACH"} {
+			if v, ok := vals[k]; ok {
+				r.apply(litesource.Event{Interface: d.Interface, Address: d.Address + ":0", Key: k, Value: json.RawMessage(v), TS: ts, Confirmed: true, Source: SourceCache}, false)
+			}
+		}
+	}
+	return nil
 }
 
 func isKey(k string) bool {
@@ -838,7 +885,7 @@ func (r *Recorder) apply(e litesource.Event, live bool) {
 		r.mu.Unlock()
 		return
 	}
-	if ms > cur.LastReport {
+	if ms > cur.LastReport && e.Source != SourceCache {
 		cur.LastReport = ms
 	}
 	if supply {

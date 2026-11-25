@@ -193,8 +193,10 @@ Geräte) und VirtualDevices (die Gruppen des Systems) lässt das Addon ganz aus:
 Geräteliste und meldet sich nicht für ihre Ereignisse an. Ein Gerät wird aufgezeichnet, wenn seine
 Beschreibungen einen der Batterie-Datenpunkte tragen.
 Beim Start übernimmt das Addon die Werte aus dem Zustandsspeicher des Systems und, für Homematic
-IP, aus dem Cache des Funkprozesses (kein Funkverkehr); BidCos-Werte werden nie gelesen, nur
-empfangen. Die Werte werden ausgedünnt: eine Zeile, wenn sich die Spannung um 0,01 V bewegt hat,
+IP, aus dem Cache des Funkprozesses (kein Funkverkehr). Bei BidCos-Geräten, deren Batterie-leer-Meldung
+noch unbekannt ist, kommen LOWBAT und UNREACH aus dem Cache des BidCos-Prozesses (ebenfalls kein
+Funkverkehr; "Letzte Meldung" bleibt, wie sie war), denn BidCos-Geräte melden den Wert nur, wenn er
+sich ändert. Die Werte werden ausgedünnt: eine Zeile, wenn sich die Spannung um 0,01 V bewegt hat,
 wenn sich die Batterie-leer-Meldung geändert hat, oder einmal am Tag. Kurzes Hin- und Herspringen
 um 0,1 V zeichnet der Verlauf nicht mehr auf: Eine Änderung um höchstens 0,1 V kommt erst hinein,
 wenn sie einen halben Tag (und mindestens zwei Meldungen lang) gehalten hat, dann mit der Zeit, zu

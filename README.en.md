@@ -185,7 +185,9 @@ VirtualDevices (the system's groups) are left out entirely: the addon lists no d
 not register for their events. A device is tracked when its descriptions carry one of the battery
 datapoints. At the start the
 addon seeds the values from the system's state store and, for Homematic IP, from the radio
-process's cache (no radio traffic); BidCos values are never read, only received. Samples are
+process's cache (no radio traffic); for a BidCos device whose low-battery flag is still unknown,
+LOWBAT and UNREACH come from the BidCos process's cache (no radio traffic either, and "Last report"
+stays as it was), since BidCos devices report the flag only when it changes. Samples are
 downsampled: a row when the voltage moved by 0.01 V, when the low-battery flag changed, or once a
 day. The history no longer records short 0.1 V flips: a change of at most 0.1 V goes in only once
 it held for half a day (over two reports at least), at the time it first came; if the value flips

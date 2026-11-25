@@ -70,7 +70,9 @@ func system(t *testing.T) *fakelite.Server {
 	s.Paramsets["BidCos-RF/HM-Sec-SC-2/2.4/1/MAINTENANCE/VALUES"] = map[string]any{"LOWBAT": map[string]any{"TYPE": "BOOL"}, "UNREACH": map[string]any{"TYPE": "BOOL"}}
 	s.Values["HmIP-RF/WRC2:0/VALUES"] = map[string]any{"OPERATING_VOLTAGE": 2.9, "OPERATING_VOLTAGE_STATUS": 0, "LOW_BAT": false, "UNREACH": false, "BOOTED": false, "RSSI_DEVICE": -60}
 	s.Values["HmIP-RF/BBL:0/VALUES"] = map[string]any{"OPERATING_VOLTAGE": 230.0, "OPERATING_VOLTAGE_STATUS": 0, "UNREACH": false}
-	s.Values["BidCos-RF/RTDN:0/VALUES"] = map[string]any{"LOWBAT": false} // must never be read
+	// rfd's cache: read for RTDN (its LOWBAT is unknown after the state store), never for SC (seeded)
+	s.Values["BidCos-RF/RTDN:0/VALUES"] = map[string]any{"LOWBAT": false, "UNREACH": false, "RSSI_DEVICE": -65535}
+	s.Values["BidCos-RF/SC:0/VALUES"] = map[string]any{"LOWBAT": false, "UNREACH": false}
 	s.State = []map[string]any{
 		{"interface": "BidCos-RF", "address": "SC:0", "datapoint": "LOWBAT", "value": true, "ts": "2026-10-27T10:00:00Z", "lc": "2026-10-20T08:00:00Z", "confirmed": false, "source": "restored"},
 		{"interface": "BidCos-RF", "address": "RTDN:0", "datapoint": "UNREACH", "value": false, "ts": "2026-10-27T10:00:00Z", "confirmed": true, "source": "event"},
@@ -145,6 +147,10 @@ func TestLearnSeedRecord(t *testing.T) {
 	if rt == nil || rt.VoltageDP != "4/BATTERY_STATE" || rt.LowBatDP != "0/LOWBAT" || rt.Unreach == nil || *rt.Unreach {
 		t.Fatalf("RT-DN: %+v", rt)
 	}
+	// RT-DN's LOWBAT from rfd's cache, which is no report: the last report stays the state store's
+	if rt.LowBat == nil || *rt.LowBat || rt.LastReport != time.Date(2026, 10, 27, 10, 0, 0, 0, time.UTC).UnixMilli() {
+		t.Fatalf("RT-DN LOWBAT from the cache: %+v", rt)
+	}
 	sc := find(views, "SC")
 	if sc == nil || sc.VoltageDP != "" || sc.LowBatDP != "0/LOWBAT" || sc.LowBat == nil || !*sc.LowBat || sc.LowBatSince != time.Date(2026, 10, 20, 8, 0, 0, 0, time.UTC).UnixMilli() || sc.Name != "Fenster" || len(sc.Rooms) != 1 || sc.Rooms[0] != "Küche" {
 		t.Fatalf("SC (LOWBAT only, restored seed, named and roomed by its channel): %+v", sc)
@@ -156,8 +162,8 @@ func TestLearnSeedRecord(t *testing.T) {
 		t.Fatal("VirtualDevices and BidCos-Wired are never recorded")
 	}
 	for _, c := range s.Calls {
-		if strings.Contains(c, "BidCos-RF getParamset") {
-			t.Fatalf("a BidCos value was read: %v", s.Calls)
+		if strings.Contains(c, "BidCos-RF getParamset") && !strings.Contains(c, "RTDN:0") {
+			t.Fatalf("a BidCos value was read that the state store had: %v", s.Calls)
 		}
 		if strings.HasPrefix(c, "VirtualDevices ") || strings.HasPrefix(c, "BidCos-Wired ") {
 			t.Fatalf("an interface the addon does not record was asked: %v", s.Calls)
