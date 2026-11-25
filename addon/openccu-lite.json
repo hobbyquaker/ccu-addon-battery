@@ -35,10 +35,6 @@
     "needs": [],
     "api_scopes": ["rpc:read", "meta:read"],
     "groups": ["usbstorage"],
-    "paths": ["/media"],
-    "note": {
-      "de": "Liest Geräteliste, Zustandsspeicher und Ereignisstrom der Funkschnittstellen sowie Namen und Räume des Systems (nur lesend). Die Gruppe usbstorage und /media, damit die Datenbank auf einen USB-Stick gelegt werden kann. Kontaktiert nichts außerhalb des Systems.",
-      "en": "Reads the device lists, the state store and the event stream of the radio interfaces, and the system's names and rooms (read only). The group usbstorage and /media so the database can be kept on a USB stick. Contacts nothing outside the system."
-    }
+    "paths": ["/media"]
   }
 }

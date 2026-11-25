@@ -35,8 +35,12 @@ func TestManifest(t *testing.T) {
 			t.Errorf("scope %s missing", want)
 		}
 	}
-	if m.Description["de"] == "" || m.Description["en"] == "" || m.Runtime.Note["de"] == "" || m.Runtime.Note["en"] == "" {
+	if m.Description["de"] == "" || m.Description["en"] == "" {
 		t.Error("texts in both languages")
+	}
+	// no note: the description says it all (the catalogue's text for users, occulited task 188)
+	if m.Runtime.Note != nil {
+		t.Error("no note")
 	}
 	// the system backup: the hook and the restore program are the tracked wrappers, executable;
 	// after a restore onto a new system bin/ (tagged .nobackup) comes back with the reinstall, and
