@@ -1,5 +1,14 @@
 # Changelog
 
+## [1.5.8] - 2026-11-25
+
+- **piVCCU, CCU3 and OpenCCU:** BidCos devices no longer stay "Unbekannt" (unknown). A BidCos device reports its
+  low-battery flag only when it changes, and a classic CCU keeps no record of it that the addon could read at the
+  start, so a push button or motion detector whose batteries stayed fine showed "Unbekannt" for good. At the start
+  the addon now reads the flag of every BidCos device it does not know yet from the radio process's cache; nothing
+  is sent over the air, and "Letzte Meldung" (last report) still shows only what the device itself reported.
+  (reported by emil70 in the homematic-forum)
+
 ## [1.5.7] - 2026-11-24
 
 - **piVCCU, CCU3 and every system:** an addon that was running before an update runs again after it. The install
