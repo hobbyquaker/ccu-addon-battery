@@ -6,7 +6,8 @@
   CCU3 firmware's installer, which piVCCU uses as well, unpacks every package into a new folder there and copies the
   system's programs next to it, and never removes that folder; the firmware empties the folder only when it starts.
   Where no restart follows the installation, as on a piVCCU that installs without one, a new folder of some
-  hundred megabytes stayed with every update, and every backup carried them all. The install script now removes
+  hundred megabytes stayed with every update, and piVCCU's own backup (`pivccu-backup`) carried them all; the
+  WebUI's backup leaves `/usr/local/tmp` out. The install script now removes
   these leftovers, those of earlier installations of any addon at once and its own once the installer has finished;
   a folder in which anything is still mounted is never touched. (reported by Slice in the homematic-forum)
 
