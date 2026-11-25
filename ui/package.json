@@ -18,7 +18,7 @@
     "test:e2e": "playwright test"
   },
   "dependencies": {
-    "ccu-addon-kit": "github:hobbyquaker/ccu-addon-kit#2812e06",
+    "ccu-addon-kit": "github:hobbyquaker/ccu-addon-kit#501a78d",
     "occulite-ui": "^0.1.0",
     "svelte": "^5.57.0",
     "uplot": "^1.6.32"

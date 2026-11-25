@@ -12,8 +12,10 @@
 #      stopped and stays stopped, the kit's release cache is gone;
 #   4. an update of a running service (the real daemon) starts it again;
 #   5. the CCU3 firmware (S00InstallAddon): its installer's chroot replayed (a copy of the root,
-#      /proc, /dev, /sys and /usr/local bound in): a running service is started again in the real
-#      root, not in the chroot; a stopped one (the install during the shutdown) is not started;
+#      /proc, /dev, /sys and /usr/local bound in, the directory left behind): a running service is
+#      started again in the real root, not in the chroot; a stopped one (the install during the
+#      shutdown) is not started; the installer's leftovers in /usr/local/tmp are removed - earlier
+#      ones at once, its own once the installer has ended -, a directory with a mount below it is not;
 #   6. the update_script's snippets are the kit's (ui/node_modules/ccu-addon-kit, after the build).
 #
 #   The container runs privileged: the chroot replay binds directories.
@@ -94,8 +96,12 @@ echo "ok   an update of a running service starts it again"
 
 # 5. the CCU3 firmware: S00InstallAddon and its installer's chroot
 touch /etc/init.d/S00InstallAddon 2>/dev/null || { mkdir -p /etc/init.d && touch /etc/init.d/S00InstallAddon; }
-install_ccu3() {
-    rm -f /usr/local/tmp/new_addon.tar.gz
+# as the firmware's /bin/install_addon: the temp dir stays, and so does a mount that is busy (no
+# lazy fallback); run as a script of that name (the update_script's cleanup job waits for it)
+mkdir -p /tmp/ia
+cat > /tmp/ia/install_addon <<'IA'
+#!/bin/sh
+fail() { echo "FAIL: $*"; exit 1; }
     dir=$(mktemp -d -p /usr/local/tmp)
     tar -C "$dir" -xzf "/dist/battery-x86_64-$VERSION.tar.gz" || fail "unpack (ccu3)"
     for d in bin sbin lib lib64 etc usr; do
@@ -110,9 +116,24 @@ install_ccu3() {
     for m in proc sys dev usr/local; do mkdir -p "$dir/$m"; mount -o bind /$m "$dir/$m" || fail "bind $m"; done
     chroot "$dir" /bin/sh -c 'cd / && ./update_script HM-RASPBERRYMATIC' > /tmp/out 2>&1
     code=$?
-    for m in usr/local dev sys proc; do umount "$dir/$m" 2>/dev/null || umount -l "$dir/$m"; done
-    grep -q " $dir/" /proc/mounts || rm -rf "$dir"
-    return $code
+    sleep 1
+    for m in usr/local dev sys proc; do umount "$dir/$m"; done
+    exit $code
+IA
+chmod 755 /tmp/ia/install_addon
+install_ccu3() {
+    rm -f /usr/local/tmp/new_addon.tar.gz
+    VERSION=$VERSION /tmp/ia/install_addon
+}
+# the cleanup job on the real root (argv kit-tmpclean): wait until it has ended
+tmpclean_wait() {
+    i=0
+    while [ $i -lt 60 ]; do
+        n=$(for f in /proc/[0-9]*/cmdline; do tr '\0' '\n' < "$f" 2>/dev/null | grep -qx kit-tmpclean && echo "$f"; done | wc -l)
+        [ "$n" -eq 0 ] && return 0
+        sleep 0.25; i=$((i + 1))
+    done
+    fail "the cleanup job did not end"
 }
 old=$(running); [ -n "$old" ] || fail "ccu3: the service does not run before the update"
 install_ccu3; code=$?
@@ -128,6 +149,32 @@ install_ccu3; code=$?
 [ $code -eq 0 ] || { cat /tmp/out; fail "ccu3 (stopped): exit $code, want 0"; }
 [ -z "$(running)" ] || fail "ccu3 (stopped): started from the chroot (the boot starts it)"
 echo "ok   ccu3, the install during the shutdown (service stopped): nothing started"
+
+# the installer's leftovers: two of earlier installs, a directory that is not an installer's
+tmpclean_wait
+cd /usr/local/tmp && for d in tmp.old111 tmp.old222; do mkdir -p $d/etc && touch $d/update_script; done
+mkdir -p tmp.other1 && touch tmp.other1/keep && cd /
+install_ccu3; code=$?
+[ $code -eq 0 ] || { cat /tmp/out; fail "ccu3 (leftovers): exit $code, want 0"; }
+tmpclean_wait
+[ "$(grep -c ' /usr/local/tmp/' /proc/mounts)" -eq 0 ] || fail "ccu3 (leftovers): a mount below /usr/local/tmp stayed: $(grep ' /usr/local/tmp/' /proc/mounts)"
+left=$(cd /usr/local/tmp && ls -d tmp.* 2>/dev/null | tr '\n' ' ')
+[ "$left" = "tmp.other1 " ] || fail "ccu3 (leftovers): left in /usr/local/tmp: $left"
+grep -q "^VERSION_ADDON=$VERSION$" /usr/local/addons/battery/versions || fail "ccu3 (leftovers): versions"
+echo "ok   ccu3: the installer's leftovers removed, its own directory once it has ended, the rest kept"
+
+# never a directory with a mount below it: rm -rf would go through the bind of /usr/local
+cd /usr/local/tmp && mkdir -p tmp.mount1/usr/local && touch tmp.mount1/update_script && cd /
+mount -o bind /usr/local /usr/local/tmp/tmp.mount1/usr/local || fail "bind (mount1)"
+mkdir -p /tmp/pkg && tar -C /tmp/pkg -xzf "/dist/battery-x86_64-$VERSION.tar.gz" ./update_script || fail "unpack (mount1)"
+eval "$(sed -n "/^KIT_TMPCLEAN='/,/^'\$/p" /tmp/pkg/update_script)"
+[ -n "$KIT_TMPCLEAN" ] || fail "no KIT_TMPCLEAN in update_script"
+sh -c "$KIT_TMPCLEAN" kit-tmpclean wait battery
+[ -f /usr/local/tmp/tmp.mount1/update_script ] && [ -x /usr/local/addons/battery/bin/battery ] && [ -f /usr/local/tmp/tmp.mount1/usr/local/addons/battery/versions ] \
+    || fail "ccu3: a directory with a mount below it was touched"
+umount /usr/local/tmp/tmp.mount1/usr/local
+rm -rf /usr/local/tmp/tmp.mount1 /usr/local/tmp/tmp.other1 /tmp/pkg
+echo "ok   ccu3: a directory with a mount below it is left alone, the user partition intact"
 rm -f /etc/init.d/S00InstallAddon
 EOF
 
