@@ -1,5 +1,15 @@
 # Changelog
 
+## [1.5.9] - 2026-11-25
+
+- **piVCCU and CCU3:** installing the addon no longer leaves a copy of the system behind in `/usr/local/tmp`. The
+  CCU3 firmware's installer, which piVCCU uses as well, unpacks every package into a new folder there and copies the
+  system's programs next to it, and never removes that folder; the firmware empties the folder only when it starts.
+  Where no restart follows the installation, as on a piVCCU that installs without one, a new folder of some
+  hundred megabytes stayed with every update, and every backup carried them all. The install script now removes
+  these leftovers, those of earlier installations of any addon at once and its own once the installer has finished;
+  a folder in which anything is still mounted is never touched. (reported by Slice in the homematic-forum)
+
 ## [1.5.8] - 2026-11-25
 
 - **piVCCU, CCU3 and OpenCCU:** BidCos devices no longer stay "Unbekannt" (unknown). A BidCos device reports its
