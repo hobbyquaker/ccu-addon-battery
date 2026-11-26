@@ -13,7 +13,7 @@ check. This page describes the rules (`internal/detect`).
 | `BATTERY_STATE` (the thermostat channel) | HM-CC-RT-DN, HM-TC-IT-WM-W-EU | the voltage rules |
 | `OPERATING_VOLTAGE`, else `BATTERY_VOLTAGE` (the first channel with it, a FLOAT in volts) | self-built devices (HB-…) without a voltage on channel 0 | the voltage rules |
 | `BOOTED` (channel 0) | Homematic IP | rule A: true in the first report after a power-up, and in later reports for a while |
-| `LOW_BAT` / `LOWBAT` | all | rule C; the only signal of most BidCos sensors and remotes |
+| `LOW_BAT` / `LOWBAT` (channel 0) | all, self-built devices (HB-…) included | rule C; the only signal of most BidCos sensors and remotes. The same key on another channel (several HB devices repeat it on a sensor or contact channel) is not used |
 | `UNREACH` | all | an UNREACH gap that ended in the hour before a jump raises its confidence |
 
 What a device takes (count, type, chemistry) comes from the battery table
@@ -54,6 +54,15 @@ first voltage reading after it:
 - **discarded** otherwise, with the reason `recovered` (there was a jump) or `boot` (a `BOOTED`
   alone). The readings of a discarded candidate are dropped from the 30-day maximum, so the
   recovery does not hide a real change in the following weeks.
+
+A candidate that `BOOTED` alone opened is not kept for the window when the voltage of that very
+report is known and less than half a step above the reading before it: the device restarted with
+the cells it had (a firmware update, a reset), and it is discarded as a `boot` once the status
+report is through (ten seconds, so a low-battery flag clearing in the same report still counts as
+a trigger of its own), at the next tick of the detector. The fields of one report may come in any
+order: a voltage that arrived just before its `BOOTED` is taken as the reading after the trigger
+and the one before it as the reading before. A value the addon read rather than received is never
+taken for the reading after a trigger.
 
 A low-battery flag that comes back during the window discards the candidate (`low-again`). A
 device without a voltage (rule C alone) is offered when the window passed without the flag coming

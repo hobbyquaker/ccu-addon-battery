@@ -138,6 +138,8 @@ type Detector struct {
 
 	hist         []point
 	lastV        *float64
+	lastVTS      int64
+	lastVLive    bool // lastV was reported, not read (Obs.Seed)
 	lowBat       *bool
 	booted       *bool
 	unreach      *bool
@@ -239,8 +241,9 @@ func (d *Detector) Observe(o Obs) []Result {
 	if len(trig) > 0 {
 		out = append(out, d.trigger(o, trig)...)
 	}
-	if d.open != nil && o.Voltage != nil && d.open.Evidence.VoltageAfter == nil && o.TS >= d.open.At {
-		// the first reading after a trigger that came without one (BOOTED before the voltage)
+	if d.open != nil && o.Voltage != nil && !o.Seed && d.open.Evidence.VoltageAfter == nil && o.TS >= d.open.At {
+		// the first reading after a trigger that came without one (BOOTED before the voltage);
+		// a value that was read, not reported, may be the one from before the trigger
 		v := *o.Voltage
 		d.open.Evidence.VoltageAfter = &v
 		out = append(out, Result{Kind: Attached, Candidate: *d.open, Rule: strings.Join(d.open.Evidence.Triggers, "+")})
@@ -248,7 +251,7 @@ func (d *Detector) Observe(o Obs) []Result {
 	// the state
 	if o.Voltage != nil {
 		v := *o.Voltage
-		d.lastV = &v
+		d.lastV, d.lastVTS, d.lastVLive = &v, o.TS, !o.Seed
 		d.hist = append(d.hist, point{o.TS, v})
 		cut := o.TS - d.P.MaxSpan.Milliseconds()
 		i := 0
@@ -283,7 +286,27 @@ func (d *Detector) Observe(o Obs) []Result {
 		v := *o.Voltage
 		out = append(out, d.decide(o.TS, &v, ""))
 	}
+	if d.noLift(o.TS) {
+		out = append(out, d.decide(o.TS, nil, "boot"))
+	}
 	return out
+}
+
+// noLift says whether the open candidate is a restart and nothing else: BOOTED alone opened it,
+// the status report it came with is through (burstSpan, so a low-battery flag clearing in the
+// same report has attached), and the voltage of that report is not half a step above the one
+// before. A device restarts after a firmware update or a reset with the cells it had; cells that
+// read no higher than before are not fresh ones, and waiting for the window would only leave a
+// "change from 2.7 V to 2.7 V" in the inbox for a day.
+func (d *Detector) noLift(ts int64) bool {
+	if d.open == nil || d.L.Fresh <= 0 {
+		return false
+	}
+	ev := d.open.Evidence
+	if len(ev.Triggers) != 1 || ev.Triggers[0] != "A" || ev.VoltageBefore == nil || ev.VoltageAfter == nil {
+		return false
+	}
+	return ts >= ev.LastTrigger+burstSpan && *ev.VoltageAfter < *ev.VoltageBefore+d.L.Step/2-eps
 }
 
 func (d *Detector) trigger(o Obs, trig []string) []Result {
@@ -308,8 +331,14 @@ func (d *Detector) trigger(o Obs, trig []string) []Result {
 	if d.lastChange > 0 && o.TS-d.lastChange < d.P.Debounce.Milliseconds() && o.TS >= d.lastChange {
 		return nil
 	}
-	ev := Evidence{Triggers: trig, VoltageBefore: copyF(d.lastV), MaxBefore: d.max30(o.TS), LowBatBefore: copyB(d.lowBat),
-		Booted: has(trig, "A"), Fresh: d.L.Fresh, Step: d.L.Step, WindowS: int64(d.P.Window / time.Second), LastTrigger: o.TS, VoltageAfter: copyF(o.Voltage)}
+	before, after := copyF(d.lastV), copyF(o.Voltage)
+	if n := len(d.hist); after == nil && d.lastV != nil && d.lastVLive && o.TS >= d.lastVTS && o.TS-d.lastVTS <= burstSpan && n >= 2 && d.hist[n-1].ts == d.lastVTS {
+		// the voltage of this very status report came before its BOOTED or low-battery flag:
+		// it is the reading after the trigger, and the one before it is the reading before
+		after, before = copyF(d.lastV), copyF(&d.hist[n-2].v)
+	}
+	ev := Evidence{Triggers: trig, VoltageBefore: before, MaxBefore: d.max30(o.TS), LowBatBefore: copyB(d.lowBat),
+		Booted: has(trig, "A"), Fresh: d.L.Fresh, Step: d.L.Step, WindowS: int64(d.P.Window / time.Second), LastTrigger: o.TS, VoltageAfter: after}
 	if d.gapEnd > 0 && o.TS-d.gapEnd <= d.P.GapBefore.Milliseconds() {
 		ev.UnreachGapS = d.gapS
 	}
@@ -328,6 +357,9 @@ func (d *Detector) Tick(now int64) []Result {
 		return nil
 	}
 	ev := d.open.Evidence
+	if d.noLift(now) {
+		return []Result{d.decide(now, nil, "boot")}
+	}
 	if d.L.Fresh == 0 && now >= ev.LastTrigger+d.P.Window.Milliseconds() {
 		return []Result{d.decide(now, nil, "")}
 	}
@@ -343,7 +375,7 @@ func (d *Detector) decide(ts int64, v *float64, reason string) Result {
 	ev := &c.Evidence
 	ev.ConfirmedAt = ts
 	rule := strings.Join(ev.Triggers, "+")
-	if reason == "low-again" {
+	if reason == "low-again" || reason == "boot" {
 		ev.Reason = reason
 		return Result{Kind: Discarded, Candidate: c, Rule: rule}
 	}

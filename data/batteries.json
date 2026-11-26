@@ -5218,6 +5218,9 @@
   "HmIP-eTRV-B-2_R4M": {
    "power": "battery",
    "family": "HmIP-RF",
+   "aliases": [
+    "HmIP-eTRV-B-2 R4M"
+   ],
    "slots": [
     {
      "count": 2,

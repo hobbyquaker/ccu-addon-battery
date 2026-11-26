@@ -319,3 +319,81 @@ func TestAnsweredWhileChecking(t *testing.T) {
 		}
 	}
 }
+
+// A firmware update restarts a device with the cells it had (an HmIP-eTRV-B-2 R4M reported in the
+// forum, 2026-11-26): BOOTED goes true, the voltage is 2.7 V as before. That is discarded as a
+// boot once the status report is through, not left in the inbox for the window.
+func TestRestartWithoutALiftIsDiscardedAtOnce(t *testing.T) {
+	etrv := Levels{Fresh: 2.96, Step: 0.24}
+	boot := t0 + 5*h
+	for name, order := range map[string][]step{
+		"BOOTED first": {
+			{o: Obs{TS: boot, Booted: b(true)}},
+			{o: Obs{TS: boot + 3, Voltage: f(2.7)}},
+			{o: Obs{TS: boot + 5, LowBat: b(false), Unreach: b(false)}},
+		},
+		"the voltage first": {
+			{o: Obs{TS: boot, Voltage: f(2.7)}},
+			{o: Obs{TS: boot + 3, LowBat: b(false), Unreach: b(false)}},
+			{o: Obs{TS: boot + 5, Booted: b(true)}},
+		},
+	} {
+		d := New(DefaultParams(), etrv)
+		rs := run(d, seq(daily(t0-20*day, 21, 2.7), order))
+		if got := last(rs); got.Kind != Opened && got.Kind != Attached {
+			t.Fatalf("%s: the restart opens a candidate, got %v", name, kinds(rs))
+		}
+		if rs = d.Tick(boot + 5_000); len(rs) != 0 {
+			t.Fatalf("%s: decided inside the status report: %v", name, kinds(rs))
+		}
+		rs = d.Tick(boot + 60_000)
+		if len(rs) != 1 || rs[0].Kind != Discarded || rs[0].Candidate.Evidence.Reason != "boot" {
+			t.Fatalf("%s: want discarded as a boot at the next tick, got %+v", name, rs)
+		}
+		ev := rs[0].Candidate.Evidence
+		if ev.VoltageBefore == nil || *ev.VoltageBefore != 2.7 || ev.VoltageAfter == nil || *ev.VoltageAfter != 2.7 {
+			t.Fatalf("%s: evidence %+v", name, ev)
+		}
+		if d.Open() != nil {
+			t.Fatalf("%s: the candidate is still open", name)
+		}
+	}
+}
+
+// The same restart with a lift (re-seated or fresh cells) still waits for the window, whichever
+// field of the report comes first; and with the voltage first a real change is still offered.
+func TestRestartWithALiftWaitsForTheWindow(t *testing.T) {
+	boot := t0 + 5*h
+	d := New(DefaultParams(), wrc2)
+	rs := run(d, seq(daily(t0-20*day, 21, 2.8), []step{
+		{o: Obs{TS: boot, Voltage: f(3.0)}}, // +0.2: no rule B (the step is 0.24)
+		{o: Obs{TS: boot + 5, Booted: b(true)}},
+		{o: Obs{TS: boot + 60_000}, tick: true},
+	}))
+	if d.Open() == nil {
+		t.Fatalf("a restart with a lift must stay a candidate, got %v", kinds(rs))
+	}
+	ev := d.Open().Evidence
+	if ev.VoltageBefore == nil || *ev.VoltageBefore != 2.8 || ev.VoltageAfter == nil || *ev.VoltageAfter != 3.0 {
+		t.Fatalf("evidence %+v", ev)
+	}
+	rs = run(d, report(boot+25*h, 3.0, false, true))
+	if got := last(rs); got.Kind != Offered || got.Rule != "A" {
+		t.Fatalf("held after the window: want offered by rule A, got %+v", rs)
+	}
+}
+
+// A value that was read (the start-up read, a sweep) may be the one from before the restart: it
+// is no reading after the trigger and decides nothing.
+func TestRestartThenASeedDecidesNothing(t *testing.T) {
+	boot := t0 + 5*h
+	d := New(DefaultParams(), wrc2)
+	run(d, seq(daily(t0-20*day, 21, 2.8), []step{
+		{o: Obs{TS: boot, Booted: b(true)}},
+		{o: Obs{TS: boot + 30_000, Voltage: f(2.8), Seed: true}},
+		{o: Obs{TS: boot + 60_000}, tick: true},
+	}))
+	if d.Open() == nil || d.Open().Evidence.VoltageAfter != nil {
+		t.Fatalf("a read value must not decide the candidate: %+v", d.Open())
+	}
+}
