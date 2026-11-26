@@ -16,6 +16,8 @@ export interface DeviceView {
     voltage_status?: string;
     low_bat: boolean | null;
     low_bat_since?: number;
+    /** The voltage is at or below the profile's low level: the addon's own low-battery finding, beside the device's flag. */
+    voltage_low?: boolean;
     unreach: boolean | null;
     unreach_since?: number;
     last_report?: number;
@@ -224,6 +226,7 @@ export interface DeviceForecast {
     image?: string;
     slots: Slot[];
     low_bat: boolean;
+    voltage_low?: boolean;
     voltage: number | null;
     forecast: Forecast;
 }
@@ -391,11 +394,11 @@ export function batteryName(b: {vendor?: string; product?: string; type?: string
 }
 
 
-/** The one word the status pill says, worst first: unreachable, low, externally powered, ok. */
-export function statusOf(d: Pick<DeviceView, 'low_bat' | 'unreach' | 'voltage_status' | 'power' | 'voltage'> & {ignored?: boolean}): Status {
+/** The one word the status pill says, worst first: unreachable, low (the device's flag, or a voltage at or below its low level), externally powered, ok. */
+export function statusOf(d: Pick<DeviceView, 'low_bat' | 'unreach' | 'voltage_status' | 'power' | 'voltage'> & {ignored?: boolean; voltage_low?: boolean}): Status {
     if (d.ignored === true) return 'ignored';
     if (d.unreach === true) return 'unreach';
-    if (d.low_bat === true) return 'low';
+    if (d.low_bat === true || d.voltage_low === true) return 'low';
     if (d.voltage_status === 'EXTERNAL' || isMains(d.power)) return 'external';
     if (d.low_bat === false || d.voltage !== null) return 'ok';
     return 'unknown';

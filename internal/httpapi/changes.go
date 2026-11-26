@@ -446,7 +446,7 @@ func (o Options) computeStats(r *http.Request) (*stats.Stats, error) {
 	}
 	low := map[string]bool{}
 	for _, d := range o.Recorder.Devices("en") {
-		if d.LowBat != nil && *d.LowBat {
+		if d.LowBat != nil && *d.LowBat || d.VoltageLow {
 			low[d.Interface+"."+d.Address] = true
 		}
 	}

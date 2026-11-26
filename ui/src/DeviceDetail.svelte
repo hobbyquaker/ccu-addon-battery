@@ -252,7 +252,7 @@
             <dd class="bat-mono">{formatVoltage(device.voltage, lang) || '–'}{#if device.voltage_ts}{' '}<span class="bat-muted">{relativeTime(device.voltage_ts, Date.now(), lang)}</span>{/if}</dd>
             {#if device.profile?.fresh}
                 <dt>{t('detail.levels')}</dt>
-                <dd class="bat-mono">{formatVoltage(device.profile.fresh, lang)} / {formatVoltage(device.profile.low, lang)}</dd>
+                <dd class="bat-mono">{formatVoltage(device.profile.fresh, lang)} / {formatVoltage(device.profile.low, lang)}{#if device.voltage_low && device.low_bat !== true}{' '}<span class="bat-muted" data-testid="voltage-low">{t('detail.voltageLow')}</span>{/if}</dd>
             {/if}
             <dt>{t('life.column')}</dt>
             <dd><span class="bat-life" class:short={device.life?.hint === 'short'}>{lifeText(device.life, lang) || t('life.none')}</span></dd>

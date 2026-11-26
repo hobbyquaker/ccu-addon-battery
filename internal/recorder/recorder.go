@@ -834,6 +834,11 @@ func (r *Recorder) apply(e litesource.Event, live bool) {
 			}
 		}
 	case "LOW_BAT", "LOWBAT":
+		// the device's own flag only (channel 0): a self-built device repeats LOWBAT on its
+		// sensor or contact channels, and a flag there is not the one the device is known by
+		if want := strconv.Itoa(e.Channel()) + "/" + e.Key; want != d.LowBatDP {
+			break
+		}
 		b, ok := e.Bool()
 		if !ok {
 			break
@@ -1262,10 +1267,29 @@ type View struct {
 	// ServiceMessagesOff: the user switched the device's service messages off in the system
 	// (a classic CCU; never set on openccu-lite, which has no such switch).
 	ServiceMessagesOff bool `json:"service_messages_off,omitempty"`
+	// VoltageLow: the voltage is at or below the profile's low level (VoltageLow); with LowBat
+	// it is what makes a device "low".
+	VoltageLow bool `json:"voltage_low,omitempty"`
 	// Ignored: the user switched the device's monitoring off (SetIgnored).
 	Ignored bool `json:"ignored,omitempty"`
 	// Profile is the battery profile: slots, levels, where it came from.
 	Profile batteries.Profile `json:"profile"`
+}
+
+// VoltageLow says whether a voltage is at or below the profile's low level - the device's own
+// limit where the table has it, else count x per-cell of the slots' chemistry (1x AA alkaline:
+// 1.1 V). It is the addon's own low-battery finding, beside the device's flag: a device whose
+// flag has another limit than its cells need (a self-built one, cells the user set), or none,
+// is still found low. Never for a device that is not on batteries (power: the one in force).
+func VoltageLow(v *float64, power string, p batteries.Profile) bool {
+	if v == nil || p.Low <= 0 {
+		return false
+	}
+	switch power {
+	case "mains", "bus", "host", "external":
+		return false
+	}
+	return *v <= p.Low+1e-9
 }
 
 // Devices answers every tracked device with its current values and names in lang.
@@ -1284,6 +1308,7 @@ func (r *Recorder) Devices(lang string) []View {
 		if v.Profile.Slots == nil {
 			v.Profile.Slots = []batteries.Slot{}
 		}
+		v.VoltageLow = VoltageLow(d.cur.Voltage, d.Power, d.profile)
 		v.ServiceMessagesOff = r.serviceOff[d.Address]
 		if r.names != nil {
 			v.Name = r.names.Name(d.Interface, d.Address)

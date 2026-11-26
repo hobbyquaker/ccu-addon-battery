@@ -28,8 +28,12 @@ type DeviceForecast struct {
 	Image     string           `json:"image,omitempty"`
 	Slots     []batteries.Slot `json:"slots"`
 	LowBat    bool             `json:"low_bat"`
-	Voltage   *float64         `json:"voltage"`
-	Forecast  forecast.Result  `json:"forecast"`
+	// VoltageLow: the voltage is at or below the device's low level (recorder.VoltageLow); the
+	// state is low when either says so.
+	VoltageLow bool            `json:"voltage_low,omitempty"`
+	Voltage    *float64        `json:"voltage"`
+	Forecast   forecast.Result `json:"forecast"`
+	low        float64         // the profile's low level, for the notice
 }
 
 var stateRank = map[string]int{forecast.StateLow: 0, forecast.StateDue: 1, forecast.StateSoon: 2, forecast.StateOK: 3, forecast.StateUnknown: 4}
@@ -65,7 +69,7 @@ func (o Options) forecasts(ctx context.Context, lang string, soonDays float64) (
 			continue
 		}
 		key := v.Interface + "." + v.Address
-		in := forecast.Input{Profile: v.Profile, Model: models[strings.ToLower(v.Model)], Now: now, LowBat: v.LowBat != nil && *v.LowBat}
+		in := forecast.Input{Profile: v.Profile, Model: models[strings.ToLower(v.Model)], Now: now, LowBat: v.LowBat != nil && *v.LowBat || v.VoltageLow}
 		if l, ok := st.Devices[key]; ok {
 			life := l
 			in.Life = &life
@@ -76,7 +80,7 @@ func (o Options) forecasts(ctx context.Context, lang string, soonDays float64) (
 				in.Samples = samples
 			}
 		}
-		d := DeviceForecast{Interface: v.Interface, Address: v.Address, Name: v.Name, Rooms: v.Rooms, Model: v.Model, Image: o.image(v.Model), Slots: v.Profile.Slots, LowBat: in.LowBat, Voltage: v.Voltage, Forecast: forecast.Compute(in, soonDays)}
+		d := DeviceForecast{Interface: v.Interface, Address: v.Address, Name: v.Name, Rooms: v.Rooms, Model: v.Model, Image: o.image(v.Model), Slots: v.Profile.Slots, LowBat: v.LowBat != nil && *v.LowBat, VoltageLow: v.VoltageLow, Voltage: v.Voltage, Forecast: forecast.Compute(in, soonDays), low: v.Profile.Low}
 		if d.Slots == nil {
 			d.Slots = []batteries.Slot{}
 		}
@@ -256,6 +260,11 @@ func (o Options) Events(ctx context.Context) []notify.Event {
 			case forecast.StateLow:
 				e := base
 				e.Kind, e.Key, e.Title, e.Text = "low", key, notify.Text(lang, "low.title", p), notify.Text(lang, "low.text", p)
+				if !d.LowBat && d.VoltageLow && d.Voltage != nil {
+					// the addon's own finding: the device's flag is not set (or it has none)
+					p["voltage"], p["low"] = notify.Volts(lang, *d.Voltage), notify.Volts(lang, d.low)
+					e.Text = notify.Text(lang, "low.voltage.text", p)
+				}
 				out = append(out, e)
 			case forecast.StateDue:
 				e := base

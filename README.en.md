@@ -45,7 +45,7 @@ service, its log and the version. Service control and the log are the system's o
 openccu-lite.
 
 **Notifications:** over [ntfy](https://ntfy.sh) or a webhook of yours, the addon tells you when a
-device reports a low battery, a change is due or due soon, or a detected change waits in the
+device reports a low battery or its voltage reaches the low level, a change is due or due soon, or a detected change waits in the
 inbox - each once, and again only after a week. The system itself offers an addon no channel
 yet; once it does, it becomes a third one here.
 
@@ -62,7 +62,8 @@ browser shows the one that matches its setting.
 
 <picture><source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/01-geraete-dunkel.png"><img alt="Devices" src="docs/screenshots/01-geraete.png"></picture>
 
-Every battery device with its picture, status (unreachable, low battery, OK), the batteries from
+Every battery device with its picture, status (unreachable, low battery - reported by the device
+or by its voltage, see [When a battery counts as low](#when-a-battery-counts-as-low) -, OK), the batteries from
 the battery table, the last voltage, how long its batteries lasted so far, how long the current
 ones have been in, when the next change is due and when it last reported. Every column sorts and
 filters; the box at the top adds the mains- and bus-powered devices. Two more boxes hide devices:
@@ -209,12 +210,32 @@ page under *Batterien bearbeiten…* (edit batteries), or through the API. Corre
 the table are welcome as pull requests; `python3 data/check.py` checks it (CI runs it), and
 [tools/](tools/README.md) has the scripts it was built with.
 
+## When a battery counts as low
+
+A device shows *Battery low* (and goes into the shopping list and the notifications) when either
+of two things holds - the current values are compared, nothing has to be watched over time:
+
+- **the device says so:** its own low-battery flag (`LOW_BAT`, `LOWBAT` on channel 0) is set. The
+  device decides that by its own limit; self-built devices (HB-…) have the flag as well;
+- **the voltage has reached the low level:** the last reported voltage is at or below the *low*
+  level the device page shows (*Fresh / low*). That level is the device's own limit where the
+  battery table knows it, otherwise the number of cells times the level of their kind (1.1 V per
+  alkaline cell, so 1.10 V for 1× AA and 2.20 V for 2× AA); with batteries set under *Batterien
+  bearbeiten…* it follows those. So a device whose own flag has a limit that does not fit its
+  cells, or that never raises it, is still found - also when it was at that voltage before the
+  addon was installed. The device page then says that the low level is reached and the device
+  itself reports no low battery.
+
+A device that is unreachable shows that instead; one on a power supply unit is never low.
+
 ## Detecting a battery change
 
 A device restart (`BOOTED`), a voltage jump to the fresh level, or the low-battery flag clearing
 makes a *candidate*. Re-seating the same half-used cells looks the same for a while - their voltage
 recovers once the load is off - so a candidate is checked for a day: when the voltage still holds
-the fresh level then, the detection is confirmed; otherwise it is logged as a boot. The candidate
+the fresh level then, the detection is confirmed; otherwise it is logged as a boot. A restart after
+which the voltage is no higher than before - a firmware update, a reset - is logged as a boot at
+once. The candidate
 is in the **inbox** already while it is being checked, marked "still being checked until …".
 Nothing is booked on its own: you confirm a detection, reject it, or say it was another day - right
 away or after the check. Your answer stands; the check no longer changes it. Devices that report only

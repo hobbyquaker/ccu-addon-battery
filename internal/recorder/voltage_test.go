@@ -5,6 +5,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/hobbyquaker/ccu-addon-battery/internal/batteries"
 	"github.com/hobbyquaker/ccu-addon-battery/internal/store"
 	"github.com/hobbyquaker/ccu-addon-kit/go/addonkit"
 	"github.com/hobbyquaker/ccu-addon-kit/go/litesource"
@@ -183,7 +184,47 @@ func TestLearnHomebrewVoltage(t *testing.T) {
 	if rows, _ := st.Samples(ctx, "BidCos-RF", "IAQ", 0, 0); len(rows) != 1 || rows[0].Voltage == nil || *rows[0].Voltage != 2.9 {
 		t.Fatalf("IAQ samples: %+v", rows)
 	}
+	// the low-battery flag is the device's own on channel 0: the same key on a sensor channel
+	// (several HB devices repeat it there) is not taken for it
+	ev("IAQ:0", "LOWBAT", "false", now.Add(2*time.Minute))
+	ev("IAQ:1", "LOWBAT", "true", now.Add(3*time.Minute))
+	if v := find(r.Devices("de"), "IAQ"); v.LowBat == nil || *v.LowBat {
+		t.Fatalf("LOWBAT of another channel was taken: %+v", v)
+	}
+	ev("IAQ:0", "LOWBAT", "true", now.Add(4*time.Minute))
+	if v := find(r.Devices("de"), "IAQ"); v.LowBat == nil || !*v.LowBat {
+		t.Fatalf("LOWBAT of channel 0 was not taken: %+v", v)
+	}
 	if !isKey("BATTERY_VOLTAGE") {
 		t.Fatal("BATTERY_VOLTAGE is not subscribed")
+	}
+}
+
+// A voltage at or below the profile's low level is low, whatever the device's own flag says: the
+// HB-UNI-Sen-CAP-MOIST-T of the forum report (2026-11-26) sat at 1.10 V with 1x AA set (low
+// 1.10 V) and its flag clear.
+func TestVoltageLow(t *testing.T) {
+	f := func(v float64) *float64 { return &v }
+	aa := batteries.Shipped().Resolve("HB-UNI-Sen-CAP-MOIST-T", &batteries.Override{Power: "battery", Slots: []batteries.Slot{{Count: 1, Type: "AA"}}}, nil, 1.1)
+	if aa.Low != 1.1 {
+		t.Fatalf("1x AA: low %v", aa.Low)
+	}
+	for _, c := range []struct {
+		v     *float64
+		power string
+		p     batteries.Profile
+		want  bool
+	}{
+		{f(1.1), "battery", aa, true},
+		{f(0.9), "battery", aa, true},
+		{f(1.2), "battery", aa, false},
+		{nil, "battery", aa, false},
+		{f(1.1), "external", aa, false}, // on a supply: its voltage says nothing of cells
+		{f(1.1), "mains", aa, false},
+		{f(1.1), "unknown", batteries.Profile{}, false}, // no levels
+	} {
+		if got := VoltageLow(c.v, c.power, c.p); got != c.want {
+			t.Errorf("VoltageLow(%v, %s, low %v) = %v", c.v, c.power, c.p.Low, got)
+		}
 	}
 }

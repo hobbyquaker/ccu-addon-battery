@@ -15,6 +15,7 @@ import (
 	"io"
 	"net/http"
 	"sort"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -247,31 +248,42 @@ func base64(s string) string {
 	return out.String()
 }
 
+// Volts writes a voltage as the notices say it: "1,10 V" in German, "1.10 V" otherwise.
+func Volts(lang string, v float64) string {
+	s := strconv.FormatFloat(v, 'f', 2, 64)
+	if lang == "de" {
+		s = strings.Replace(s, ".", ",", 1)
+	}
+	return s + " V"
+}
+
 // Texts are the notices' words, German and English.
 var Texts = map[string]map[string]string{
 	"de": {
-		"low.title":   "Batterie leer: {name}",
-		"low.text":    "{name} ({model}) meldet eine leere Batterie.",
-		"due.title":   "Batteriewechsel fällig: {name}",
-		"due.text":    "Die Batterien von {name} ({model}) sind seit {days} Tagen fällig (voraussichtliche Haltedauer erreicht).",
-		"soon.title":  "Batteriewechsel bald fällig: {name}",
-		"soon.text":   "Die Batterien von {name} ({model}) sind voraussichtlich in {days} Tagen fällig.",
-		"inbox.title": "Erkannter Batteriewechsel wartet",
-		"inbox.text":  "{count} erkannte Batteriewechsel warten im Eingang auf Ihre Bestätigung.",
-		"test.title":  "Testnachricht von Batterie",
-		"test.text":   "Die Benachrichtigungen des Batterie-Addons kommen an.",
+		"low.title":        "Batterie leer: {name}",
+		"low.text":         "{name} ({model}) meldet eine leere Batterie.",
+		"low.voltage.text": "Die Spannung von {name} ({model}) hat mit {voltage} die Leer-Schwelle von {low} erreicht.",
+		"due.title":        "Batteriewechsel fällig: {name}",
+		"due.text":         "Die Batterien von {name} ({model}) sind seit {days} Tagen fällig (voraussichtliche Haltedauer erreicht).",
+		"soon.title":       "Batteriewechsel bald fällig: {name}",
+		"soon.text":        "Die Batterien von {name} ({model}) sind voraussichtlich in {days} Tagen fällig.",
+		"inbox.title":      "Erkannter Batteriewechsel wartet",
+		"inbox.text":       "{count} erkannte Batteriewechsel warten im Eingang auf Ihre Bestätigung.",
+		"test.title":       "Testnachricht von Batterie",
+		"test.text":        "Die Benachrichtigungen des Batterie-Addons kommen an.",
 	},
 	"en": {
-		"low.title":   "Battery low: {name}",
-		"low.text":    "{name} ({model}) reports a low battery.",
-		"due.title":   "Battery change due: {name}",
-		"due.text":    "The batteries of {name} ({model}) have been due for {days} days (the expected life is reached).",
-		"soon.title":  "Battery change due soon: {name}",
-		"soon.text":   "The batteries of {name} ({model}) are due in about {days} days.",
-		"inbox.title": "A detected battery change waits",
-		"inbox.text":  "{count} detected battery changes wait in the inbox for your confirmation.",
-		"test.title":  "Test message from Battery",
-		"test.text":   "The Battery addon's notifications arrive.",
+		"low.title":        "Battery low: {name}",
+		"low.text":         "{name} ({model}) reports a low battery.",
+		"low.voltage.text": "The voltage of {name} ({model}) has reached its low level: {voltage}, the level is {low}.",
+		"due.title":        "Battery change due: {name}",
+		"due.text":         "The batteries of {name} ({model}) have been due for {days} days (the expected life is reached).",
+		"soon.title":       "Battery change due soon: {name}",
+		"soon.text":        "The batteries of {name} ({model}) are due in about {days} days.",
+		"inbox.title":      "A detected battery change waits",
+		"inbox.text":       "{count} detected battery changes wait in the inbox for your confirmation.",
+		"test.title":       "Test message from Battery",
+		"test.text":        "The Battery addon's notifications arrive.",
 	},
 }
 

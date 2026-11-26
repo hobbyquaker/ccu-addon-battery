@@ -35,8 +35,10 @@ type Input struct {
 	Model stats.Summary
 	// Samples are the device's voltage samples of the last TrendWindow, oldest first.
 	Samples []store.Sample
-	LowBat  bool
-	Now     time.Time
+	// LowBat: the device's low-battery flag is set, or its voltage is at or below the profile's
+	// low level.
+	LowBat bool
+	Now    time.Time
 }
 
 // Trend is the voltage regression over the last weeks.
@@ -61,7 +63,7 @@ type Result struct {
 	// DueAt is the forecast date (ms); 0 when there is none.
 	DueAt    int64   `json:"due_at,omitempty"`
 	DaysLeft float64 `json:"days_left,omitempty"`
-	// State: low (the device says so), due (the date passed), soon (within the horizon), ok,
+	// State: low (the device says so, or its voltage is at or below its low level), due (the date passed), soon (within the horizon), ok,
 	// unknown (no basis).
 	State string `json:"state"`
 	Trend *Trend `json:"trend,omitempty"`

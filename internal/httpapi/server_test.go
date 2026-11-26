@@ -701,3 +701,77 @@ func TestIgnoreAPI(t *testing.T) {
 		t.Fatalf("forecast: %s", w.Body)
 	}
 }
+
+// A device whose voltage is at or below its low level is low although its own flag is clear: in
+// GET devices (voltage_low), in the forecast (state low) and in the notice, which then names the
+// voltage and the level instead of saying the device reported it.
+func TestVoltageLowAPI(t *testing.T) {
+	o, _, s, _ := serverOptions(t)
+	s.Interfaces = []string{"HmIP-RF"}
+	s.Devices["HmIP-RF"] = []map[string]any{
+		{"ADDRESS": "WRC2", "TYPE": "HmIP-WRC2", "FIRMWARE": "1.2", "VERSION": 1, "CHILDREN": []string{"WRC2:0"}},
+		{"ADDRESS": "WRC2:0", "TYPE": "MAINTENANCE", "PARENT": "WRC2"},
+		{"ADDRESS": "OK", "TYPE": "HmIP-WRC2", "FIRMWARE": "1.2", "VERSION": 1, "CHILDREN": []string{"OK:0"}},
+		{"ADDRESS": "OK:0", "TYPE": "MAINTENANCE", "PARENT": "OK"},
+	}
+	s.Paramsets["HmIP-RF/HmIP-WRC2/1.2/1/MAINTENANCE/VALUES"] = map[string]any{"OPERATING_VOLTAGE": map[string]any{"TYPE": "FLOAT"}, "LOW_BAT": map[string]any{"TYPE": "BOOL"}, "UNREACH": map[string]any{"TYPE": "BOOL"}}
+	s.Values["HmIP-RF/WRC2:0/VALUES"] = map[string]any{"OPERATING_VOLTAGE": 2.0, "LOW_BAT": false, "UNREACH": false}
+	s.Values["HmIP-RF/OK:0/VALUES"] = map[string]any{"OPERATING_VOLTAGE": 2.9, "LOW_BAT": false, "UNREACH": false}
+	h := New(o)
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	go o.Recorder.Run(ctx)
+	deadline := time.Now().Add(5 * time.Second)
+	ready := func() bool {
+		n := 0
+		for _, d := range o.Recorder.Devices("en") {
+			if d.Voltage != nil {
+				n++
+			}
+		}
+		return n == 2
+	}
+	for !ready() {
+		if time.Now().After(deadline) {
+			t.Fatalf("recorder: %s", o.Recorder.State())
+		}
+		time.Sleep(5 * time.Millisecond)
+	}
+	var dl struct {
+		Devices []struct {
+			Address    string `json:"address"`
+			LowBat     *bool  `json:"low_bat"`
+			VoltageLow bool   `json:"voltage_low"`
+		} `json:"devices"`
+	}
+	w := call(h, "GET", "/addons/battery/api/v1/devices", user, "")
+	if w.Code != 200 || json.Unmarshal(w.Body.Bytes(), &dl) != nil || len(dl.Devices) != 2 {
+		t.Fatalf("devices: %d %s", w.Code, w.Body)
+	}
+	for _, d := range dl.Devices {
+		if d.VoltageLow != (d.Address == "WRC2") || d.LowBat == nil || *d.LowBat {
+			t.Fatalf("devices: %+v in %s", d, w.Body)
+		}
+	}
+	var fl struct {
+		Devices []DeviceForecast `json:"devices"`
+	}
+	w = call(h, "GET", "/addons/battery/api/v1/forecast", user, "")
+	if w.Code != 200 || json.Unmarshal(w.Body.Bytes(), &fl) != nil || len(fl.Devices) != 2 {
+		t.Fatalf("forecast: %d %s", w.Code, w.Body)
+	}
+	for _, d := range fl.Devices {
+		if (d.Forecast.State == "low") != (d.Address == "WRC2") || d.LowBat || d.VoltageLow != (d.Address == "WRC2") {
+			t.Fatalf("forecast: %+v", d)
+		}
+	}
+	var low []string
+	for _, e := range o.Events(context.Background()) {
+		if e.Kind == "low" {
+			low = append(low, e.Device+": "+e.Text)
+		}
+	}
+	if len(low) != 1 || !strings.HasPrefix(low[0], "WRC2: ") || !strings.Contains(low[0], "2.00 V") && !strings.Contains(low[0], "2,00 V") {
+		t.Fatalf("low notices: %q", low)
+	}
+}

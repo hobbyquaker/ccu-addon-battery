@@ -48,7 +48,7 @@ die Benachrichtigungen und, auf einer CCU, der Dienst, sein Protokoll und die Ve
 Dienststeuerung und Protokoll sind auf openccu-lite die Seiten des Systems selbst.
 
 **Benachrichtigungen:** über [ntfy](https://ntfy.sh) oder einen eigenen Webhook meldet das Addon,
-wenn ein Gerät eine leere Batterie meldet, ein Wechsel fällig oder bald fällig ist oder ein
+wenn ein Gerät eine leere Batterie meldet oder seine Spannung die Leer-Schwelle erreicht, ein Wechsel fällig oder bald fällig ist oder ein
 erkannter Wechsel im Eingang wartet – jede Meldung einmal und frühestens nach einer Woche erneut.
 Das System selbst bietet einem Addon noch keinen Kanal; sobald es einen hat, wird er hier der
 dritte.
@@ -66,7 +66,8 @@ das, das zu seiner Einstellung passt.
 
 <picture><source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/01-geraete-dunkel.png"><img alt="Geräte" src="docs/screenshots/01-geraete.png"></picture>
 
-Jedes Batteriegerät mit Bild, Status (nicht erreichbar, Batterie leer, OK), den Batterien
+Jedes Batteriegerät mit Bild, Status (nicht erreichbar, Batterie leer – vom Gerät gemeldet oder
+an seiner Spannung erkannt, siehe [Wann eine Batterie als leer gilt](#wann-eine-batterie-als-leer-gilt) –, OK), den Batterien
 aus der Batterietabelle, der letzten Spannung, der bisherigen Haltedauer seiner Batterien, wie
 lange die aktuellen schon drin sind, wann der nächste Wechsel fällig ist und wann es sich zuletzt
 gemeldet hat. Jede Spalte lässt sich sortieren und filtern; Geräte mit Netz- oder Busversorgung
@@ -222,13 +223,36 @@ Geräteseite unter *Batterien bearbeiten…*, oder über die API. Korrekturen an
 Tabelle sind als Pull Requests willkommen; `python3 data/check.py` prüft sie (die CI führt es aus),
 und [tools/](tools/README.md) enthält die Skripte, mit denen sie gebaut wurde.
 
+## Wann eine Batterie als leer gilt
+
+Ein Gerät zeigt *Batterie leer* (und kommt in die Einkaufsliste und die Benachrichtigungen), wenn
+eines von beidem zutrifft – verglichen werden die aktuellen Werte, es muss nichts über die Zeit
+beobachtet werden:
+
+- **das Gerät meldet es:** seine eigene Batterie-leer-Meldung (`LOW_BAT`, `LOWBAT` auf Kanal 0)
+  ist gesetzt. Das entscheidet das Gerät nach seiner eigenen Schwelle; auch selbstgebaute Geräte
+  (HB-…) haben diese Meldung;
+- **die Spannung hat die Leer-Schwelle erreicht:** die zuletzt gemeldete Spannung liegt auf oder
+  unter dem Wert *leer*, den die Geräteseite zeigt (*Frisch / leer*). Dieser Wert ist die eigene
+  Schwelle des Geräts, wo die Batterietabelle sie kennt, sonst die Zellenzahl mal dem Wert der
+  Zellenart (1,1 V je Alkaline-Zelle, also 1,10 V bei 1× AA und 2,20 V bei 2× AA); mit unter
+  *Batterien bearbeiten…* gesetzten Batterien richtet er sich nach diesen. So wird auch ein Gerät
+  gefunden, dessen eigene Meldung eine Schwelle hat, die nicht zu seinen Zellen passt, oder das
+  sie nie setzt – auch wenn es diese Spannung schon hatte, bevor das Addon installiert wurde. Die
+  Geräteseite sagt dann, dass die Leer-Schwelle erreicht ist und das Gerät selbst keine leere
+  Batterie meldet.
+
+Ein nicht erreichbares Gerät zeigt stattdessen das; eines am Netzteil ist nie leer.
+
 ## Wie ein Batteriewechsel erkannt wird
 
 Ein Neustart des Geräts (`BOOTED`), ein Spannungssprung auf das Frischniveau oder das Erlöschen
 der Batterie-leer-Meldung ergibt einen *Kandidaten*. Dieselben halb verbrauchten Zellen neu
 einzusetzen sieht eine Weile genauso aus – ihre Spannung erholt sich, sobald die Last weg ist –,
 deshalb wird ein Kandidat einen Tag lang geprüft: hält die Spannung dann noch das Frischniveau, ist
-die Erkennung bestätigt, sonst wird sie als Neustart protokolliert. Im **Eingang** steht der
+die Erkennung bestätigt, sonst wird sie als Neustart protokolliert. Ein Neustart, nach dem die
+Spannung nicht höher ist als vorher – ein Firmware-Update, ein Reset –, wird sofort als Neustart
+protokolliert. Im **Eingang** steht der
 Kandidat schon während der Prüfung, markiert mit „wird noch geprüft bis …“. Nichts wird von allein
 gebucht: Sie bestätigen eine Erkennung, verwerfen sie oder sagen, dass es ein anderer Tag war –
 gleich oder nach der Prüfung. Ihre Antwort gilt; die Prüfung ändert sie nicht mehr. Geräte, die nur

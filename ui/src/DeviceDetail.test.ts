@@ -141,3 +141,55 @@ describe('DeviceDetail: the battery editor', () => {
         expect(JSON.parse(calls.find((c) => c.method === 'PUT')!.body!)).toEqual({outdoor: true});
     });
 });
+
+describe('DeviceDetail: a voltage at the low level', () => {
+    beforeEach(() => {
+        addMessages(MESSAGES);
+        i18n.language = 'de';
+        vi.stubGlobal(
+            'ResizeObserver',
+            class {
+                observe() {}
+                unobserve() {}
+                disconnect() {}
+            },
+        );
+    });
+    afterEach(() => {
+        cleanup();
+        vi.unstubAllGlobals();
+    });
+
+    const moist = (p: Partial<DeviceView>): DeviceView => ({
+        interface: 'BidCos-RF',
+        address: 'WRCAPM0002',
+        name: 'Bodenfeuchtesensor02',
+        rooms: [],
+        model: 'HB-UNI-Sen-CAP-MOIST-T',
+        power: 'battery',
+        voltage: 1.1,
+        low_bat: false,
+        unreach: false,
+        first_seen: 0,
+        profile: {source: 'override', power: 'battery', slots: [{count: 1, type: 'AA'}], fresh: 1.48, low: 1.1, step: 0.12},
+        ...p,
+    });
+
+    it('says low and why when the device itself reports nothing', async () => {
+        serve(null, {in_table: false});
+        const {container} = render(DeviceDetail, {device: moist({voltage_low: true}), notices, onback: () => {}});
+        expect((await screen.findByTestId('voltage-low')).textContent).toContain('Leer-Schwelle erreicht');
+        expect(container.querySelector('.bat-pill.low')?.textContent).toBe('Batterie leer');
+    });
+
+    it('says nothing more when the device reports it too, or the voltage is above the level', async () => {
+        serve(null, {in_table: false});
+        const a = render(DeviceDetail, {device: moist({voltage_low: true, low_bat: true}), notices, onback: () => {}});
+        await waitFor(() => expect(a.container.querySelector('.bat-pill.low')).not.toBeNull());
+        expect(screen.queryByTestId('voltage-low')).toBeNull();
+        cleanup();
+        const b = render(DeviceDetail, {device: moist({voltage: 1.3}), notices, onback: () => {}});
+        await waitFor(() => expect(b.container.querySelector('.bat-pill.ok')).not.toBeNull());
+        expect(screen.queryByTestId('voltage-low')).toBeNull();
+    });
+});

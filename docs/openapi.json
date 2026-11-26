@@ -209,6 +209,10 @@
      "low_bat_since": {
       "type": "integer"
      },
+     "voltage_low": {
+      "type": "boolean",
+      "description": "the voltage is at or below the profile's low level; with low_bat it is what makes a device low"
+     },
      "unreach": {
       "type": [
        "boolean",

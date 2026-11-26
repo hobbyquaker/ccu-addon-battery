@@ -26,6 +26,11 @@ describe('statusOf', () => {
         expect(statusOf(dev({voltage: 2.9}))).toBe('ok');
         expect(statusOf(dev({}))).toBe('unknown');
     });
+    it('says low for a voltage at the low level, whatever the flag says', () => {
+        expect(statusOf(dev({low_bat: false, voltage: 1.1, voltage_low: true}))).toBe('low');
+        expect(statusOf(dev({voltage: 1.1, voltage_low: true}))).toBe('low');
+        expect(statusOf(dev({unreach: true, voltage_low: true}))).toBe('unreach');
+    });
     it('says ignored first for a device the user does not monitor', () => {
         expect(statusOf(dev({ignored: true, low_bat: true, unreach: true}))).toBe('ignored');
         expect(statusOf(dev({ignored: false, low_bat: true}))).toBe('low');

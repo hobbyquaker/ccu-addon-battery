@@ -184,7 +184,7 @@ export const MESSAGES: Catalogue = {
     'shopping.stockHint': {de: 'Der Vorrat ist, was Sie zu Hause haben; tragen Sie ihn hier ein, dann rechnet die Liste ihn ab. Die Prognose je Gerät steht in der Geräteliste (Spalte Fällig).', en: 'The stock is what you have at home; enter it here and the list takes it off. The forecast per device is in the device list (column Due).'},
     'shopping.due.title': {de: 'Fällig in den nächsten {days} Tagen', en: 'Due within the next {days} days'},
     'shopping.due.none': {de: 'Nichts fällig.', en: 'Nothing due.'},
-    'notify.intro': {de: 'Das Addon kann melden, wenn ein Gerät eine leere Batterie meldet, ein Wechsel fällig oder bald fällig ist oder ein erkannter Wechsel im Eingang wartet – über ntfy oder einen Webhook. Jede Meldung geht einmal hinaus und frühestens nach sieben Tagen erneut.', en: 'The addon can notify you when a device reports a low battery, a change is due or due soon, or a detected change waits in the inbox – over ntfy or a webhook. Each notice goes out once and again only after seven days.'},
+    'notify.intro': {de: 'Das Addon kann melden, wenn ein Gerät eine leere Batterie meldet oder seine Spannung die Leer-Schwelle erreicht, ein Wechsel fällig oder bald fällig ist oder ein erkannter Wechsel im Eingang wartet – über ntfy oder einen Webhook. Jede Meldung geht einmal hinaus und frühestens nach sieben Tagen erneut.', en: 'The addon can notify you when a device reports a low battery or its voltage reaches its low level, a change is due or due soon, or a detected change waits in the inbox – over ntfy or a webhook. Each notice goes out once and again only after seven days.'},
     'notify.channel': {de: 'Kanal', en: 'Channel'},
     'notify.channel.off': {de: 'aus', en: 'off'},
     'notify.channel.webhook': {de: 'Webhook (JSON per POST)', en: 'Webhook (JSON by POST)'},
@@ -224,6 +224,7 @@ export const MESSAGES: Catalogue = {
         en: 'Battery low although the current life is well below the usual – a battery-hungry device?',
     },
     'detail.levels': {de: 'Frisch / leer', en: 'Fresh / low'},
+    'detail.voltageLow': {de: 'Leer-Schwelle erreicht (das Gerät selbst meldet keine leere Batterie)', en: 'low level reached (the device itself reports no low battery)'},
     'detail.curve': {de: 'Spannungsverlauf', en: 'Voltage over time'},
     'detail.noVoltageModel': {
         de: 'Dieses Modell meldet keine Spannung; Wechsel werden erkannt, wenn die Batterie-leer-Meldung erlischt, oder wenn Sie sie buchen.',

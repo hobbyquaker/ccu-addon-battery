@@ -1,5 +1,23 @@
 # Changelog
 
+## [Unreleased]
+
+- **A battery at its low level is shown as low.** A device counted as low only when it raised its own low-battery
+  flag. A device whose flag has a limit that does not fit its cells - a self-built HB device with one AA cell, say -
+  stayed "OK" at 1.10 V with the low level at 1.10 V. Now a device is low when its flag is set **or** its last
+  voltage is at or below the *low* level its page shows (the device's own limit where the battery table knows it,
+  else the cells' level, following the batteries you set). It applies at once, also to a device that was at that
+  voltage before the addon came; the device page says when the level is reached while the device itself reports
+  nothing, and the forecast, the shopping list and the notification follow (the notice then names the voltage and
+  the level). The README says how a low battery is found. (reported in the homematic-forum)
+- **A restart is no battery change:** after a firmware update an HmIP-eTRV-B-2 R4M restarted, and the inbox showed a
+  detected change "2.7 V → 2.7 V" for a day until the check discarded it. A restart after which the voltage is no
+  higher than before is now logged as a boot at once and never reaches the inbox. The detector also no longer
+  depends on whether a report's voltage or its restart flag arrives first. (reported in the homematic-forum)
+- **Self-built devices (HB-…):** the low-battery flag is taken from channel 0 only. Several HB devices repeat
+  `LOWBAT` on a sensor or contact channel; its events were mixed into the device's flag.
+- **Battery table:** the HmIP-eTRV-B-2 R4M is found under the name the system reports ("HmIP-eTRV-B-2 R4M").
+
 ## [1.5.9] - 2026-11-25
 
 - **piVCCU and CCU3:** installing the addon no longer leaves a copy of the system behind in `/usr/local/tmp`. The
