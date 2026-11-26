@@ -1,6 +1,6 @@
 # Changelog
 
-## [Unreleased]
+## [1.5.10] - 2026-11-26
 
 - **A battery at its low level is shown as low.** A device counted as low only when it raised its own low-battery
   flag. A device whose flag has a limit that does not fit its cells - a self-built HB device with one AA cell, say -
@@ -9,11 +9,11 @@
   else the cells' level, following the batteries you set). It applies at once, also to a device that was at that
   voltage before the addon came; the device page says when the level is reached while the device itself reports
   nothing, and the forecast, the shopping list and the notification follow (the notice then names the voltage and
-  the level). The README says how a low battery is found. (reported in the homematic-forum)
+  the level). The README says how a low battery is found.
 - **A restart is no battery change:** after a firmware update an HmIP-eTRV-B-2 R4M restarted, and the inbox showed a
   detected change "2.7 V → 2.7 V" for a day until the check discarded it. A restart after which the voltage is no
   higher than before is now logged as a boot at once and never reaches the inbox. The detector also no longer
-  depends on whether a report's voltage or its restart flag arrives first. (reported in the homematic-forum)
+  depends on whether a report's voltage or its restart flag arrives first.
 - **Self-built devices (HB-…):** the low-battery flag is taken from channel 0 only. Several HB devices repeat
   `LOWBAT` on a sensor or contact channel; its events were mixed into the device's flag.
 - **Battery table:** the HmIP-eTRV-B-2 R4M is found under the name the system reports ("HmIP-eTRV-B-2 R4M").
@@ -89,7 +89,7 @@
   the battery kind again, for one device or for all devices of a model (*Batterien bearbeiten…*); they were stored,
   but the page did not show them. A device's values come before its model's, the model's before the battery table's;
   the page says where each value comes from and resets each level on its own. This also works for a model missing
-  from the battery table, such as a self-built HB device. (reported in the homematic-forum)
+  from the battery table, such as a self-built HB device.
 
 ## [1.5.2] - 2026-11-22
 
@@ -98,7 +98,7 @@
   touches the installed version, which keeps running; OpenCCU shows *Error (13)*, openccu-lite *unsupported
   platform*, and the system log names both architectures and the package to download (e.g.
   `battery-x86_64-1.5.2.tar.gz`). A Raspberry Pi with a 64-bit system still takes the `armv7l` package as well.
-  (reported in the homematic-forum)
+ 
 - **CCU3 and OpenCCU:** the update hint on the *Zusatzsoftware* page links the package for the system
   (`uname -m`) directly instead of the release page with all three files.
 
