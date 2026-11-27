@@ -246,6 +246,7 @@ export const MESSAGES: Catalogue = {
         en: 'Delete the battery change of {name} on {when}? The lives of this device are recalculated.',
     },
     'change.slot': {de: 'Fach {n}', en: 'Slot {n}'},
+    'change.inserted.hint': {de: 'Was wurde neu eingelegt? Hersteller und Typ der eingelegten Batterien, nicht der herausgenommenen.', en: 'What was put in? The vendor and product line of the batteries inserted, not of the ones taken out.'},
     'change.slot.unknownType': {de: 'Batterie', en: 'Battery'},
     'change.type': {de: 'Größe', en: 'Size'},
     'change.count': {de: 'Anzahl', en: 'Count'},

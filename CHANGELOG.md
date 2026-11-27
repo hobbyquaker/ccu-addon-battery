@@ -1,5 +1,10 @@
 # Changelog
 
+## [Unreleased]
+
+- **The change dialog says what to enter.** A line above the battery slots asks for the vendor and product line of
+  the batteries just inserted, not of the ones taken out: a battery's life runs from this change to the next one.
+
 ## [1.5.10] - 2026-11-26
 
 - **A battery at its low level is shown as low.** A device counted as low only when it raised its own low-battery

@@ -164,6 +164,7 @@
         <label for="bat-change-at">{mode === 'record' ? t('change.record.when') : t('change.redate.when')}</label>
         <input id="bat-change-at" class="hmm-input" type="datetime-local" bind:value />
     </div>
+    {#if slots.length}<p class="bat-muted" data-testid="change-inserted-hint">{t('change.inserted.hint')}</p>{/if}
     {#each slots as s, i (i)}
         <fieldset class="bat-slot">
             <legend>
